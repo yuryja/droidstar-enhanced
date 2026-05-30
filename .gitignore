@@ -1,0 +1,8 @@
+build/
+*.app
+*.dmg
+Makefile
+.qmake.stash
+.DS_Store
+*.user
+*.log
