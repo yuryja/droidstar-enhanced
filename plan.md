@@ -231,6 +231,10 @@ tail -f ~/Library/Application\ Support/DroidStar/droidstar.log
 - [ ] Sign with Developer Certificate (optional)
 - [ ] Notarize the app (if planning to distribute)
 
+### 8.5 Internationalization (i18n)
+- [ ] The app will support multiple languages: English, French, Spanish, Italian, and Portuguese.
+- [ ] The language will be automatically detected and set according to the device's locale settings.
+
 ---
 
 ## 9. Distribution (Future)
