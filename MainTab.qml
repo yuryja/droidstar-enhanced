@@ -40,6 +40,29 @@ Item {
 	property real volValue: 0.5
 	property real micValue: 0.1
 
+    property string connectedTG: ""
+
+    Timer {
+        id: qsyTimer
+        interval: 400
+        running: false
+        repeat: false
+        onTriggered: {
+            if (!mainTab.connectbutton.isconnected) {
+                droidstar.set_dmrtgid(_dmrtgidEdit.text);
+                mainTab.connectbutton.clickConnect();
+                mainTab.connectedTG = _dmrtgidEdit.text;
+            }
+        }
+    }
+
+    function triggerQSY() {
+        if (mainTab.connectbutton.isconnected) {
+            mainTab.connectbutton.clickConnect();
+            qsyTimer.start();
+        }
+    }
+
 	onWidthChanged:{
         if(_comboMode.currentText === "DMR"){
 			_comboMode.width = (mainTab.width / 5) - 5;
@@ -1126,6 +1149,56 @@ Item {
                                     }
                                 }
 
+                                // QSY Button
+                                Item {
+                                    width: 50; height: 52
+                                    visible: _dmrtgidEdit.visible
+
+                                    property bool canQSY: mainTab.connectbutton.isconnected && _dmrtgidEdit.text.trim() !== "" && _dmrtgidEdit.text !== mainTab.connectedTG
+
+                                    Column {
+                                        anchors.fill: parent
+                                        spacing: 2
+
+                                        Text {
+                                            text: "QSY"
+                                            color: parent.canQSY ? "#00FF00" : "#888888"
+                                            font.bold: true
+                                            font.pixelSize: 9
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+
+                                        Rectangle {
+                                            id: qsyBtn
+                                            width: 44
+                                            height: 38
+                                            radius: 6
+                                            color: parent.parent.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
+                                            border.color: parent.parent.canQSY ? "#00FF00" : "#444444"
+                                            border.width: 1.5
+                                            anchors.horizontalCenter: parent.horizontalCenter
+
+                                            Text {
+                                                text: "QSY"
+                                                color: parent.parent.canQSY ? "white" : "#666666"
+                                                font.bold: true
+                                                font.pixelSize: 11
+                                                anchors.centerIn: parent
+                                            }
+
+                                            MouseArea {
+                                                id: qsyMouse
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                enabled: parent.parent.canQSY
+                                                onClicked: {
+                                                    mainTab.triggerQSY();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
                                 Loader {
                                     sourceComponent: toggleSwitchComponent
                                     onLoaded: { item.labelText = "SWTX"; item.checked = _swtxBox.checked; item.onClickedFunc = function(){ droidstar.set_swtx(item.checked) } }
@@ -1223,6 +1296,11 @@ Item {
                         property bool isconnected: false
                         function clickConnect() {
                             isconnected = !isconnected;
+                            if (isconnected) {
+                                mainTab.connectedTG = _dmrtgidEdit.text;
+                            } else {
+                                mainTab.connectedTG = "";
+                            }
                             droidstar.set_callsign(settingsTab.callsignEdit.text.toUpperCase());
                             droidstar.set_module(_comboModule.currentText);
                             droidstar.set_protocol(_comboMode.currentText);
