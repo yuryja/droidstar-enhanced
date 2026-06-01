@@ -256,6 +256,10 @@ public slots:
 	void tts_changed(QString);
 	void tts_text_changed(QString);
 	void obtain_asl_wt_creds();
+	void appendToStationLog(const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country);
+	QString readStationLog();
+	QString exportStationLog();
+	void clearStationLog();
 private:
 	int connect_status;
 	bool m_update_host_files;

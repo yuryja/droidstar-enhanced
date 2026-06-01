@@ -18,7 +18,9 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Dialogs
+import QtQuick.Layouts
 import org.dudetronics.droidstar
 
 ApplicationWindow {
@@ -27,19 +29,25 @@ ApplicationWindow {
 	width: 340
 	height: 480
 	title: qsTr("DroidStar")
-
-	palette.window: "#252424"
-	palette.button: "#252424"
-	palette.buttonText: "white"
-	palette.base: "black"
-	palette.text: "white"
-	palette.windowText: "white"
-	palette.highlight: "steelblue"
+    Material.theme: Material.Dark
+    Material.accent: Material.Teal
+    Material.primary: Material.BlueGrey
 
 	MessageDialog {
 		id: errorDialog
 		title: "Error"
 	}
+
+    background: Rectangle {
+        id: bgRect
+        color: "#161B22"
+        Image {
+            anchors.fill: parent
+            source: "bg_texture.bmp"
+            fillMode: Image.Tile
+            opacity: 0.8
+        }
+    }
 	MessageDialog {
 		id: updateDialog
 		title: "Updating..."
@@ -51,62 +59,153 @@ ApplicationWindow {
 		text: "No hardware or software vocoder found for this mode. You can still connect, but you will not RX or TX any audio. See the project website (url on the About tab) for info on loading a sw vocoder, or use a USB AMBE dongle (and an OTG adapter on Android devices)"
 	}
 
-	TabBar {
-		id: bar
-		width: parent.width
-		currentIndex: swiper.currentIndex
-		background: Rectangle {
-			color: "steelblue"
-		}
-		TabButton {
-			id: mainButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 0 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Main")
-		}
-		TabButton {
-			id: settingsButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 1 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Settings")
-		}
-		TabButton {
-			id: logButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 2 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Log")
-		}
-		TabButton {
-			id: hostsButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 3 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Hosts")
-		}
-		TabButton {
-			id: aboutButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 4 ? "steelblue" : "#353535"
-			}
-			text: qsTr("About")
-		}
-	}
+    header: ToolBar {
+        background: Rectangle { color: "#222222" }
+        RowLayout {
+            anchors.fill: parent
+            spacing: 6
+            
+            ToolButton {
+                text: "☰"
+                font.pixelSize: 24
+                onClicked: drawer.open()
+                contentItem: Text {
+                    text: parent.text
+                    font: parent.font
+                    color: "white"
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+            
+            Label {
+                text: "DroidStar"
+                font.pixelSize: 20
+                font.bold: true
+                color: "white"
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            Item { Layout.fillWidth: true } // Spacer to push Power to the far right
+            
+            // Power Toggle Button in Header
+            Item {
+                width: 60
+                height: 38
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                Layout.rightMargin: 8
+                
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 6
+                    
+                    Text {
+                        text: "POWER"
+                        color: "white"
+                        font.family: "Monospace"
+                        font.pixelSize: 9
+                        font.bold: true
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    
+                    Rectangle {
+                        width: 18; height: 28; radius: 9
+                        color: "#111111"
+                        border.color: "#555555"
+                        border.width: 1.5
+                        anchors.verticalCenter: parent.verticalCenter
+                        
+                        Rectangle {
+                            width: 14; height: 14; radius: 7; x: 2
+                            y: (mainTab && mainTab.connectbutton && mainTab.connectbutton.isconnected) ? 2 : 12
+                            color: (mainTab && mainTab.connectbutton && mainTab.connectbutton.isconnected) ? "#00FF00" : "#FF3333"
+                            Behavior on y { NumberAnimation { duration: 100 } }
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (mainTab && mainTab.connectbutton) {
+                                    mainTab.connectbutton.clickConnect();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Drawer {
+        id: drawer
+        width: Math.min(main.width, main.height) / 3 * 2
+        height: main.height
+
+        ListView {
+            id: menuList
+            anchors.fill: parent
+            model: ListModel {
+                ListElement { name: "Main"; index: 0 }
+                ListElement { name: "Settings"; index: 1 }
+                ListElement { name: "Log"; index: 2 }
+                ListElement { name: "Hosts"; index: 3 }
+                ListElement { name: "Station Log"; index: 4 }
+                ListElement { name: "About"; index: 5 }
+            }
+            delegate: ItemDelegate {
+                width: parent.width
+                text: model.name
+                highlighted: ListView.isCurrentItem
+                onClicked: {
+                    swiper.currentIndex = model.index
+                    drawer.close()
+                }
+            }
+        }
+    }
+
 	SwipeView {
 		id: swiper
-		width: parent.width
-		height: parent.height - 50
-		x: 0
-		y: 50
-		currentIndex: bar.currentIndex
+		anchors.fill: parent
+		currentIndex: 0
 		interactive: false
+        focus: true
+
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown) {
+                if (event.isAutoRepeat) {
+                    event.accepted = true;
+                    return;
+                }
+                event.accepted = true;
+                if (settingsTab.toggleTX.checked) {
+                    mainTab.buttonTX.tx = !mainTab.buttonTX.tx;
+                    droidstar.click_tx(mainTab.buttonTX.tx);
+                    if (mainTab.buttonTX.tx) {
+                        mainTab.buttonTX.cnt = 0;
+                        mainTab.txtimer.running = true;
+                    } else {
+                        mainTab.txtimer.running = false;
+                    }
+                } else {
+                    mainTab.buttonTX.tx = true;
+                    droidstar.press_tx();
+                }
+            }
+        }
+        Keys.onReleased: (event) => {
+            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown) {
+                if (event.isAutoRepeat) {
+                    event.accepted = true;
+                    return;
+                }
+                event.accepted = true;
+                if (!settingsTab.toggleTX.checked) {
+                    mainTab.buttonTX.tx = false;
+                    droidstar.release_tx();
+                }
+            }
+        }
 
 		MainTab{
 			id: mainTab
@@ -119,6 +218,9 @@ ApplicationWindow {
 		}
 		HostsTab{
 			id: hostsTab
+		}
+		StationLogTab{
+			id: stationLogTab
 		}
 		AboutTab{}
 	}
@@ -135,12 +237,12 @@ ApplicationWindow {
             settingsTab.comboModem.model = droidstar.get_modems();
             settingsTab.comboPlayback.model = droidstar.get_playbacks();
             settingsTab.comboCapture.model = droidstar.get_captures();
-			mainTab.data1.font.family = droidstar.get_monofont();
-			mainTab.data2.font.family = droidstar.get_monofont();
-			mainTab.data3.font.family = droidstar.get_monofont();
-			mainTab.data4.font.family = droidstar.get_monofont();
-			mainTab.data5.font.family = droidstar.get_monofont();
-			mainTab.data6.font.family = droidstar.get_monofont();
+			// mainTab.data1.font.family = droidstar.get_monofont();
+			// mainTab.data2.font.family = droidstar.get_monofont();
+			// mainTab.data3.font.family = droidstar.get_monofont();
+			// mainTab.data4.font.family = droidstar.get_monofont();
+			// mainTab.data5.font.family = droidstar.get_monofont();
+			// mainTab.data6.font.family = droidstar.get_monofont();
 		}
 		function onSwtx_state(s){
 			mainTab.swtxBox.checked = s;
@@ -378,6 +480,10 @@ ApplicationWindow {
 			mainTab.mmdvmstatus.text = droidstar.get_mmdvmstatustxt();
 			mainTab.netstatus.text = droidstar.get_netstatustxt();
 			++mainTab.uitimer.rxcnt;
+			
+			if (mainTab.data1.text !== "") {
+				mainTab.addLastHeard(mainTab.data1.text, mainTab.data6.text, mainTab.data5.text);
+			}
         }
 		function onUpdate_settings() {
 			//console.log("update_settings comboHost == ", mainTab.comboHost.find(droidstar.get_host()));
@@ -470,15 +576,12 @@ ApplicationWindow {
 					mainTab.buttonTX.tx = false;
 					droidstar.tx_clicked(false);
 					mainTab.txtimer.running = false;
-					mainTab.btntxt.color = "black";
-					mainTab.btntxt.text = "TX";
 				}
 				mainTab.connectbutton.text = "Connect";
 				mainTab.comboMode.enabled = true;
 				mainTab.comboHost.enabled = true;
 				mainTab.comboModule.enabled = true;
 				mainTab.buttonTX.enabled = false;
-				mainTab.btntxt.color = "steelblue";
 				mainTab.data1.text = "";
 				mainTab.data2.text = "";
 				mainTab.data3.text = "";
@@ -520,7 +623,6 @@ ApplicationWindow {
 				}
 
 				mainTab.buttonTX.enabled = true;
-				mainTab.btntxt.color = "black";
 				mainTab.agcBox.checked = true;
 			}
 			if(c === 3){

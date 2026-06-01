@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
+if(POLICY CMP0072)
+  cmake_policy(SET CMP0072 NEW)
+endif()
 project(DroidStar VERSION 1.0 LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -99,7 +102,11 @@ qt_add_qml_module(DroidStar
     QML_FILES SettingsTab.qml
     QML_FILES LogTab.qml
     QML_FILES HostsTab.qml
+    QML_FILES StationLogTab.qml
     QML_FILES AboutTab.qml
+    RESOURCES
+        bg_texture.bmp
+        fonts/arcade_pizzadude/ARCADE.TTF
 )
 
 execute_process(
@@ -148,6 +155,7 @@ if(APPLE)
     target_link_libraries(DroidStar PRIVATE
         "-framework AVFoundation"
     )
+    target_link_options(DroidStar PRIVATE "-F${CMAKE_CURRENT_SOURCE_DIR}/Frameworks" "-F/System/Library/Frameworks")
 endif()
 
 if(ANDROID)
@@ -210,7 +218,7 @@ if(FALSE) # set TRUE for flite
     )
 endif()
 
-if(TRUE) # set TRUE for md380_vocoder
+if(FALSE) # set TRUE for md380_vocoder
     target_compile_definitions(DroidStar PRIVATE
         USE_MD380_VOCODER
     )

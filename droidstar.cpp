@@ -24,6 +24,7 @@
 #endif
 #include <QStandardPaths>
 #include <QFile>
+#include <QTextStream>
 #include <QFileInfo>
 #include <QDir>
 #include <QFont>
@@ -1525,3 +1526,64 @@ void DroidStar::click_tx(bool tx)
 {
 	emit tx_clicked(tx);
 }
+
+void DroidStar::appendToStationLog(const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country)
+{
+    QFile f(config_path + "/station_log.csv");
+    if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&f);
+        
+        // Escape commas and quotes for CSV compliance
+        QString escName = name;
+        escName.replace("\"", "\"\"");
+        if (escName.contains(",")) escName = "\"" + escName + "\"";
+
+        // Fallback to Country text escaping
+        QString escCountry = country;
+        escCountry.replace("\"", "\"\"");
+        if (escCountry.contains(",")) escCountry = "\"" + escCountry + "\"";
+
+        out << dateStr << "," << timeStr << "," << callsign << "," << escName << "," << escCountry << "\n";
+        f.close();
+    }
+}
+
+QString DroidStar::readStationLog()
+{
+    QFile f(config_path + "/station_log.csv");
+    if (f.exists() && f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&f);
+        QString content = in.readAll();
+        f.close();
+        return content;
+    }
+    return "";
+}
+
+QString DroidStar::exportStationLog()
+{
+    QString srcPath = config_path + "/station_log.csv";
+    QFile srcFile(srcPath);
+    if (!srcFile.exists()) {
+        return "EMPTY";
+    }
+
+    QString destDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    QDir().mkpath(destDir);
+    QString destPath = destDir + "/station_log.csv";
+
+    if (QFile::exists(destPath)) {
+        QFile::remove(destPath);
+    }
+
+    if (QFile::copy(srcPath, destPath)) {
+        return destPath;
+    }
+    return "ERROR";
+}
+
+void DroidStar::clearStationLog()
+{
+    QFile::remove(config_path + "/station_log.csv");
+}
+

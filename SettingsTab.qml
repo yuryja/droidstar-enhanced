@@ -82,125 +82,117 @@ Item {
 		Text {
 			id: vocoderLabel
 			x: 10
-			y: 0
+			anchors.verticalCenter: _comboVocoder.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Vocoder")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		ComboBox {
 			id: _comboVocoder
 			x: 100
-			y: vocoderLabel.y
+			y: 0
 			width: parent.width - 110
 			height: 30
 		}
 		Text {
 			id: modemLabel
 			x: 10
-			y: 30
+			anchors.verticalCenter: _comboModem.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Modem")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		ComboBox {
 			id: _comboModem
 			x: 100
-			y: modemLabel.y
+			y: 30
 			width: parent.width - 110
 			height: 30
 		}
 		Text {
 			id: playbackLabel
 			x: 10
-			y: 60
+			anchors.verticalCenter: _comboPlayback.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Playback")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		ComboBox {
 			id: _comboPlayback
 			x: 100
-			y: playbackLabel.y
+			y: 60
 			width: parent.width - 110
 			height: 30
 		}
 		Text {
 			id: captureLabel
 			x: 10
-			y: 90
+			anchors.verticalCenter: _comboCapture.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Capture")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		ComboBox {
 			id: _comboCapture
 			x: 100
-			y: captureLabel.y
+			y: 90
 			width: parent.width - 110
 			height: 30
 		}
 		Text {
 			id: csLabel
 			x: 10
-			y: 120
+			anchors.verticalCenter: csedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Callsign")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: csedit
 			x: 100
-			y: csLabel.y
-			width: 125
+			y: 120
+			width: parent.width - 110
 			height: 25
 			text: qsTr("")
 			font.capitalization: Font.AllUppercase
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: dmridLabel
 			x: 10
-			y: 150
+			anchors.verticalCenter: dmridedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("DMRID")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: dmridedit
 			x: 100
-			y: dmridLabel.y
-			width: 125
+			y: 150
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: essidLabel
 			x: 10
-			y: 180
+			anchors.verticalCenter: comboessid.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("ESSID")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		ComboBox {
 			id: comboessid
 			x: 100
-			y: essidLabel.y
-			width: 80
+			y: 180
+			width: parent.width - 110
 			height: 30
 			function build_model(){
 				var ids = ["None"];
@@ -220,330 +212,347 @@ Item {
 		Text {
 			id: bmpwLabel
 			x: 10
-			y: 210
+			anchors.verticalCenter: bmpwedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("BM Pass")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: bmpwedit
 			x: 100
-			y: bmpwLabel.y
+			y: 210
 			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			echoMode: TextInput.Password
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: tgifpwLabel
 			x: 10
-			y: 240
+			anchors.verticalCenter: tgifpwedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("TGIF Pass")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: tgifpwedit
 			x: 100
-			y: tgifpwLabel.y
+			y: 240
 			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			echoMode: TextInput.Password
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: aslpwLabel
 			x: 10
-			y: 270
+			anchors.verticalCenter: aslpwedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("ASL Pass")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: aslpwedit
 			x: 100
-			y: aslpwLabel.y
+			y: 270
 			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			echoMode: TextInput.Password
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: latLabel
 			x: 10
-			y: 300
+			anchors.verticalCenter: latedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Latitude")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: latedit
 			x: 100
-			y: latLabel.y
-			width: 125
+			y: 300
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: lonLabel
 			x: 10
-			y: 330
+			anchors.verticalCenter: lonedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Longitude")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: lonedit
 			x: 100
-			y: lonLabel.y
-			width: 125
+			y: 330
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: locLabel
 			x: 10
-			y: 360
+			anchors.verticalCenter: locedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Location")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: locedit
 			x: 100
-			y: locLabel.y
-			width: 125
+			y: 360
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: descLabel
 			x: 10
-			y: 390
+			anchors.verticalCenter: descedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("Description")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: descedit
 			x: 100
-			y: descLabel.y
-			width: 125
+			y: 390
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: urlLabel
 			x: 10
-			y: 420
+			anchors.verticalCenter: urledit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("URL")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: urledit
 			x: 100
-			y: urlLabel.y
-			width: 125
+			y: 420
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: swidLabel
 			x: 10
-			y: 450
+			anchors.verticalCenter: swidedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("SoftwareID")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: swidedit
 			x: 100
-			y: swidLabel.y
-			width: 125
+			y: 450
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: pkgidLabel
 			x: 10
-			y: 480
+			anchors.verticalCenter: pkgidedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("PackageID")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: pkgidedit
 			x: 100
-			y: pkgidLabel.y
+			y: 480
 			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: dmroptslabel
 			x: 10
-			y: 510
+			anchors.verticalCenter: dmroptsedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("DMR+ Opts")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: dmroptsedit
 			x: 100
-			y: dmroptslabel.y
+			y: 510
 			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: mycallLabel
 			x: 10
-			y: 540
+			anchors.verticalCenter: mycalledit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("MYCALL")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: mycalledit
 			x: 100
-			y: mycallLabel.y
-			width: 125
+			y: 540
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			font.capitalization: Font.AllUppercase
 			onEditingFinished: {
 				droidstar.set_mycall(mycalledit.text.toUpperCase())
 			}
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: urcallLabel
 			x: 10
-			y: 570
+			anchors.verticalCenter: urcalledit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("URCALL")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: urcalledit
 			x: 100
-			y: urcallLabel.y
-			width: 125
+			y: 570
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			font.capitalization: Font.AllUppercase
 			onEditingFinished: {
 				droidstar.set_urcall(urcalledit.text.toUpperCase())
 			}
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: rptr1Label
 			x: 10
-			y: 600
+			anchors.verticalCenter: rptr1edit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("RPTR1")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: rptr1edit
 			x: 100
-			y: rptr1Label.y
-			width: 125
+			y: 600
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			font.capitalization: Font.AllUppercase
 			onEditingFinished: {
 				droidstar.set_rptr1(rptr1edit.text.toUpperCase())
 			}
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: rptr2Label
 			x: 10
-			y: 630
+			anchors.verticalCenter: rptr2edit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("RPTR2")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: rptr2edit
 			x: 100
-			y: rptr2Label.y
-			width: 125
+			y: 630
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			font.capitalization: Font.AllUppercase
 			onEditingFinished: {
 				droidstar.set_rptr2(rptr2edit.text.toUpperCase())
 			}
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: usrtxtLabel
 			x: 10
-			y: 660
+			anchors.verticalCenter: usrtxtedit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("USRTXT")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: usrtxtedit
 			x: 100
-			y: usrtxtLabel.y
+			y: 660
 			width: parent.width - 110
 			height: 25
 			selectByMouse: true
 			onEditingFinished: {
 				droidstar.set_usrtxt(usrtxtedit.text)
 			}
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: txtimerLabel
 			x: 10
-			y: 690
+			anchors.verticalCenter: txtimeredit.verticalCenter
 			width: 80
-			height: 25
 			text: qsTr("TX Timeout")
 			color: "white"
-			verticalAlignment: Text.AlignVCenter
 		}
 		TextField {
 			id: txtimeredit
 			x: 100
-			y: txtimerLabel.y
-			width: 125
+			y: 690
+			width: parent.width - 110
 			height: 25
 			selectByMouse: true
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: m17rateLabel
@@ -566,21 +575,25 @@ Item {
 			x: 120
 			y: m17rateLabel.y
 			//width: 100
-			height: 25
-			spacing: 1
+			height: 30
+			spacing: 6
 			text: qsTr("Voice Full")
 			checked: true
 			ButtonGroup.group: m17rateGroup
+			topPadding: 0
+			bottomPadding: 0
 		}
 		CheckBox {
 			id: m17_1600
 			x: 220
 			y: m17rateLabel.y
 			//width: 100
-			height: 25
-			spacing: 1
+			height: 30
+			spacing: 6
 			text: qsTr("Voice/Data")
 			ButtonGroup.group: m17rateGroup
+			topPadding: 0
+			bottomPadding: 0
 		}
 		Button {
 			id: updatehostsButton
@@ -611,30 +624,36 @@ Item {
 			x: 10
 			y: 780
 			//width: 100
-			height: 25
-			spacing: 1
+			height: 30
+			spacing: 6
 			text: qsTr("Enable TX toggle mode")
 			onClicked:{
 				droidstar.set_toggletx(toggleTX.checked);
 			}
+			topPadding: 0
+			bottomPadding: 0
 		}
 		CheckBox {
 			id: xrf2Ref
 			x: 10
 			y: 810
 			//width: 100
-			height: 25
-			spacing: 1
+			height: 30
+			spacing: 6
 			text: qsTr("Use REF for XRF")
+			topPadding: 0
+			bottomPadding: 0
 		}
 		CheckBox {
 			id: ipV6
 			x: 10
 			y: 840
 			//width: 100
-			height: 25
-			spacing: 1
+			height: 30
+			spacing: 6
 			text: qsTr("Use IPv6 when available")
+			topPadding: 0
+			bottomPadding: 0
 		}
 		Text {
 			id: _modemRXFreqLabel
@@ -654,6 +673,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemTXFreqLabel
@@ -673,6 +695,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemRXOffsetLabel
@@ -692,6 +717,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			//inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemTXOffsetLabel
@@ -711,6 +739,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			//inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemRXLevelLabel
@@ -730,6 +761,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemTXLevelLabel
@@ -749,6 +783,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemRXDCOffsetLabel
@@ -768,6 +805,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemTXDCOffsetLabel
@@ -787,6 +827,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemRFLevelLabel
@@ -806,6 +849,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemTXDelayLabel
@@ -825,6 +871,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemCWIdTXLevelLabel
@@ -844,6 +893,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemDStarTXLevelLabel
@@ -863,6 +915,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemDMRTXLevelLabel
@@ -882,6 +937,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemYSFTXLevelLabel
@@ -901,6 +959,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemP25TXLevelLabel
@@ -920,6 +981,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemNXDNTXLevelLabel
@@ -939,6 +1003,9 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
 		Text {
 			id: _modemBaudLabel
@@ -958,28 +1025,36 @@ Item {
 			height: 25
 			selectByMouse: true
 			inputMethodHints: "ImhPreferNumbers"
+			topPadding: 0
+			bottomPadding: 0
+			verticalAlignment: TextInput.AlignVCenter
 		}
         CheckBox {
             id: _mmdvmBox
             x: 10
 			y: 1130
             width: parent.width
-            height: 25
+            height: 30
+            spacing: 6
             text: qsTr("MMDVM_DIRECT")
             onClicked:{
                 droidstar.set_mmdvm_direct(_mmdvmBox.checked)
             }
+            topPadding: 0
+            bottomPadding: 0
         }
         CheckBox {
             id: _debugBox
             x: 10
 			y: 1160
             width: parent.width
-            height: 25
+            height: 30
+            spacing: 6
             text: qsTr("Debug output to stderr")
             onClicked:{
                 droidstar.set_debug(_debugBox.checked)
             }
+            topPadding: 0
         }
 	}
 }
