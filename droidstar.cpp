@@ -297,8 +297,7 @@ void DroidStar::process_connect()
 		connect_status = Mode::DISCONNECTED;
 		if (m_modethread) {
 			m_modethread->quit();
-			m_modethread->wait();
-			QCoreApplication::processEvents();
+			m_modethread = nullptr;
 		}
 		m_data1.clear();
 		m_data2.clear();
@@ -306,8 +305,6 @@ void DroidStar::process_connect()
 		m_data4.clear();
 		m_data5.clear();
 		m_data6.clear();
-		emit connect_status_changed(0);
-		emit update_log("Disconnected");
 #ifdef Q_OS_ANDROID
         QJniObject::callStaticMethod<void>(
             "org/dudetronics/droidstar/NotificationClient",
@@ -422,7 +419,15 @@ void DroidStar::process_connect()
         connect(m_mode, SIGNAL(update_log(QString)), this, SLOT(updatelog(QString)));
 		connect(m_mode, SIGNAL(update_output_level(unsigned short)), this, SLOT(update_output_level(unsigned short)));
         connect(m_modethread, SIGNAL(started()), m_mode, SLOT(begin_connect()));
-		connect(m_modethread, SIGNAL(finished()), m_mode, SLOT(deleteLater()));
+		connect(m_modethread, &QThread::finished, this, [this]() {
+			if (m_mode) {
+				delete m_mode;
+				m_mode = nullptr;
+			}
+			emit connect_status_changed(0);
+			emit update_log("Disconnected");
+		});
+		connect(m_modethread, SIGNAL(finished()), m_modethread, SLOT(deleteLater()));
 		connect(this, SIGNAL(input_source_changed(int,QString)), m_mode, SLOT(input_src_changed(int,QString)));
 		connect(this, SIGNAL(swrx_state_changed(int)), m_mode, SLOT(swrx_state_changed(int)));
 		connect(this, SIGNAL(swtx_state_changed(int)), m_mode, SLOT(swtx_state_changed(int)));
