@@ -3,7 +3,7 @@
 #include <QQuickStyle>
 #include <QIcon>
 #include <QQmlContext>
-#include "droidstar.h"
+#include "core/droidstar.h"
 
 int main(int argc, char *argv[])
 {
@@ -27,7 +27,11 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
-    engine.loadFromModule("DroidStarApp", "Main");
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    engine.loadFromModule("DroidStarApp", "ui/mobile/Main");
+#else
+    engine.loadFromModule("DroidStarApp", "ui/desktop/MainDesktop");
+#endif
     return app.exec();
 
 }

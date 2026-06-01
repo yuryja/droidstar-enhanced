@@ -20,94 +20,151 @@ set(app_icon_macos "${CMAKE_CURRENT_SOURCE_DIR}/images/droidstar.icns")
 set_source_files_properties(${app_icon_macos} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
 qt_add_executable(DroidStar WIN32 MACOSX_BUNDLE
-    CRCenc.cpp CRCenc.h
-    DMRDefines.h
-    Golay24128.cpp Golay24128.h
-    M17Convolution.cpp M17Convolution.h
-    M17Defines.h
-    MMDVMDefines.h
-    SHA256.cpp SHA256.h
-    YSFConvolution.cpp YSFConvolution.h
-    YSFFICH.cpp YSFFICH.h
-    audioengine.cpp audioengine.h
-    cbptc19696.cpp cbptc19696.h
-    cgolay2087.cpp cgolay2087.h
-    chamming.cpp chamming.h
-    crs129.cpp crs129.h
-    dcs.cpp dcs.h
-    dmr.cpp dmr.h
-    droidstar.cpp droidstar.h
-    httpmanager.cpp httpmanager.h
-    iax.cpp iax.h
-    iaxdefines.h
-    imbe_vocoder/aux_sub.cc imbe_vocoder/aux_sub.h
-    imbe_vocoder/basic_op.h
-    imbe_vocoder/basicop2.cc
-    imbe_vocoder/ch_decode.cc imbe_vocoder/ch_decode.h
-    imbe_vocoder/ch_encode.cc imbe_vocoder/ch_encode.h
-    imbe_vocoder/dc_rmv.cc imbe_vocoder/dc_rmv.h
-    imbe_vocoder/decode.cc imbe_vocoder/decode.h
-    imbe_vocoder/dsp_sub.cc imbe_vocoder/dsp_sub.h
-    imbe_vocoder/encode.cc imbe_vocoder/encode.h
-    imbe_vocoder/globals.h
-    imbe_vocoder/imbe.h
-    imbe_vocoder/imbe_vocoder.cc imbe_vocoder/imbe_vocoder.h
-    imbe_vocoder/imbe_vocoder_api.h
-    imbe_vocoder/imbe_vocoder_impl.cc imbe_vocoder/imbe_vocoder_impl.h
-    imbe_vocoder/math_sub.cc imbe_vocoder/math_sub.h
-    imbe_vocoder/pe_lpf.cc imbe_vocoder/pe_lpf.h
-    imbe_vocoder/pitch_est.cc imbe_vocoder/pitch_est.h
-    imbe_vocoder/pitch_ref.cc imbe_vocoder/pitch_ref.h
-    imbe_vocoder/qnt_sub.cc imbe_vocoder/qnt_sub.h
-    imbe_vocoder/rand_gen.cc imbe_vocoder/rand_gen.h
-    imbe_vocoder/sa_decode.cc imbe_vocoder/sa_decode.h
-    imbe_vocoder/sa_encode.cc imbe_vocoder/sa_encode.h
-    imbe_vocoder/sa_enh.cc imbe_vocoder/sa_enh.h
-    imbe_vocoder/tbls.cc imbe_vocoder/tbls.h
-    imbe_vocoder/typedef.h
-    imbe_vocoder/typedefs.h
-    imbe_vocoder/uv_synt.cc imbe_vocoder/uv_synt.h
-    imbe_vocoder/v_synt.cc imbe_vocoder/v_synt.h
-    imbe_vocoder/v_uv_det.cc imbe_vocoder/v_uv_det.h
-    mbe/ambe3600x2400.c
-    mbe/ambe3600x2400_const.h
-    mbe/ambe3600x2450.c
-    mbe/ambe3600x2450_const.h
-    mbe/ecc.c
-    mbe/ecc_const.h
-    mbe/mbelib.c mbe/mbelib.h
-    mbe/mbelib_const.h
-    mbe/mbelib_parms.h
-    mbe/mbevocoder.cpp mbe/mbevocoder.h
-    mbe/mbevocoder_api.h
-    mbe/vocoder_tables.h
-    m17.cpp m17.h
+    core/CRCenc.cpp
+    core/CRCenc.h
+    core/DMRDefines.h
+    core/Golay24128.cpp
+    core/Golay24128.h
+    core/M17Convolution.cpp
+    core/M17Convolution.h
+    core/M17Defines.h
+    core/MMDVMDefines.h
+    core/SHA256.cpp
+    core/SHA256.h
+    core/YSFConvolution.cpp
+    core/YSFConvolution.h
+    core/YSFFICH.cpp
+    core/YSFFICH.h
+    core/audioengine.cpp
+    core/audioengine.h
+    core/cbptc19696.cpp
+    core/cbptc19696.h
+    core/cgolay2087.cpp
+    core/cgolay2087.h
+    core/chamming.cpp
+    core/chamming.h
+    core/crs129.cpp
+    core/crs129.h
+    core/dcs.cpp
+    core/dcs.h
+    core/dmr.cpp
+    core/dmr.h
+    core/droidstar.cpp
+    core/droidstar.h
+    core/httpmanager.cpp
+    core/httpmanager.h
+    core/iax.cpp
+    core/iax.h
+    core/iaxdefines.h
+    core/imbe_vocoder/aux_sub.cc
+    core/imbe_vocoder/aux_sub.h
+    core/imbe_vocoder/basic_op.h
+    core/imbe_vocoder/basicop2.cc
+    core/imbe_vocoder/ch_decode.cc
+    core/imbe_vocoder/ch_decode.h
+    core/imbe_vocoder/ch_encode.cc
+    core/imbe_vocoder/ch_encode.h
+    core/imbe_vocoder/dc_rmv.cc
+    core/imbe_vocoder/dc_rmv.h
+    core/imbe_vocoder/decode.cc
+    core/imbe_vocoder/decode.h
+    core/imbe_vocoder/dsp_sub.cc
+    core/imbe_vocoder/dsp_sub.h
+    core/imbe_vocoder/encode.cc
+    core/imbe_vocoder/encode.h
+    core/imbe_vocoder/globals.h
+    core/imbe_vocoder/imbe.h
+    core/imbe_vocoder/imbe_vocoder.cc
+    core/imbe_vocoder/imbe_vocoder.h
+    core/imbe_vocoder/imbe_vocoder_api.h
+    core/imbe_vocoder/imbe_vocoder_impl.cc
+    core/imbe_vocoder/imbe_vocoder_impl.h
+    core/imbe_vocoder/math_sub.cc
+    core/imbe_vocoder/math_sub.h
+    core/imbe_vocoder/pe_lpf.cc
+    core/imbe_vocoder/pe_lpf.h
+    core/imbe_vocoder/pitch_est.cc
+    core/imbe_vocoder/pitch_est.h
+    core/imbe_vocoder/pitch_ref.cc
+    core/imbe_vocoder/pitch_ref.h
+    core/imbe_vocoder/qnt_sub.cc
+    core/imbe_vocoder/qnt_sub.h
+    core/imbe_vocoder/rand_gen.cc
+    core/imbe_vocoder/rand_gen.h
+    core/imbe_vocoder/sa_decode.cc
+    core/imbe_vocoder/sa_decode.h
+    core/imbe_vocoder/sa_encode.cc
+    core/imbe_vocoder/sa_encode.h
+    core/imbe_vocoder/sa_enh.cc
+    core/imbe_vocoder/sa_enh.h
+    core/imbe_vocoder/tbls.cc
+    core/imbe_vocoder/tbls.h
+    core/imbe_vocoder/typedef.h
+    core/imbe_vocoder/typedefs.h
+    core/imbe_vocoder/uv_synt.cc
+    core/imbe_vocoder/uv_synt.h
+    core/imbe_vocoder/v_synt.cc
+    core/imbe_vocoder/v_synt.h
+    core/imbe_vocoder/v_uv_det.cc
+    core/imbe_vocoder/v_uv_det.h
+    core/mbe/ambe3600x2400.c
+    core/mbe/ambe3600x2400_const.h
+    core/mbe/ambe3600x2450.c
+    core/mbe/ambe3600x2450_const.h
+    core/mbe/ecc.c
+    core/mbe/ecc_const.h
+    core/mbe/mbelib.c
+    core/mbe/mbelib.h
+    core/mbe/mbelib_const.h
+    core/mbe/mbelib_parms.h
+    core/mbe/mbevocoder.cpp
+    core/mbe/mbevocoder.h
+    core/mbe/mbevocoder_api.h
+    core/mbe/vocoder_tables.h
+    core/m17.cpp
+    core/m17.h
     main.cpp
-    mode.cpp mode.h
-    nxdn.cpp nxdn.h
-    p25.cpp p25.h
-    ref.cpp ref.h
-
-    xrf.cpp xrf.h
-    ysf.cpp ysf.h
+    core/mode.cpp
+    core/mode.h
+    core/nxdn.cpp
+    core/nxdn.h
+    core/p25.cpp
+    core/p25.h
+    core/ref.cpp
+    core/ref.h
+    core/xrf.cpp
+    core/xrf.h
+    core/ysf.cpp
+    core/ysf.h
     ${app_icon_resource_windows}
     ${app_icon_macos}
 )
 
-qt_add_qml_module(DroidStar
-    URI DroidStarApp
-    VERSION 1.0
-    QML_FILES Main.qml
-    QML_FILES MainTab.qml
-    QML_FILES SettingsTab.qml
-    QML_FILES LogTab.qml
-    QML_FILES HostsTab.qml
-    QML_FILES StationLogTab.qml
-    QML_FILES AboutTab.qml
-    RESOURCES
-        bg_texture.bmp
-        fonts/arcade_pizzadude/ARCADE.TTF
-)
+if(ANDROID OR IOS)
+    qt_add_qml_module(DroidStar
+        URI DroidStarApp
+        VERSION 1.0
+        QML_FILES ui/mobile/Main.qml
+        QML_FILES ui/mobile/MainTab.qml
+        QML_FILES ui/mobile/SettingsTab.qml
+        QML_FILES ui/mobile/LogTab.qml
+        QML_FILES ui/mobile/HostsTab.qml
+        QML_FILES ui/mobile/StationLogTab.qml
+        QML_FILES ui/mobile/AboutTab.qml
+        RESOURCES
+            ui/shared/bg_texture.bmp
+            ui/shared/fonts/arcade_pizzadude/ARCADE.TTF
+    )
+else()
+    qt_add_qml_module(DroidStar
+        URI DroidStarApp
+        VERSION 1.0
+        QML_FILES ui/desktop/MainDesktop.qml
+        RESOURCES
+            ui/shared/bg_texture.bmp
+            ui/shared/fonts/arcade_pizzadude/ARCADE.TTF
+    )
+endif()
 
 execute_process(
     COMMAND git rev-parse --short HEAD
@@ -174,8 +231,8 @@ endif()
 
 if(NOT IOS)
     target_sources(DroidStar PUBLIC
-        serialambe.cpp serialambe.h
-        serialmodem.cpp serialmodem.h
+        core/serialambe.cpp core/serialambe.h
+        core/serialmodem.cpp core/serialmodem.h
     )
 endif()
 
@@ -188,17 +245,17 @@ if(FALSE) #set TRUE to use external codec2
     )
 else()
     target_sources(DroidStar PUBLIC
-        codec2/codebooks.cpp
-        codec2/codec2.cpp
-        codec2/codec2_api.h
-        codec2/codec2_internal.h
-        codec2/defines.h
-        codec2/kiss_fft.cpp codec2/kiss_fft.h
-        codec2/lpc.cpp codec2/lpc.h
-        codec2/nlp.cpp codec2/nlp.h
-        codec2/pack.cpp
-        codec2/qbase.cpp codec2/qbase.h
-        codec2/quantise.cpp codec2/quantise.h
+        core/codec2/codebooks.cpp
+        core/codec2/codec2.cpp
+        core/codec2/codec2_api.h
+        core/codec2/codec2_internal.h
+        core/codec2/defines.h
+        core/codec2/kiss_fft.cpp core/codec2/kiss_fft.h
+        core/codec2/lpc.cpp core/codec2/lpc.h
+        core/codec2/nlp.cpp core/codec2/nlp.h
+        core/codec2/pack.cpp
+        core/codec2/qbase.cpp core/codec2/qbase.h
+        core/codec2/quantise.cpp core/codec2/quantise.h
     )
 endif()
 
