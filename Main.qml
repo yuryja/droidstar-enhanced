@@ -578,6 +578,8 @@ ApplicationWindow {
 					mainTab.txtimer.running = false;
 				}
 				mainTab.connectbutton.text = "Connect";
+				mainTab.connectbutton.isconnected = false;
+				mainTab.connectedTG = "";
 				mainTab.comboMode.enabled = true;
 				mainTab.comboHost.enabled = true;
 				mainTab.comboModule.enabled = true;
@@ -589,6 +591,12 @@ ApplicationWindow {
 				mainTab.data5.text = "";
 				mainTab.data6.text = "";
 				mainTab.netstatus.text = "Not connected";
+
+				if (mainTab.isQSYing) {
+					mainTab.isQSYing = false;
+					droidstar.set_dmrtgid(mainTab.dmrtgidEdit.text);
+					mainTab.connectbutton.clickConnect();
+				}
             }
 			if(c === 1){
 				mainTab.connectbutton.text = "Connecting";
@@ -601,6 +609,8 @@ ApplicationWindow {
             }
 			if(c === 2){
 				mainTab.connectbutton.text = "Disconnect";
+				mainTab.connectbutton.isconnected = true;
+				mainTab.connectedTG = mainTab.dmrtgidEdit.text;
 				mainTab.comboMode.enabled = false;
 				mainTab.comboHost.enabled = false;
 

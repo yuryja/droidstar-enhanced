@@ -40,26 +40,13 @@ Item {
 	property real volValue: 0.5
 	property real micValue: 0.1
 
+    property bool isQSYing: false
     property string connectedTG: ""
-
-    Timer {
-        id: qsyTimer
-        interval: 400
-        running: false
-        repeat: false
-        onTriggered: {
-            if (!mainTab.connectbutton.isconnected) {
-                droidstar.set_dmrtgid(_dmrtgidEdit.text);
-                mainTab.connectbutton.clickConnect();
-                mainTab.connectedTG = _dmrtgidEdit.text;
-            }
-        }
-    }
 
     function triggerQSY() {
         if (mainTab.connectbutton.isconnected) {
+            mainTab.isQSYing = true;
             mainTab.connectbutton.clickConnect();
-            qsyTimer.start();
         }
     }
 

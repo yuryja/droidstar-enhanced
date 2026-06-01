@@ -295,7 +295,11 @@ void DroidStar::process_connect()
             emit connect_status_changed(5);
         }
 		connect_status = Mode::DISCONNECTED;
-		m_modethread->quit();
+		if (m_modethread) {
+			m_modethread->quit();
+			m_modethread->wait();
+			QCoreApplication::processEvents();
+		}
 		m_data1.clear();
 		m_data2.clear();
 		m_data3.clear();
