@@ -45,6 +45,8 @@ Item {
 
     function triggerQSY() {
         if (mainTab.connectbutton.isconnected) {
+            _dmrtgidEdit.focus = false;
+            mainTab.forceActiveFocus();
             mainTab.isQSYing = true;
             mainTab.connectbutton.clickConnect();
         }
@@ -1298,6 +1300,8 @@ Item {
                         id: _connectbutton
                         property bool isconnected: false
                         function clickConnect() {
+                            _dmrtgidEdit.focus = false;
+                            mainTab.forceActiveFocus();
                             isconnected = !isconnected;
                             if (isconnected) {
                                 mainTab.connectedTG = _dmrtgidEdit.text;
