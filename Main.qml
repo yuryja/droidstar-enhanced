@@ -577,29 +577,35 @@ ApplicationWindow {
 					droidstar.tx_clicked(false);
 					mainTab.txtimer.running = false;
 				}
-				mainTab.connectbutton.text = "Connect";
-				mainTab.connectbutton.isconnected = false;
-				mainTab.connectedTG = "";
-				mainTab.comboMode.enabled = true;
-				mainTab.comboHost.enabled = true;
-				mainTab.comboModule.enabled = true;
-				mainTab.buttonTX.enabled = false;
-				mainTab.data1.text = "";
-				mainTab.data2.text = "";
-				mainTab.data3.text = "";
-				mainTab.data4.text = "";
-				mainTab.data5.text = "";
-				mainTab.data6.text = "";
-				mainTab.netstatus.text = "Not connected";
-
 				if (mainTab.isQSYing) {
+					mainTab.connectbutton.text = "QSY...";
+					mainTab.netstatus.text = "QSY to " + mainTab.dmrtgidEdit.text + "...";
 					mainTab.isQSYing = false;
 					droidstar.set_dmrtgid(mainTab.dmrtgidEdit.text);
 					mainTab.connectbutton.clickConnect();
+				} else {
+					mainTab.connectbutton.text = "Connect";
+					mainTab.connectbutton.isconnected = false;
+					mainTab.connectedTG = "";
+					mainTab.comboMode.enabled = true;
+					mainTab.comboHost.enabled = true;
+					mainTab.comboModule.enabled = true;
+					mainTab.buttonTX.enabled = false;
+					mainTab.data1.text = "";
+					mainTab.data2.text = "";
+					mainTab.data3.text = "";
+					mainTab.data4.text = "";
+					mainTab.data5.text = "";
+					mainTab.data6.text = "";
+					mainTab.netstatus.text = "Not connected";
 				}
             }
 			if(c === 1){
-				mainTab.connectbutton.text = "Connecting";
+				if (mainTab.connectbutton.text === "QSY...") {
+					// Keep showing QSY... for a transparent user experience
+				} else {
+					mainTab.connectbutton.text = "Connecting";
+				}
 				mainTab.comboMode.enabled = false;
 				mainTab.comboHost.enabled = false;
 				if(mainTab.comboMode.currentText != "REF"){
