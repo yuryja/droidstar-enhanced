@@ -230,7 +230,7 @@ ApplicationWindow {
 
     Timer {
         id: qsyDelayTimer
-        interval: 1500
+        interval: 5000
         repeat: false
         running: false
         onTriggered: {

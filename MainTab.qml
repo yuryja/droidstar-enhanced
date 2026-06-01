@@ -553,11 +553,12 @@ Item {
             Text {
                 id: qsySearchingText
                 anchors.centerIn: parent
-                text: "searching..."
+                text: "changing TG\nplease wait..."
                 color: "#111111"
                 font.family: llpixelFont.name
                 font.bold: true
-                font.pixelSize: 28
+                font.pixelSize: 24
+                horizontalAlignment: Text.AlignHCenter
                 visible: mainTab.isQSYing
             }
         }
