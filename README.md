@@ -1,21 +1,54 @@
-# DroidStar Enhanced for macOS M1
+# DroidStar Enhanced for macOS M1 & Multiplatform
 
-This repository is an enhanced, macOS Apple Silicon (M1/M2/M3) optimized version of the original DroidStar project. 
+This repository is an enhanced, optimized, and visually premium multiplatform edition of the original **DroidStar** project, specially tailored for macOS Apple Silicon (M1/M2/M3/M4) architectures and mobile devices.
 
-## Original Project Acknowledgement
-The original project and code can be found at:
-- [nostar/DroidStar](https://github.com/nostar/DroidStar)
-- Fork with DMR improvements: [rohithzmoi/Droidstar-DMR](https://github.com/rohithzmoi/Droidstar-DMR)
+## 🌟 Original Project & Credits
+This project is based on the incredible open-source work of:
+*   **Original Creator**: Doug McLain (nostar)
+*   **Original Repository**: [nostar/DroidStar on GitHub](https://github.com/nostar/DroidStar)
+*   **Upstream Contributions & DMR Fork**: [rohithzmoi/Droidstar-DMR](https://github.com/rohithzmoi/Droidstar-DMR)
 
-We deeply thank the original authors for their incredible work. This repository builds upon their foundation to provide a better native experience and performance specifically for macOS M1 architecture.
+We express our deepest gratitude to Doug McLain and all upstream contributors for their foundational ham radio software engineering. This enhanced repository builds upon their work to deliver a modern, bug-free, and high-performance user experience.
 
-## Project Rules
-- **Language**: This project operates strictly in English (code, comments, commits, pull requests).
-- **Performance**: We strictly optimize resource utilization (CPU, memory, battery life), specially targeting the M1 architecture.
-- **Security**: Security checks are mandatory before any commit. No secrets or vulnerabilities should be pushed.
+---
 
-## Setup & Compilation
-Please read the [plan.md](plan.md) file for comprehensive instructions on how to setup the environment and compile this project for Apple Silicon.
+## ✨ Enhanced Features in this Edition
+
+This fork introduces significant improvements, visual polish, and performance optimizations:
+
+### 1. Persistent Station Log Tab
+*   **Permanent Database**: Automatically records all uniquely heard stations inside a local `config_path/station_log.csv` database, persisting history across application restarts.
+*   **Interactive Grid History**: Added a dedicated, glassmorphic **Station Log** tab in the navigation menu drawer. Displays logged history columns (**DATE**, **TIME**, **CALLSIGN**, **NAME**, **COUNTRY**) sorted with the **newest entries first** using an asynchronous safe CSV parser.
+*   **CSV Exporter Utility**: Export logs dynamically to a standard, user-accessible CSV spreadsheet in your platform-independent `Documents/` folder with a single click.
+*   **History Wipe**: Includes a styled confirmation dialog to safely clear database records.
+
+### 2. Premium LCD Amber Screen & Typography
+*   **High-Legibility Font**: Bundled the retro `'ARCADE.TTF'` pixel font embedded directly in the application's QRC virtual resource system for absolute portability.
+*   **Upscaled Scaling**: Increased label font sizes from `15px` to `22px` and status lines to `12px`, dramatically resolving legibility issues on high-DPI displays.
+*   **Constant-Height Column Layout**: Replaced the dynamic Grid layout with a rigid, non-adaptive `Column` of `Row` elements. This prevents layout shifting and clumping when data fields are empty, keeping the amber bezel proportions perfectly unified in all states.
+*   **ITU Callsign Country Lookup**: Implemented a built-in international prefix parser resolving calls (e.g. `YY` -> Venezuela, `CX` -> Uruguay, `EA` -> Spain, etc.) to show actual countries instead of `"Unknown"`.
+*   **Harmonized Clean Table**: Cleaned up the Last Heard list by removing rectangular card borders and inserting a snug, solid underline divider below the UTC/Callsign/Name/Country headers.
+
+### 3. Settings Interface Polish
+*   **Full-Width Inputs**: Stretched all input text fields and comboboxes to match the right margin (`parent.width - 110`) for a unified layout.
+*   **Perfect Centering**: Anchored all label text vertical centers directly to their matching inputs, eliminating offsets.
+*   **Zero Text Clipping**: Added internal padding adjustments (`topPadding: 0`, `bottomPadding: 0`) and vertical alignments to ensure text inside `25px`-high text inputs displays fully without cutoffs.
+*   **Checkbox Labels Restored**: Increased checkbox heights to `30px` to fully restore the visibility of all descriptive text labels under the Material theme.
+
+### 4. Global Physical Volume Buttons as PTT
+*   Mapped physical `Volume Up` and `Volume Down` buttons to act as hardware Push-To-Talk (PTT) keys on mobile and compatible desktop environments.
+*   Supports both **PTT hold-to-transmit** and **PTT toggle-to-transmit** modes based on active settings.
+*   Includes auto-repeat event filtering to ensure smooth triggering and blocks standard OS volume hud popups during transmission.
+
+### 5. 100% Cross-Platform Standalone Portability
+*   **Statically Bundled Assets**: All textures (`bg_texture.bmp`) and fonts are loaded relative to the `/qt/qml/DroidStarApp/` compiled resource cache, allowing the app to build and run out-of-the-box on **Android, iOS, Windows, and macOS** without external local files.
+*   **Xcode OpenGL Linker Stub**: Bundled a mock Text-Based SDK Stub (`AGL.tbd`) under local Frameworks folder to bypass legacy Xcode transitive linkage errors in macOS SDKs.
+
+---
+
+## 🛠️ Project Rules
+*   **Language**: All codebase edits, comments, and documentation must remain strictly in **English**.
+*   **Performance**: Highly optimized resource utilization (specifically tuned for battery life and low-overhead on Apple Silicon and mobile hardware).
 
 ---
 
