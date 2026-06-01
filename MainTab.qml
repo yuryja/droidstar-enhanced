@@ -332,6 +332,7 @@ Item {
                 anchors.top: sMeterContainer.bottom
                 anchors.margins: 6
                 spacing: 1
+                visible: !mainTab.isQSYing
 
                 Row {
                     width: parent.width
@@ -389,6 +390,7 @@ Item {
                 anchors.leftMargin: 6
                 anchors.rightMargin: 6
                 spacing: 1
+                visible: !mainTab.isQSYing
                 Text { id: _ambestatus; text: "No AMBE hardware connected"; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 12 }
                 Text { id: _mmdvmstatus; text: "No MMDVM connected";        color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 12 }
                 Text { id: _netstatus;   text: "Not Connected to network";   color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 12 }
@@ -404,6 +406,7 @@ Item {
                 anchors.leftMargin: 6
                 anchors.rightMargin: 6
                 spacing: 2
+                visible: !mainTab.isQSYing
 
                 // Panel Header/Title - BORDERS REMOVED
                 Rectangle {
@@ -545,6 +548,17 @@ Item {
                         }
                     }
                 }
+            }
+
+            Text {
+                id: qsySearchingText
+                anchors.centerIn: parent
+                text: "searching..."
+                color: "#111111"
+                font.family: llpixelFont.name
+                font.bold: true
+                font.pixelSize: 28
+                visible: mainTab.isQSYing
             }
         }
     }

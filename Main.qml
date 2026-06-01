@@ -228,6 +228,17 @@ ApplicationWindow {
         id: droidstar
     }
 
+    Timer {
+        id: qsyDelayTimer
+        interval: 1500
+        repeat: false
+        running: false
+        onTriggered: {
+            droidstar.set_dmrtgid(mainTab.dmrtgidEdit.text);
+            mainTab.connectbutton.clickConnect();
+        }
+    }
+
     Connections {
         target: droidstar
 		Component.onCompleted: {
@@ -580,9 +591,7 @@ ApplicationWindow {
 				if (mainTab.isQSYing) {
 					mainTab.connectbutton.text = "QSY...";
 					mainTab.netstatus.text = "QSY to " + mainTab.dmrtgidEdit.text + "...";
-					mainTab.isQSYing = false;
-					droidstar.set_dmrtgid(mainTab.dmrtgidEdit.text);
-					mainTab.connectbutton.clickConnect();
+					qsyDelayTimer.start();
 				} else {
 					mainTab.connectbutton.text = "Connect";
 					mainTab.connectbutton.isconnected = false;
@@ -614,6 +623,7 @@ ApplicationWindow {
 				droidstar.set_debug(settingsTab.debugBox.checked);
             }
 			if(c === 2){
+				mainTab.isQSYing = false; // Reset QSY flag on successful connection!
 				mainTab.connectbutton.text = "Disconnect";
 				mainTab.connectbutton.isconnected = true;
 				mainTab.connectedTG = mainTab.dmrtgidEdit.text;
@@ -644,10 +654,12 @@ ApplicationWindow {
 			if(c === 3){
 			}
 			if(c === 4){
+				mainTab.isQSYing = false; // Reset QSY flag
 				idcheckDialog.open();
 				onConnect_status_changed(0);
 			}
 			if(c === 5){
+				mainTab.isQSYing = false; // Reset QSY flag
 				errorDialog.text = droidstar.get_error_text();
                 if(errorDialog.text == ""){
                     errorDialog.text = "Banned!"
