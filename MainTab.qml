@@ -1138,6 +1138,7 @@ Item {
 
                                 // QSY Button
                                 Item {
+                                    id: qsyContainer
                                     width: 50; height: 52
                                     visible: _dmrtgidEdit.visible
 
@@ -1149,7 +1150,7 @@ Item {
 
                                         Text {
                                             text: "QSY"
-                                            color: parent.canQSY ? "#00FF00" : "#888888"
+                                            color: qsyContainer.canQSY ? "#00FF00" : "#888888"
                                             font.bold: true
                                             font.pixelSize: 9
                                             anchors.horizontalCenter: parent.horizontalCenter
@@ -1160,14 +1161,14 @@ Item {
                                             width: 44
                                             height: 38
                                             radius: 6
-                                            color: parent.parent.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
-                                            border.color: parent.parent.canQSY ? "#00FF00" : "#444444"
+                                            color: qsyContainer.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
+                                            border.color: qsyContainer.canQSY ? "#00FF00" : "#444444"
                                             border.width: 1.5
                                             anchors.horizontalCenter: parent.horizontalCenter
 
                                             Text {
                                                 text: "QSY"
-                                                color: parent.parent.canQSY ? "white" : "#666666"
+                                                color: qsyContainer.canQSY ? "white" : "#666666"
                                                 font.bold: true
                                                 font.pixelSize: 11
                                                 anchors.centerIn: parent
@@ -1177,7 +1178,7 @@ Item {
                                                 id: qsyMouse
                                                 anchors.fill: parent
                                                 hoverEnabled: true
-                                                enabled: parent.parent.canQSY
+                                                enabled: qsyContainer.canQSY
                                                 onClicked: {
                                                     mainTab.triggerQSY();
                                                 }
