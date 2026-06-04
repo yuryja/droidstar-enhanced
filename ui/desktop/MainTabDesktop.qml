@@ -532,15 +532,15 @@ Item {
 
         Row {
             anchors.centerIn: parent
-            spacing: 30
+            spacing: 20
 
             // PTT key
             Column {
-                spacing: 4
+                spacing: 12
                 Text { text: "PTT"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 Rectangle {
                     id: _buttonTX
-                    width: 120; height: 60; radius: 14
+                    width: 100; height: 50; radius: 14
                     color: tx ? "#FF3333" : "#2A2A2A"
                     border.color: tx ? "#FF8888" : "#555555"; border.width: 3
                     property bool tx: false; property int cnt: 0
@@ -583,120 +583,124 @@ Item {
                 }
             }
 
-            // VOL CONTROL (Dial)
+            // VOL CONTROL (Horizontal Slider)
             Column {
-                spacing: 4
+                spacing: 8
                 Text { text: "VOL"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 
-                Item {
-                    width: 54; height: 54
-                    
+                Row {
+                    spacing: 6
+                    anchors.horizontalCenter: parent.horizontalCenter
                     Repeater {
                         model: 11
-                        Item {
-                            anchors.centerIn: parent
-                            width: parent.width; height: parent.height
-                            rotation: -140 + 28 * index
-                            
-                            Rectangle {
-                                width: 2; height: 5; radius: 1
-                                color: index <= Math.round(volValue * 10) ? "#FFFFFF" : "#444444"
-                                anchors.top: parent.top
-                                anchors.horizontalCenter: parent.horizontalCenter
-                            }
+                        Rectangle {
+                            width: 3; height: 6; radius: 1.5
+                            color: index <= Math.round(volValue * 10) ? "#FFFFFF" : "#444444"
                         }
                     }
+                }
+                
+                Slider {
+                    id: volDial
+                    width: 120; height: 38
+                    from: 0.0; to: 1.0; value: volValue
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    onValueChanged: {
+                        volValue = value;
+                        droidstar.set_output_volume(volValue);
+                    }
                     
-                    Dial {
-                        id: volDial
-                        anchors.centerIn: parent
+                    background: Rectangle {
+                        x: volDial.leftPadding
+                        y: volDial.topPadding + volDial.availableHeight / 2 - height / 2
+                        width: volDial.availableWidth
+                        height: 6
+                        color: "#181818"
+                        radius: 3
+                        border.color: "#555555"
+                        border.width: 1
+                        Rectangle {
+                            width: volDial.visualPosition * parent.width
+                            height: parent.height
+                            color: "#555555"
+                            radius: 3
+                        }
+                    }
+                    handle: Rectangle {
+                        x: volDial.leftPadding + volDial.visualPosition * (volDial.availableWidth - width)
+                        y: volDial.topPadding + volDial.availableHeight / 2 - height / 2
                         width: 38; height: 38
-                        from: 0.0; to: 1.0; value: volValue
-                        onValueChanged: {
-                            volValue = value;
-                            droidstar.set_output_volume(volValue);
-                        }
-                        
-                        background: Rectangle {
-                            x: volDial.width / 2 - width / 2
-                            y: volDial.height / 2 - height / 2
-                            width: volDial.width; height: volDial.height
-                            color: "#181818"
-                            radius: width / 2
-                            border.color: "#555555"
-                            border.width: 1.5
-                        }
-                        handle: Rectangle {
-                            id: handleItemVol
-                            x: volDial.background.x + volDial.background.width / 2 - width / 2
-                            y: volDial.background.y + volDial.background.height / 2 - height / 2
+                        color: "#181818"
+                        radius: 19
+                        border.color: "#555555"
+                        border.width: 1.5
+                        Rectangle {
                             width: 8; height: 8
                             color: "#AAAAAA"
                             radius: 4
-                            transform: [
-                                Translate { y: -volDial.background.height * 0.35 + handleItemVol.height / 2 },
-                                Rotation { angle: volDial.angle; origin.x: handleItemVol.width / 2; origin.y: handleItemVol.height / 2 }
-                            ]
+                            anchors.centerIn: parent
                         }
                     }
                 }
             }
 
-            // MIC CONTROL (Dial)
+            // MIC CONTROL (Horizontal Slider)
             Column {
-                spacing: 4
+                spacing: 8
                 Text { text: "MIC"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 
-                Item {
-                    width: 54; height: 54
-                    
+                Row {
+                    spacing: 6
+                    anchors.horizontalCenter: parent.horizontalCenter
                     Repeater {
                         model: 11
-                        Item {
-                            anchors.centerIn: parent
-                            width: parent.width; height: parent.height
-                            rotation: -140 + 28 * index
-                            
-                            Rectangle {
-                                width: 2; height: 5; radius: 1
-                                color: index <= Math.round(micValue * 10) ? "#FFFFFF" : "#444444"
-                                anchors.top: parent.top
-                                anchors.horizontalCenter: parent.horizontalCenter
-                            }
+                        Rectangle {
+                            width: 3; height: 6; radius: 1.5
+                            color: index <= Math.round(micValue * 10) ? "#FFFFFF" : "#444444"
                         }
                     }
+                }
+                
+                Slider {
+                    id: micDial
+                    width: 120; height: 38
+                    from: 0.0; to: 1.0; value: micValue
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    onValueChanged: {
+                        micValue = value;
+                        _slidermicGain.value = micValue;
+                        droidstar.set_input_volume(micValue);
+                    }
                     
-                    Dial {
-                        id: micDial
-                        anchors.centerIn: parent
+                    background: Rectangle {
+                        x: micDial.leftPadding
+                        y: micDial.topPadding + micDial.availableHeight / 2 - height / 2
+                        width: micDial.availableWidth
+                        height: 6
+                        color: "#181818"
+                        radius: 3
+                        border.color: "#555555"
+                        border.width: 1
+                        Rectangle {
+                            width: micDial.visualPosition * parent.width
+                            height: parent.height
+                            color: "#555555"
+                            radius: 3
+                        }
+                    }
+                    handle: Rectangle {
+                        x: micDial.leftPadding + micDial.visualPosition * (micDial.availableWidth - width)
+                        y: micDial.topPadding + micDial.availableHeight / 2 - height / 2
                         width: 38; height: 38
-                        from: 0.0; to: 1.0; value: micValue
-                        onValueChanged: {
-                            micValue = value;
-                            _slidermicGain.value = micValue;
-                            droidstar.set_input_volume(micValue);
-                        }
-                        
-                        background: Rectangle {
-                            x: micDial.width / 2 - width / 2
-                            y: micDial.height / 2 - height / 2
-                            width: micDial.width; height: micDial.height
-                            color: "#181818"
-                            radius: width / 2
-                            border.color: "#555555"
-                            border.width: 1.5
-                        }
-                        handle: Rectangle {
-                            id: handleItemMic
-                            x: micDial.background.x + micDial.background.width / 2 - width / 2
-                            y: micDial.background.y + micDial.background.height / 2 - height / 2
+                        color: "#181818"
+                        radius: 19
+                        border.color: "#555555"
+                        border.width: 1.5
+                        Rectangle {
                             width: 8; height: 8
                             color: "#AAAAAA"
                             radius: 4
-                            transform: [
-                                Translate { y: -micDial.background.height * 0.35 + handleItemMic.height / 2 },
-                                Rotation { angle: micDial.angle; origin.x: handleItemMic.width / 2; origin.y: handleItemMic.height / 2 }
-                            ]
+                            anchors.centerIn: parent
                         }
                     }
                 }
