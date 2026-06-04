@@ -160,6 +160,12 @@ else()
         URI DroidStarApp
         VERSION 1.0
         QML_FILES ui/desktop/MainDesktop.qml
+        QML_FILES ui/desktop/MainTabDesktop.qml
+        QML_FILES ui/mobile/SettingsTab.qml
+        QML_FILES ui/mobile/LogTab.qml
+        QML_FILES ui/mobile/HostsTab.qml
+        QML_FILES ui/mobile/StationLogTab.qml
+        QML_FILES ui/mobile/AboutTab.qml
         RESOURCES
             ui/shared/bg_texture.bmp
             ui/shared/fonts/arcade_pizzadude/ARCADE.TTF
@@ -186,6 +192,7 @@ target_link_libraries(DroidStar PRIVATE
     Qt::Quick
     Qt::QuickControls2
 )
+target_include_directories(DroidStar PRIVATE core)
 
 if(UNIX AND NOT IOS)
     target_link_libraries(DroidStar PRIVATE

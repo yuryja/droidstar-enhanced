@@ -43,7 +43,7 @@ ApplicationWindow {
         color: "#161B22"
         Image {
             anchors.fill: parent
-            source: "bg_texture.bmp"
+            source: "../shared/bg_texture.bmp"
             fillMode: Image.Tile
             opacity: 0.8
         }

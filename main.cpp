@@ -27,10 +27,11 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
+
 #if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    engine.loadFromModule("DroidStarApp", "ui/mobile/Main");
+    engine.loadFromModule("DroidStarApp", "Main");
 #else
-    engine.loadFromModule("DroidStarApp", "ui/desktop/MainDesktop");
+    engine.loadFromModule("DroidStarApp", "MainDesktop");
 #endif
     return app.exec();
 

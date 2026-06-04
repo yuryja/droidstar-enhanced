@@ -436,6 +436,7 @@ void DroidStar::process_connect()
 		connect(this, SIGNAL(tx_pressed()), m_mode, SLOT(start_tx()));
 		connect(this, SIGNAL(tx_released()), m_mode, SLOT(stop_tx()));
 		connect(this, SIGNAL(in_audio_vol_changed(qreal)), m_mode, SLOT(in_audio_vol_changed(qreal)));
+		connect(this, SIGNAL(out_audio_vol_changed(qreal)), m_mode, SLOT(out_audio_vol_changed(qreal)));
 		connect(this, SIGNAL(mycall_changed(QString)), m_mode, SLOT(mycall_changed(QString)));
 		connect(this, SIGNAL(urcall_changed(QString)), m_mode, SLOT(urcall_changed(QString)));
 		connect(this, SIGNAL(rptr1_changed(QString)), m_mode, SLOT(rptr1_changed(QString)));
@@ -1519,6 +1520,11 @@ void DroidStar::set_input_volume(qreal v)
 {
 	emit in_audio_vol_changed(v);
 	//audioin->setVolume(v * 0.01);
+}
+
+void DroidStar::set_output_volume(qreal v)
+{
+	emit out_audio_vol_changed(v);
 }
 
 void DroidStar::press_tx()

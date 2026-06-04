@@ -41,6 +41,7 @@ signals:
 	void update_settings();
 	void connect_status_changed(int c);
 	void in_audio_vol_changed(qreal);
+	void out_audio_vol_changed(qreal);
 	void tx_pressed();
 	void tx_released();
     void tx_clicked(bool);
@@ -97,6 +98,7 @@ public slots:
 	void set_module(const QString &module) { m_module = module.toStdString()[0]; save_settings(); emit module_changed(m_module);}
 	void set_protocol(const QString &protocol) { m_protocol = protocol; save_settings(); }
 	void set_input_volume(qreal v);
+	void set_output_volume(qreal v);
 	void set_modelchange(bool t){ m_modelchange = t; }
 	void set_mycall(const QString &mycall) { m_mycall = mycall; save_settings(); emit mycall_changed(mycall); }
     void set_urcall(const QString &urcall) { m_urcall = urcall; save_settings(); emit urcall_changed(urcall); }

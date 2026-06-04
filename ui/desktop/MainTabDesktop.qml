@@ -272,12 +272,12 @@ Item {
         }
     }
 
-    // --- TOP AMBER SCREEN ---
+            // --- LEFT AMBER SCREEN ---
     Rectangle {
         id: screenBezel
         x: 5; y: 5
-        width: parent.width - 10
-        height: parent.height * 0.45
+        width: (parent.width * 0.60) - 10
+        height: 140
         color: "#222222"
         radius: 10
         border.color: "#555555"
@@ -287,292 +287,429 @@ Item {
             id: glassCard
             anchors.fill: parent
             anchors.margins: 4
-            color: "#FFB000"
-            radius: 8
-            border.color: "#8C6200"
-            border.width: 2
+            color: "#FFA100"
+            radius: 4
+            border.color: "transparent"
 
-            // Horizontal S-Meter
+            // Hidden level meter for C++ bindings to calculate properly
             Item {
-                id: sMeterContainer
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.margins: 6
-                height: 10
-
-                Rectangle { anchors.fill: parent; color: "transparent"; border.color: "#8C6200"; border.width: 1 }
-
+                id: hiddenSMeter
+                anchors.fill: parent
+                visible: false
                 Rectangle {
                     id: _levelMeter
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.left: parent.left
-                    anchors.topMargin: 1; anchors.bottomMargin: 1; anchors.leftMargin: 1
                     width: 0
-                    color: "#1A1A1A"
-                    Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
                 }
-                Row {
-                    anchors.fill: parent
-                    Repeater {
-                        model: 22
-                        Item {
-                            width: parent.width / 22
-                            height: parent.height
-                            Rectangle { anchors.left: parent.left; width: 1; height: parent.height; color: "#FFB000" }
+            }
+
+            // Hidden labels/data to satisfy C++ property aliases
+            Item {
+                visible: false
+                Text { id: _label1 }
+                Text { id: _label2 }
+                Text { id: _data2 }
+                Text { id: _label5 }
+                Text { id: _label6 }
+                Text { id: _data6 }
+                Text { id: _label7 }
+            }
+
+            // Top Left: Callsign/Name
+            Text {
+                id: _data1
+                x: 10
+                y: 10
+                text: "" 
+                color: "#6B3E00"
+                font.family: llpixelFont.name
+                font.pixelSize: 34
+                font.bold: true
+                onTextChanged: {
+                    if (text && text.trim() !== "") {
+                        var callsign = text.trim().split(/\s+/)[0].toUpperCase();
+                        var c = getCountryFromCallsign(callsign);
+                        if (c === "Unknown" && _data6.text !== "") {
+                            c = _data6.text;
                         }
+                        _data7.text = (c !== "Unknown") ? c : "";
+                    } else {
+                        _data7.text = "";
                     }
                 }
             }
 
-            // Labels and Data Column Layout (Constant Height)
-            Column {
-                id: labelsColumn
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: sMeterContainer.bottom
-                anchors.margins: 6
-                spacing: 1
-                visible: !mainTab.isQSYing
-
-                Row {
-                    width: parent.width
-                    height: 22
-                    Text { id: _label1; width: 120; height: parent.height; text: "MYCALL"; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data1;  height: parent.height; text: "";       color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
-                Row {
-                    width: parent.width
-                    height: 22
-                    Text { id: _label2; width: 120; height: parent.height; text: "URCALL"; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data2;  height: parent.height; text: "";       color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
-                Row {
-                    width: parent.width
-                    height: 22
-                    Text { id: _label3; width: 120; height: parent.height; text: "RPTR1";  color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data3;  height: parent.height; text: "";       color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
-                Row {
-                    width: parent.width
-                    height: 22
-                    Text { id: _label4; width: 120; height: parent.height; text: "RPTR2";  color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data4;  height: parent.height; text: "";       color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
-                Row {
-                    width: parent.width
-                    height: 22
-                    Text { id: _label5; width: 120; height: parent.height; text: "StrmID"; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data5;  height: parent.height; text: "";       color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
-                Row {
-                    width: parent.width
-                    height: 22
-                    visible: _label6.text !== ""
-                    Text { id: _label6; width: 120; height: parent.height; text: "Text";   color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data6;  height: parent.height; text: "";       color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
-                Row {
-                    width: parent.width
-                    height: 22
-                    visible: _label7.text !== ""
-                    Text { id: _label7; width: 120; height: parent.height; text: ""; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                    Text { id: _data7;  height: parent.height; text: ""; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 22 }
-                }
+            // Country Variable
+            Text {
+                id: _data7
+                anchors.top: _data1.bottom
+                anchors.topMargin: -4
+                anchors.left: _data1.left
+                color: "#6B3E00"
+                font.family: llpixelFont.name
+                font.pixelSize: 16
+                font.bold: true
             }
 
-            // Status lines (bottom of screen)
+            // Top Right: Custom S-Meter
             Column {
-                id: statusContainer
-                anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.top: labelsColumn.bottom
-                anchors.topMargin: 4
-                anchors.leftMargin: 6
-                anchors.rightMargin: 6
-                spacing: 1
-                visible: !mainTab.isQSYing
-                Text { id: _ambestatus; text: "No AMBE hardware connected"; color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 12 }
-                Text { id: _mmdvmstatus; text: "No MMDVM connected";        color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 12 }
-                Text { id: _netstatus;   text: "Not Connected to network";   color: "#111111"; font.family: llpixelFont.name; font.bold: true; font.pixelSize: 12 }
-            }
-
-            // Integrated Last Heard inside screen
-            Column {
-                id: lastHeardPanel
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: statusContainer.bottom
-                anchors.topMargin: 4
-                anchors.leftMargin: 6
-                anchors.rightMargin: 6
+                anchors.rightMargin: 10
+                anchors.bottom: _data1.bottom
+                anchors.bottomMargin: 2
                 spacing: 2
-                visible: !mainTab.isQSYing
-
-                // Panel Header/Title - BORDERS REMOVED
-                Rectangle {
-                    width: parent.width
-                    height: 14
-                    color: "transparent"
-                    border.color: "transparent"
-                    border.width: 0
-
-                    Text {
-                        text: "LAST HEARD (TG ACTIVE)"
-                        color: "#111111"
-                        font.family: llpixelFont.name
-                        font.pixelSize: 13
-                        font.bold: true
-                        anchors.centerIn: parent
-                    }
-                }
-
-                // Table Header Row with Solid Bottom Divider Line
-                Column {
-                    width: parent.width
-                    spacing: 0
+                
+                Row {
+                    spacing: 4
+                    property real levelRatio: _levelMeter.width / Math.max(1, hiddenSMeter.width)
                     
-                    Row {
-                        width: parent.width
-                        height: 13
-
-                        Text {
-                            width: parent.width * 0.20
-                            text: "UTC"
-                            color: "#111111"
-                            font.family: llpixelFont.name
-                            font.pixelSize: 12
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-                        Text {
-                            width: parent.width * 0.25
-                            text: "CALLSIGN"
-                            color: "#111111"
-                            font.family: llpixelFont.name
-                            font.pixelSize: 12
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-                        Text {
-                            width: parent.width * 0.28
-                            text: "NAME"
-                            color: "#111111"
-                            font.family: llpixelFont.name
-                            font.pixelSize: 12
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-                        Text {
-                            width: parent.width * 0.27
-                            text: "COUNTRY"
-                            color: "#111111"
-                            font.family: llpixelFont.name
-                            font.pixelSize: 12
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-                    }
-                    
-                    Rectangle {
-                        width: parent.width
-                        height: 1
-                        color: "#111111"
-                    }
-                }
-
-                // Table Rows Column
-                Column {
-                    width: parent.width
-                    spacing: 2
-
                     Repeater {
-                        model: 5
-
-                        delegate: Rectangle {
-                            width: parent.width
-                            height: 20
-                            color: "transparent"
-                            border.color: "transparent"
-                            border.width: 0
-
-                            Row {
-                                anchors.fill: parent
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                // UTC
-                                Text {
-                                    width: parent.width * 0.20
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).utc : ""
-                                    color: "#111111"
-                                    font.family: llpixelFont.name
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                // Callsign
-                                Text {
-                                    width: parent.width * 0.25
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).callsign : ""
-                                    color: "#111111"
-                                    font.family: llpixelFont.name
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    elide: Text.ElideRight
-                                }
-                                // Name
-                                Text {
-                                    width: parent.width * 0.28
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).name : ""
-                                    color: "#111111"
-                                    font.family: llpixelFont.name
-                                    font.pixelSize: 12
-                                    horizontalAlignment: Text.AlignHCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    elide: Text.ElideRight
-                                }
-                                // Country
-                                Text {
-                                    width: parent.width * 0.27
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).country : ""
-                                    color: "#111111"
-                                    font.family: llpixelFont.name
-                                    font.pixelSize: 12
-                                    horizontalAlignment: Text.AlignHCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    elide: Text.ElideRight
+                        model: 10
+                        Item {
+                            width: 14
+                            height: 28
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                width: 14
+                                height: 10 + (index * 2)
+                                color: (parent.parent.levelRatio > (index / 10.0)) ? "#6B3E00" : "#D97B00"
+                                radius: 2
+                                
+                                // Dot inside the bar for 1, 5, 9
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 4
+                                    height: 4
+                                    radius: 2
+                                    color: "#FFA100"
+                                    visible: index === 0 || index === 4 || index === 8
                                 }
                             }
                         }
                     }
                 }
+                Row {
+                    width: parent.width
+                    Text { text: "1"; color: "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "5"; color: "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "9"; color: "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter }
+                }
+            }
+
+            // Bottom Left: DestID and GatewayID Boxes
+            Row {
+                x: 10
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
+                spacing: 15
+
+                // DestID Box
+                Item {
+                    width: 110
+                    height: 54
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.topMargin: 8
+                        color: "transparent"
+                        border.color: "#000000"
+                        border.width: 2
+                        radius: 8
+                    }
+                    Rectangle {
+                        x: 10; y: 0
+                        width: lblDest.width + 8
+                        height: lblDest.height
+                        color: "#FFA100"
+                    }
+                    Text {
+                        id: lblDest
+                        x: 14; y: 0
+                        text: "DestID"
+                        color: "#000000"
+                        font.family: llpixelFont.name
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
+                    Text {
+                        id: _label3
+                        visible: false
+                    }
+                    Text {
+                        id: _data3
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 4
+                        text: ""
+                        color: "#6B3E00"
+                        font.family: llpixelFont.name
+                        font.pixelSize: 26
+                        font.bold: true
+                    }
+                }
+
+                // GatewayID Box
+                Item {
+                    width: 160
+                    height: 54
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.topMargin: 8
+                        color: "transparent"
+                        border.color: "#000000"
+                        border.width: 2
+                        radius: 8
+                    }
+                    Rectangle {
+                        x: 10; y: 0
+                        width: lblGateway.width + 8
+                        height: lblGateway.height + 1
+                        color: "#FFA100"
+                    }
+                    Text {
+                        id: lblGateway
+                        x: 14; y: 0
+                        text: "GatewayID"
+                        color: "#000000"
+                        font.family: llpixelFont.name
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
+                    Text {
+                        id: _label4
+                        visible: false
+                    }
+                    Text {
+                        id: _data4
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 4
+                        text: ""
+                        color: "#6B3E00"
+                        font.family: llpixelFont.name
+                        font.pixelSize: 26
+                        font.bold: true
+                    }
+                }
+            }
+
+            // Bottom Right: Statuses
+            Column {
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
+                spacing: 2
+                
+                Text { id: _ambestatus; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _mmdvmstatus; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _netstatus; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _data5; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
             }
 
             Text {
                 id: qsySearchingText
                 anchors.centerIn: parent
-                text: "changing TG\nplease wait..."
-                color: "#111111"
+                text: "changing TG, please wait..."
+                color: "#6B3E00"
                 font.family: llpixelFont.name
                 font.bold: true
                 font.pixelSize: 24
                 horizontalAlignment: Text.AlignHCenter
                 visible: mainTab.isQSYing
             }
+
         }
     }
 
-    // --- BOTTOM CONTROLS ---
+    // --- AUDIO CONTROLS (Under Amber Screen) ---
+    Rectangle {
+        id: audioControlsCard
+        x: 5
+        y: 150
+        width: (parent.width * 0.60) - 10
+        height: 100
+        color: "transparent"
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 30
+
+            // PTT key
+            Column {
+                spacing: 4
+                Text { text: "PTT"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                Rectangle {
+                    id: _buttonTX
+                    width: 120; height: 60; radius: 14
+                    color: tx ? "#FF3333" : "#2A2A2A"
+                    border.color: tx ? "#FF8888" : "#555555"; border.width: 3
+                    property bool tx: false; property int cnt: 0
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    
+                    Row {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: -8
+                        spacing: 6
+                        opacity: 0.4
+                        Repeater {
+                            model: 3
+                            Rectangle {
+                                width: 5; height: 16; radius: 2.5
+                                color: _buttonTX.tx ? "white" : "black"
+                            }
+                        }
+                    }
+                    
+                    Text {
+                        text: _buttonTX.tx ? "TX " + _buttonTX.cnt : "TX"
+                        color: "white"; font.bold: true; font.pixelSize: 12
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom; anchors.bottomMargin: 8
+                    }
+                    
+                    Timer {
+                        id: _txtimer; repeat: true
+                        onTriggered: {
+                            ++_buttonTX.cnt;
+                            if(_buttonTX.cnt >= parseInt(settingsTab.txtimerEdit.text)){ _buttonTX.tx = false; droidstar.click_tx(_buttonTX.tx); _txtimer.running = false; }
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: { if(settingsTab.toggleTX.checked){ _buttonTX.tx = !_buttonTX.tx; droidstar.click_tx(_buttonTX.tx); if(_buttonTX.tx){ _buttonTX.cnt = 0; _txtimer.running = true; } else { _txtimer.running = false; } } }
+                        onPressed:  { if(!settingsTab.toggleTX.checked){ _buttonTX.tx = true;  droidstar.press_tx(); } }
+                        onReleased: { if(!settingsTab.toggleTX.checked){ _buttonTX.tx = false; droidstar.release_tx(); } }
+                    }
+                }
+            }
+
+            // VOL CONTROL (Dial)
+            Column {
+                spacing: 4
+                Text { text: "VOL"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                
+                Item {
+                    width: 54; height: 54
+                    
+                    Repeater {
+                        model: 11
+                        Item {
+                            anchors.centerIn: parent
+                            width: parent.width; height: parent.height
+                            rotation: -140 + 28 * index
+                            
+                            Rectangle {
+                                width: 2; height: 5; radius: 1
+                                color: index <= Math.round(volValue * 10) ? "#FFFFFF" : "#444444"
+                                anchors.top: parent.top
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
+                    }
+                    
+                    Dial {
+                        id: volDial
+                        anchors.centerIn: parent
+                        width: 38; height: 38
+                        from: 0.0; to: 1.0; value: volValue
+                        onValueChanged: {
+                            volValue = value;
+                            droidstar.set_output_volume(volValue);
+                        }
+                        
+                        background: Rectangle {
+                            x: volDial.width / 2 - width / 2
+                            y: volDial.height / 2 - height / 2
+                            width: volDial.width; height: volDial.height
+                            color: "#181818"
+                            radius: width / 2
+                            border.color: "#555555"
+                            border.width: 1.5
+                        }
+                        handle: Rectangle {
+                            id: handleItemVol
+                            x: volDial.background.x + volDial.background.width / 2 - width / 2
+                            y: volDial.background.y + volDial.background.height / 2 - height / 2
+                            width: 8; height: 8
+                            color: "#AAAAAA"
+                            radius: 4
+                            transform: [
+                                Translate { y: -volDial.background.height * 0.35 + handleItemVol.height / 2 },
+                                Rotation { angle: volDial.angle; origin.x: handleItemVol.width / 2; origin.y: handleItemVol.height / 2 }
+                            ]
+                        }
+                    }
+                }
+            }
+
+            // MIC CONTROL (Dial)
+            Column {
+                spacing: 4
+                Text { text: "MIC"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                
+                Item {
+                    width: 54; height: 54
+                    
+                    Repeater {
+                        model: 11
+                        Item {
+                            anchors.centerIn: parent
+                            width: parent.width; height: parent.height
+                            rotation: -140 + 28 * index
+                            
+                            Rectangle {
+                                width: 2; height: 5; radius: 1
+                                color: index <= Math.round(micValue * 10) ? "#FFFFFF" : "#444444"
+                                anchors.top: parent.top
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
+                    }
+                    
+                    Dial {
+                        id: micDial
+                        anchors.centerIn: parent
+                        width: 38; height: 38
+                        from: 0.0; to: 1.0; value: micValue
+                        onValueChanged: {
+                            micValue = value;
+                            _slidermicGain.value = micValue;
+                            droidstar.set_input_volume(micValue);
+                        }
+                        
+                        background: Rectangle {
+                            x: micDial.width / 2 - width / 2
+                            y: micDial.height / 2 - height / 2
+                            width: micDial.width; height: micDial.height
+                            color: "#181818"
+                            radius: width / 2
+                            border.color: "#555555"
+                            border.width: 1.5
+                        }
+                        handle: Rectangle {
+                            id: handleItemMic
+                            x: micDial.background.x + micDial.background.width / 2 - width / 2
+                            y: micDial.background.y + micDial.background.height / 2 - height / 2
+                            width: 8; height: 8
+                            color: "#AAAAAA"
+                            radius: 4
+                            transform: [
+                                Translate { y: -micDial.background.height * 0.35 + handleItemMic.height / 2 },
+                                Rotation { angle: micDial.angle; origin.x: handleItemMic.width / 2; origin.y: handleItemMic.height / 2 }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- RIGHT CONTROLS ---
     Rectangle {
         id: controlsCard
-        x: 0
-        y: screenBezel.y + screenBezel.height + 8
-        width: parent.width
-        height: parent.height - y
+        x: parent.width * 0.60
+        y: 5
+        width: parent.width * 0.40
+        height: parent.height - 10
         color: "transparent"
 
         ScrollView {
@@ -580,11 +717,6 @@ Item {
             contentWidth: parent.width
             contentHeight: controlCol.height + 20
             clip: true
-            ScrollBar.vertical: ScrollBar {
-                active: true
-                visible: true
-                policy: ScrollBar.AlwaysOn
-            }
 
             Column {
                 id: controlCol
@@ -592,248 +724,22 @@ Item {
                 x: 5
                 spacing: 10
 
-                // === PTT + DIALS (Always visible on top) ===
-                Row {
-                    id: pttDialsRow
-                    spacing: 16
-                    anchors.horizontalCenter: parent.horizontalCenter
+                // Dials and PTT moved to Left Column
 
-                    // PTT key (horizontal rounded rectangle, Walkie-Talkie style)
-                    Column {
-                        spacing: 4
-                        Text { text: "PTT"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
-                        Rectangle {
-                            id: _buttonTX
-                            width: 100; height: 56; radius: 14
-                            color: tx ? "#FF3333" : "#2A2A2A"
-                            border.color: tx ? "#FF8888" : "#555555"; border.width: 3
-                            property bool tx: false; property int cnt: 0
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                            
-                            // Walkie-Talkie rubber style: 3 vertical ridges
-                            Row {
-                                anchors.centerIn: parent
-                                anchors.verticalCenterOffset: -8
-                                spacing: 6
-                                opacity: 0.4
-                                Repeater {
-                                    model: 3
-                                    Rectangle {
-                                        width: 5; height: 16; radius: 2.5
-                                        color: _buttonTX.tx ? "white" : "black"
-                                    }
-                                }
-                            }
-                            
-                            Text {
-                                text: _buttonTX.tx ? "TX " + _buttonTX.cnt : "TX"
-                                color: "white"; font.bold: true; font.pixelSize: 12
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.bottom: parent.bottom; anchors.bottomMargin: 8
-                            }
-                            
-                            Timer {
-                                id: _txtimer; repeat: true
-                                onTriggered: {
-                                    ++_buttonTX.cnt;
-                                    if(_buttonTX.cnt >= parseInt(settingsTab.txtimerEdit.text)){ _buttonTX.tx = false; droidstar.click_tx(_buttonTX.tx); _txtimer.running = false; }
-                                }
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: { if(settingsTab.toggleTX.checked){ _buttonTX.tx = !_buttonTX.tx; droidstar.click_tx(_buttonTX.tx); if(_buttonTX.tx){ _buttonTX.cnt = 0; _txtimer.running = true; } else { _txtimer.running = false; } } }
-                                onPressed:  { if(!settingsTab.toggleTX.checked){ _buttonTX.tx = true;  droidstar.press_tx(); } }
-                                onReleased: { if(!settingsTab.toggleTX.checked){ _buttonTX.tx = false; droidstar.release_tx(); } }
-                            }
-                        }
-                    }
-
-                    // --- VOL CONTROL ---
-                    Column {
-                        spacing: 4
-                        Text {
-                            text: "VOL"; color: "white"
-                            font.bold: true; font.pixelSize: 10
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        
-                        // Value display
-                        Rectangle {
-                            width: 68; height: 20; radius: 6
-                            color: "#111111"; border.color: "#444444"; border.width: 1
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            Text {
-                                text: Math.round(volValue * 100) + "%"
-                                color: "#00FF00"; font.pixelSize: 11; font.bold: true
-                                anchors.centerIn: parent
-                            }
-                        }
-                        
-                        // Up/Down Buttons
-                        Row {
-                            spacing: 6
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            
-                            // DOWN
-                            Rectangle {
-                                width: 30; height: 30; radius: 8
-                                color: downVolMouse.pressed ? "#444444" : "#222222"
-                                border.color: "#555555"; border.width: 1
-                                Text { text: "▼"; color: "white"; font.pixelSize: 12; anchors.centerIn: parent }
-                                MouseArea {
-                                    id: downVolMouse
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        volValue = Math.max(0.0, volValue - 0.05);
-                                    }
-                                }
-                            }
-                            
-                            // UP
-                            Rectangle {
-                                width: 30; height: 30; radius: 8
-                                color: upVolMouse.pressed ? "#444444" : "#222222"
-                                border.color: "#555555"; border.width: 1
-                                Text { text: "▲"; color: "white"; font.pixelSize: 12; anchors.centerIn: parent }
-                                MouseArea {
-                                    id: upVolMouse
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        volValue = Math.min(1.0, volValue + 0.05);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // --- MIC CONTROL ---
-                    Column {
-                        spacing: 4
-                        Text {
-                            text: "MIC"; color: "white"
-                            font.bold: true; font.pixelSize: 10
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        
-                        // Value display
-                        Rectangle {
-                            width: 68; height: 20; radius: 6
-                            color: "#111111"; border.color: "#444444"; border.width: 1
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            Text {
-                                text: Math.round(micValue * 100) + "%"
-                                color: "#00FF00"; font.pixelSize: 11; font.bold: true
-                                anchors.centerIn: parent
-                            }
-                        }
-                        
-                        // Up/Down Buttons
-                        Row {
-                            spacing: 6
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            
-                            // DOWN
-                            Rectangle {
-                                width: 30; height: 30; radius: 8
-                                color: downMicMouse.pressed ? "#444444" : "#222222"
-                                border.color: "#555555"; border.width: 1
-                                Text { text: "▼"; color: "white"; font.pixelSize: 12; anchors.centerIn: parent }
-                                MouseArea {
-                                    id: downMicMouse
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        micValue = Math.max(0.0, micValue - 0.05);
-                                        _slidermicGain.value = micValue;
-                                        droidstar.set_input_volume(micValue);
-                                    }
-                                }
-                            }
-                            
-                            // UP
-                            Rectangle {
-                                width: 30; height: 30; radius: 8
-                                color: upMicMouse.pressed ? "#444444" : "#222222"
-                                border.color: "#555555"; border.width: 1
-                                Text { text: "▲"; color: "white"; font.pixelSize: 12; anchors.centerIn: parent }
-                                MouseArea {
-                                    id: upMicMouse
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        micValue = Math.min(1.0, micValue + 0.05);
-                                        _slidermicGain.value = micValue;
-                                        droidstar.set_input_volume(micValue);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // === COLLAPSIBLE SERVER SETTINGS PANEL ===
-                Item {
+                // === STATIC SERVER SETTINGS PANEL ===
+                Column {
                     id: serverSettingsPanel
                     width: parent.width
-                    height: 38
+                    spacing: 4
                     z: 10
-                    property bool expanded: false
                     
-                    // Clickable Header Bar
-                    Rectangle {
-                        width: parent.width
-                        height: 38
-                        color: "#222222"
-                        border.color: "#555555"
-                        border.width: 1
-                        radius: 8
-                        
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            spacing: 8
-                            
-                            Text {
-                                text: "SERVER SETTINGS"
-                                color: "white"
-                                font.pixelSize: 11
-                                font.bold: true
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            
-                            Item {
-                                width: parent.width - 150 - 30 // spacer
-                                height: 1
-                            }
-                            
-                            Text {
-                                text: serverSettingsPanel.expanded ? "▲" : "▼"
-                                color: "white"
-                                font.pixelSize: 12
-                                font.bold: true
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                        
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                serverSettingsPanel.expanded = !serverSettingsPanel.expanded
-                            }
-                        }
-                    }
-                    
-                    // Collapsible Content
+                    // Content
                     Item {
                         id: collapsArea
-                        y: 42
                         width: parent.width
-                        height: serverSettingsPanel.expanded ? (collapsCol.height + 16) : 0
+                        height: collapsCol.height + 16
                         clip: true
                         z: 20
-                        
-                        Behavior on height {
-                            NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
-                        }
                         
                         Rectangle {
                             anchors.fill: parent
@@ -1058,8 +964,8 @@ Item {
 
                             // === LINE 3: MODULE + CAN + PVT + TOGGLES ===
                             Row {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                spacing: 10
+                                width: parent.width
+                                spacing: 4
 
                                 // Module (MOD) - D-STAR Reflector Module (A, B, C...)
                                 Item {
@@ -1162,7 +1068,7 @@ Item {
                                 // QSY Button
                                 Item {
                                     id: qsyContainer
-                                    width: 50; height: 52
+                                    width: parent.width * 0.35; height: 52
                                     visible: _dmrtgidEdit.visible
 
                                     property bool canQSY: mainTab.connectbutton.isconnected && _dmrtgidEdit.text.trim() !== "" && _dmrtgidEdit.text !== mainTab.connectedTG
@@ -1176,18 +1082,20 @@ Item {
                                             color: qsyContainer.canQSY ? "#00FF00" : "#888888"
                                             font.bold: true
                                             font.pixelSize: 9
-                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 6
                                         }
 
                                         Rectangle {
                                             id: qsyBtn
-                                            width: 44
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 6
                                             height: 38
                                             radius: 6
                                             color: qsyContainer.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
                                             border.color: qsyContainer.canQSY ? "#00FF00" : "#444444"
                                             border.width: 1.5
-                                            anchors.horizontalCenter: parent.horizontalCenter
 
                                             Text {
                                                 text: "QSY"
@@ -1389,7 +1297,7 @@ Item {
                 else { last_rxcnt = rxcnt; }
                 cnt = 0;
             } else { ++cnt; }
-            var l = sMeterContainer.width * droidstar.get_output_level() / 32767.0;
+            var l = hiddenSMeter.width * droidstar.get_output_level() / 32767.0;
             if(l > _levelMeter.width) { _levelMeter.width = l; }
             else { if(_levelMeter.width > 0) _levelMeter.width -= 8; else _levelMeter.width = 0; }
         }
