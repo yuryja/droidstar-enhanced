@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>DStar+</string>
 	<key>CFBundleExecutable</key>
-	<string>DroidStar</string>
+	<string>DStar+</string>
 	<key>CFBundleIconFile</key>
 	<string>droidstar.icns</string>
 	<key>CFBundleIdentifier</key>
