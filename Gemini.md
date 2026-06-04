@@ -1,121 +1,128 @@
-# DroidStar Enhanced - Reglas y Memoria del Proyecto
+# DStar+ Enhanced - Project Rules & Memory
 
-Este archivo contiene las reglas arquitectónicas y el contexto del proyecto para mantener un núcleo (core) limpio y abstraído de la interfaz de usuario.
+This file contains the architectural rules and project context to maintain a clean core abstracted from the user interface.
 
-**REGLA OBLIGATORIA:** Cada vez que el agente IA o el desarrollador realice un cambio arquitectónico importante, agregue una nueva dependencia o reestructure el proyecto, **DEBE** actualizar este archivo para reflejar dichos cambios.
+**MANDATORY RULE:** Every time the AI agent or developer makes a significant architectural change, adds a new dependency, or restructures the project, they **MUST** update this file to reflect those changes.
 
-## Arquitectura del Proyecto
+## Commit Guidelines
+- Commits **must** be written in **English**.
+- They must be written in a technical and professional tone, targeted at developers.
+- **NO** emojis in commit messages.
+- After every commit, the agent must generate a summary in Markdown `.md` format of the changes made, ready to be copied and pasted into a Pull Request (PR) description.
 
-El proyecto está dividido en componentes para permitir la compilación cruzada en diferentes plataformas con la misma lógica de negocio, pero con interfaces gráficas específicas (Móvil vs Escritorio).
 
-### 1. `core/` (El Núcleo C++)
-- Contiene **TODA** la lógica de negocio, DSP, vocoders, protocolos de red (DMR, YSF, P25, etc.) y controladores.
-- La clase principal `DroidStar` se ubica aquí (`droidstar.h` y `droidstar.cpp`).
-- **Regla:** No debe contener código específico de interfaz de usuario QML ni dependencias de `Qt Quick/GUI` (salvo lo estrictamente necesario para enlazar propiedades a través de `QObject`).
+## Project Architecture
 
-### 2. `ui/` (La Capa de Presentación)
-- `ui/shared/`: Componentes comunes, fuentes, recursos e imágenes (`bg_texture.bmp`, fuentes).
-- `ui/mobile/`: Archivos QML diseñados para Android/iOS (pantallas táctiles, tabs inferiores).
-- `ui/desktop/`: Archivos QML diseñados para macOS/Windows/Linux (layouts amplios, menús superiores).
+The project is divided into components to allow cross-compilation across different platforms with the same business logic, but with specific graphical interfaces (Mobile vs Desktop).
 
-### Compilación (CMakeLists.txt)
-- El archivo CMake utiliza la condición `if(ANDROID OR IOS)` para incluir los archivos `.qml` móviles y empaquetarlos como recursos QRC (`qt_add_qml_module`). De lo contrario, carga la versión de escritorio.
-- El archivo `main.cpp` inicializa el motor QML y selecciona dinámicamente la ruta de carga correcta (`MainMobile.qml` o `MainDesktop.qml`).
+### 1. `core/` (The C++ Core)
+- Contains **ALL** business logic, DSP, vocoders, network protocols (DMR, YSF, P25, etc.), and controllers.
+- The main `DroidStar` class is located here (`droidstar.h` and `droidstar.cpp`).
+- **Rule:** It must not contain QML-specific user interface code or `Qt Quick/GUI` dependencies (except what is strictly necessary for property binding via `QObject`).
+
+### 2. `ui/` (The Presentation Layer)
+- `ui/shared/`: Common components, fonts, resources, and images (`bg_texture.bmp`, fonts).
+- `ui/mobile/`: QML files designed for Android/iOS (touchscreens, bottom tabs).
+- `ui/desktop/`: QML files designed for macOS/Windows/Linux (wide layouts, top menus).
+
+### Compilation (CMakeLists.txt)
+- The CMake file uses the `if(ANDROID OR IOS)` condition to include mobile `.qml` files and package them as QRC resources (`qt_add_qml_module`). Otherwise, it loads the desktop version.
+- The `main.cpp` file initializes the QML engine and dynamically selects the correct loading path (`MainMobile.qml` or `MainDesktop.qml`).
 
 ---
-*(Última actualización: Reestructuración inicial del Core vs UI)*
+*(Last update: Initial Core vs UI restructuring)*
 
 ---
 
-## Hoja de Ruta: Empaquetado para macOS (DMG)
+## Roadmap: macOS Packaging (DMG)
 
-Esta sección documenta el proceso **completo y probado** para generar un instalador `.dmg` funcional para macOS. Seguir estos pasos en orden es crítico.
+This section documents the **complete and tested** process for generating a functional `.dmg` installer for macOS. Following these steps in order is critical.
 
-### Contexto y Problemas Conocidos
+### Context and Known Issues
 
-| Problema | Causa | Solución |
+| Issue | Cause | Solution |
 |---|---|---|
-| App se cierra al abrir desde `/Applications` | `SIGKILL` por firma de código inválida | Re-firmar con `codesign` después de cualquier modificación al bundle |
-| Doble carga de Qt (`objc: duplicate class`) | Plugins internos tenían rpath a `/opt/homebrew` | Corregir rpaths con `install_name_tool` en todos los `.dylib` de `PlugIns/` |
-| `Library not loaded: @rpath/QtDBus.framework` | `macdeployqt` pone QtDBus como **symlink**, no lo copia | Eliminar el symlink y copiar el framework real desde Cellar con `cp -RL` |
-| `xattr -cr` falla con Permission denied | QtDBus.framework se copió con permisos de root | Ejecutar `chmod -R 755 && chown -R $USER` sobre el framework antes del xattr |
-| `codesign --deep` falla: "ambiguous format" | QtDBus.framework dentro del bundle no está bien firmado | Firmar QtDBus individualmente primero, luego `--force --deep` el bundle principal |
-| Usuarios necesitan `xattr -cr` o `sudo` | Cuarentena de Gatekeeper en archivo copiado de DMG | Limpiar xattrs del bundle **antes** de crear el DMG |
+| App crashes when opened from `/Applications` | `SIGKILL` due to invalid code signature | Re-sign with `codesign` after any modification to the bundle |
+| Double loading of Qt (`objc: duplicate class`) | Internal plugins had rpath to `/opt/homebrew` | Fix rpaths with `install_name_tool` in all `.dylib` in `PlugIns/` |
+| `Library not loaded: @rpath/QtDBus.framework` | `macdeployqt` adds QtDBus as a **symlink**, not a copy | Remove the symlink and copy the real framework from Cellar with `cp -RL` |
+| `xattr -cr` fails with Permission denied | QtDBus.framework was copied with root permissions | Run `chmod -R 755 && chown -R $USER` on the framework before xattr |
+| `codesign --deep` fails: "ambiguous format" | QtDBus.framework inside the bundle is not properly signed | Sign QtDBus individually first, then `--force --deep` the main bundle |
+| Users need `xattr -cr` or `sudo` | Gatekeeper quarantine on files copied from DMG | Clean xattrs from the bundle **before** creating the DMG |
 
-### Comando Completo de Build + Empaquetado
+### Complete Build + Packaging Command
 
-Ejecutar desde la raíz del proyecto. Requiere que el build ya esté configurado con CMake.
+Run from the root of the project. Requires the build to already be configured with CMake.
 
 ```bash
-# 1. Compilar
+# 1. Compile
 cmake --build build
 
-# 2. Desplegar dependencias de Qt
+# 2. Deploy Qt dependencies
 macdeployqt build/DroidStar.app -qmldir=ui
 
-# 3. Reemplazar el symlink de QtDBus con el framework real
+# 3. Replace QtDBus symlink with the real framework
 rm -rf build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 cp -RL /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework \
        build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 
-# 4. Corregir el install name de QtDBus para que sea relocatable
+# 4. Fix QtDBus install name so it is relocatable
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
   build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
-# 5. Corregir rpaths en todos los plugins para que no apunten a /opt/homebrew
+# 5. Fix rpaths in all plugins so they do not point to /opt/homebrew
 find build/DroidStar.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
     install_name_tool -delete_rpath "@loader_path/../../../../lib" "$lib" 2>/dev/null || true
     install_name_tool -add_rpath "@loader_path/../../Frameworks"  "$lib" 2>/dev/null || true
 done
 
-# 6. Arreglar permisos de QtDBus (fue copiado como root)
+# 6. Fix QtDBus permissions (it was copied as root)
 chmod -R 755 build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 chown -R $USER build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 
-# 7. Firmar QtDBus individualmente PRIMERO (evita el error "ambiguous format")
+# 7. Sign QtDBus individually FIRST (avoids "ambiguous format" error)
 codesign --sign - --force \
   build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
-# 8. Firmar el bundle completo
+# 8. Sign the entire bundle
 codesign --sign - --force --deep build/DroidStar.app
 
-# 9. Limpiar xattrs de cuarentena ANTES de crear el DMG
+# 9. Clear Gatekeeper quarantine xattrs BEFORE creating the DMG
 xattr -cr build/DroidStar.app
 
-# 10. Crear el DMG final
+# 10. Create the final DMG
 rm -f build/DroidStar.dmg
-hdiutil create -volname "DroidStar" \
+hdiutil create -volname "DStar+" \
                -srcfolder build/DroidStar.app \
                -ov -format UDZO \
                build/DroidStar.dmg
 ```
 
-### Instalación para el Usuario Final
+### Installation for the End User
 
-1. Abrir `DroidStar.dmg`
-2. Arrastrar `DroidStar.app` a `/Applications`
-3. Al abrir por primera vez, si macOS muestra *"desarrollador no verificado"*:
-   - Ir a **Ajustes del Sistema → Privacidad y Seguridad → Abrir de todos modos**
-   - Este paso es necesario solo la primera vez (sin Apple Developer ID)
+1. Open `DroidStar.dmg`
+2. Drag `DStar+.app` to `/Applications`
+3. Upon first launch, if macOS shows *"unverified developer"*:
+   - Go to **System Settings → Privacy & Security → Open Anyway**
+   - This step is necessary only the first time (without an Apple Developer ID)
 
-### Para Eliminar Completamente el Diálogo de Gatekeeper
+### To Completely Remove the Gatekeeper Dialog
 
-Requiere una **Apple Developer ID** ($99/año) y el proceso de **notarización**:
+Requires an **Apple Developer ID** ($99/year) and the **notarization** process:
 ```bash
-# Con Developer ID registrada:
+# With Developer ID registered:
 codesign --sign "Developer ID Application: Yury Jajitzky (TEAMID)" \
          --options runtime --deep --force build/DroidStar.app
-xcrun notarytool submit build/DroidStar.dmg --apple-id tu@email.com \
+xcrun notarytool submit build/DroidStar.dmg --apple-id your@email.com \
          --password APP_SPECIFIC_PASSWORD --team-id TEAMID --wait
 xcrun stapler staple build/DroidStar.dmg
 ```
 
-### Versión de Qt instalada
+### Installed Qt Version
 - **Qt 6.8.2** via Homebrew: `/opt/homebrew/Cellar/qt/6.8.2_1/`
-- Si se actualiza Qt, actualizar la ruta en el paso 3.
+- If Qt is updated, update the path in step 3.
 
 ### Bundle ID
-- `com.yuryjajitzky.DroidStar` — definido en `Info.plist`
+- `com.yuryjajitzky.DStarPlus` — defined in `Info.plist`
 
 ---
-*(Última actualización: Proceso completo de empaquetado macOS DMG documentado y validado)*
+*(Last update: Complete macOS DMG packaging process documented and validated)*
