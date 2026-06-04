@@ -61,9 +61,9 @@ Item {
         uiSettings.colorTheme = colorTheme
     }
 
-    property string themeBgColor: !isAppConnected ? "#9FB58B" : (colorTheme === 0 ? "#FFA100" : (colorTheme === 1 ? "#A1C6FF" : "#E6A8D7"))
-    property string themeTextColor: !isAppConnected ? "#2E3A23" : (colorTheme === 0 ? "#4A2B00" : (colorTheme === 1 ? "#0A3066" : "#4A104A"))
-    property string themeMeterColor: !isAppConnected ? "#889A7E" : (colorTheme === 0 ? "#D97B00" : (colorTheme === 1 ? "#6FA0DB" : "#C985BC"))
+    property string themeBgColor: !isAppConnected ? "#9FB58B" : (colorTheme === 0 ? "#DCA13A" : (colorTheme === 1 ? "#A1C6FF" : (colorTheme === 2 ? "#E6A8D7" : (colorTheme === 3 ? "#FF9E9E" : "#FCE081"))))
+    property string themeTextColor: !isAppConnected ? "#2E3A23" : (colorTheme === 0 ? "#4A2B00" : (colorTheme === 1 ? "#0A3066" : (colorTheme === 2 ? "#4A104A" : (colorTheme === 3 ? "#5A1A1A" : "#5C4E10"))))
+    property string themeMeterColor: !isAppConnected ? "#889A7E" : (colorTheme === 0 ? "#B57C1B" : (colorTheme === 1 ? "#6FA0DB" : (colorTheme === 2 ? "#C985BC" : (colorTheme === 3 ? "#D97878" : "#D3B651"))))
 
     function triggerQSY() {
         if (mainTab.connectbutton.isconnected) {
@@ -222,6 +222,9 @@ Item {
         var utcTime = ("0" + d.getUTCHours()).slice(-2) + ":" + 
                       ("0" + d.getUTCMinutes()).slice(-2) + ":" + 
                       ("0" + d.getUTCSeconds()).slice(-2);
+        var dateStr = d.getUTCFullYear() + "-" + 
+                      ("0" + (d.getUTCMonth()+1)).slice(-2) + "-" + 
+                      ("0" + d.getUTCDate()).slice(-2);
                       
         // Check for duplicates in last entry to prevent consecutive duplicates
         if (lastHeardModel.count > 0) {
@@ -229,6 +232,7 @@ Item {
             if (firstItem.callsign === callsign) {
                 // Update time, country and name if available
                 lastHeardModel.setProperty(0, "utc", utcTime);
+                lastHeardModel.setProperty(0, "date", dateStr);
                 if (country !== "Unknown" && country !== "") {
                     lastHeardModel.setProperty(0, "country", country);
                 }
@@ -240,9 +244,6 @@ Item {
         }
         
         // Append to C++ persistent station log
-        var dateStr = d.getUTCFullYear() + "-" + 
-                      ("0" + (d.getUTCMonth()+1)).slice(-2) + "-" + 
-                      ("0" + d.getUTCDate()).slice(-2);
         droidstar.appendToStationLog(dateStr, utcTime, callsign, name, country);
         if (typeof stationLogTab !== "undefined") {
             stationLogTab.refreshLog();
@@ -251,6 +252,7 @@ Item {
         // Insert new entry at the beginning
         lastHeardModel.insert(0, {
             "utc": utcTime,
+            "date": dateStr,
             "callsign": callsign,
             "name": name,
             "country": country
@@ -282,7 +284,7 @@ Item {
                     Rectangle {
                         width: 22; height: 22; radius: 11; x: 2
                         y: checked ? 2 : 14
-                        color: checked ? "#00CC00" : "#555555"
+                        color: checked ? mainTab.themeBgColor : "#555555"
                         Behavior on y { NumberAnimation { duration: 100 } }
                     }
                     MouseArea {
@@ -754,7 +756,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            mainTab.colorTheme = (mainTab.colorTheme + 1) % 3;
+                            mainTab.colorTheme = (mainTab.colorTheme + 1) % 5;
                         }
                     }
                     Rectangle {
@@ -1208,16 +1210,21 @@ Item {
                                             anchors.rightMargin: 6
                                             height: 38
                                             radius: 6
-                                            color: qsyContainer.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
-                                            border.color: qsyContainer.canQSY ? "#00FF00" : "#444444"
+                                            color: qsyContainer.canQSY ? (qsyMouse.pressed ? Qt.darker(mainTab.themeBgColor, 1.2) : (qsyMouse.containsMouse ? Qt.darker(mainTab.themeBgColor, 1.1) : mainTab.themeBgColor)) : "#222222"
+                                            border.color: qsyContainer.canQSY ? Qt.lighter(mainTab.themeBgColor, 1.2) : "#444444"
                                             border.width: 1.5
 
-                                            Text {
-                                                text: "QSY"
-                                                color: qsyContainer.canQSY ? "white" : "#666666"
-                                                font.bold: true
-                                                font.pixelSize: 11
+                                            Row {
                                                 anchors.centerIn: parent
+                                                spacing: 4
+                                                opacity: qsyContainer.canQSY ? 0.6 : 0.3
+                                                Repeater {
+                                                    model: 3
+                                                    Rectangle {
+                                                        width: 4; height: 16; radius: 2
+                                                        color: "white"
+                                                    }
+                                                }
                                             }
 
                                             MouseArea {
@@ -1244,6 +1251,48 @@ Item {
                                 Loader {
                                     sourceComponent: toggleSwitchComponent
                                     onLoaded: { item.labelText = "AGC"; item.checked = _agcBox.checked; item.onClickedFunc = function(){ droidstar.set_agc(item.checked) } }
+                                }
+                                Column {
+                                    spacing: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - x // Fill remaining width
+                                    Text {
+                                        text: "LOGBOOK"
+                                        color: "white"
+                                        font.bold: true
+                                        font.pixelSize: 9
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                    Rectangle {
+                                        id: _btnLogbook
+                                        width: parent.width
+                                        height: 38; radius: 6
+                                        color: logbookPopup.opened ? "#444444" : "#2A2A2A"
+                                        border.color: logbookPopup.opened ? mainTab.themeBgColor : "#555555"
+                                        border.width: logbookPopup.opened ? 2 : 1
+                                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                        
+                                        Row {
+                                            anchors.centerIn: parent
+                                            spacing: 4
+                                            opacity: 0.6
+                                            Repeater {
+                                                model: 3
+                                                Rectangle {
+                                                    width: 4; height: 16; radius: 2
+                                                    color: "white"
+                                                }
+                                            }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                if (logbookPopup.opened) logbookPopup.close();
+                                                else logbookPopup.open();
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -1415,6 +1464,93 @@ Item {
             var l = hiddenSMeter.width * droidstar.get_output_level() / 32767.0;
             if(l > _levelMeter.width) { _levelMeter.width = l; }
             else { if(_levelMeter.width > 0) _levelMeter.width -= 8; else _levelMeter.width = 0; }
+        }
+    }
+
+    Popup {
+        id: logbookPopup
+        parent: mainTab
+        x: 5
+        y: 260
+        width: mainTab.width - 10
+        height: 245
+        padding: 0
+        background: Rectangle { color: "transparent" }
+        closePolicy: Popup.CloseOnEscape
+
+        onOpened: {
+            mainTab.Window.window.maximumHeight = 505;
+            mainTab.Window.window.minimumHeight = 505;
+            mainTab.Window.window.height = 505;
+        }
+        onClosed: {
+            mainTab.Window.window.minimumHeight = 310;
+            mainTab.Window.window.maximumHeight = 310;
+            mainTab.Window.window.height = 310;
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: mainTab.themeBgColor
+            border.color: "#333333"
+            border.width: 4
+            radius: 8
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 4
+                color: "transparent"
+                border.color: Qt.rgba(1,1,1,0.2)
+                border.width: 2
+                radius: 4
+            }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 6
+                
+                Text {
+                    text: "Last heard:"
+                    color: "black"
+                    font.pixelSize: 10
+                    font.bold: true
+                }
+
+                Row {
+                    width: parent.width - 10
+                    spacing: 0
+                    Text { width: parent.width * 0.20; text: "CallSign"; color: "black"; font.pixelSize: 10; font.bold: true }
+                    Text { width: parent.width * 0.20; text: "Name"; color: "black"; font.pixelSize: 10; font.bold: true }
+                    Text { width: parent.width * 0.20; text: "Country"; color: "black"; font.pixelSize: 10; font.bold: true }
+                    Text { width: parent.width * 0.30; text: "Date"; color: "black"; font.pixelSize: 10; font.bold: true; horizontalAlignment: Text.AlignHCenter }
+                    Text { width: parent.width * 0.10; text: "Time"; color: "black"; font.pixelSize: 10; font.bold: true }
+                }
+                
+                Rectangle {
+                    width: parent.width - 10
+                    height: 2
+                    color: "black"
+                    opacity: 0.5
+                }
+                
+                ListView {
+                    width: parent.width - 10
+                    height: parent.height - 70
+                    clip: true
+                    model: lastHeardModel
+                    spacing: 6
+                    delegate: Row {
+                        spacing: 0
+                        width: parent.width
+                        Text { width: parent.width * 0.20; text: callsign; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.20; text: name; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.20; text: country; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.30; text: typeof date !== "undefined" ? date : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
+                        Text { width: parent.width * 0.10; text: utc; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                    }
+                }
+            }
         }
     }
 }
