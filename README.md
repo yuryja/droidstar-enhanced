@@ -1,139 +1,269 @@
-# DroidStar Enhanced for macOS M1
+# DStar+ — Multiplatform Amateur Radio Client
 
-This repository is an enhanced, macOS Apple Silicon (M1/M2/M3) optimized version of the original DroidStar project. 
+**DStar+** is a modern, cross-platform digital amateur radio client that connects to M17, YSF/FCS, DMR, P25, NXDN, D-STAR (REF/XRF/DCS), and AllStar (IAX2) reflectors and nodes over UDP. It runs natively on macOS (Apple Silicon and Intel), Windows, and Linux, with mobile support for Android and iOS.
 
-## Original Project Acknowledgement
-The original project and code can be found at:
-- [nostar/DroidStar](https://github.com/nostar/DroidStar)
-- Fork with DMR improvements: [rohithzmoi/Droidstar-DMR](https://github.com/rohithzmoi/Droidstar-DMR)
-
-We deeply thank the original authors for their incredible work. This repository builds upon their foundation to provide a better native experience and performance specifically for macOS M1 architecture.
-
-## Project Rules
-- **Language**: This project operates strictly in English (code, comments, commits, pull requests).
-- **Performance**: We strictly optimize resource utilization (CPU, memory, battery life), specially targeting the M1 architecture.
-- **Security**: Security checks are mandatory before any commit. No secrets or vulnerabilities should be pushed.
-
-## Setup & Compilation
-Please read the [plan.md](plan.md) file for comprehensive instructions on how to setup the environment and compile this project for Apple Silicon.
+This project is a significantly enhanced fork of the original **DroidStar** by Doug McLain ([@nostar](https://github.com/nostar)), rebuilt with a redesigned desktop interface, persistent logging, a refined LCD-style visual language, and a streamlined macOS build pipeline.
 
 ---
 
-# Original DroidStar README
+## Credits & License
 
-This software connects to M17, Fusion (YSF/FCS, DN and VW modes are supported), DMR, P25, NXDN, D-STAR (REF/XRF/DCS) reflectors and AllStar nodes (as an IAX2 client or Web Transceiver mode) over UDP.  It is compatible with all of the AMBE USB devices out there (ThumbDV, DVstick 30, DVSI, etc). It also supports MMDVM modems and can be used as a hotspot, or as a stand-alone transceiver via direct mode to the MMDVM device.  This software is open source and uses the cross platform C++ library called Qt.  It will build and run on Linux, Windows, MacOS, Android, and iOS. No USB device support for iOS though (AMBE vocoder or MMDVM). It should also build and run on any other posix platform that has Qt avilable (xxxBSD, Solaris, etc).  This software is provided *as-is* and no support is available.
+- **Original author:** Doug McLain ([@nostar](https://github.com/nostar)) — [DroidStar](https://github.com/nostar/DroidStar)
+- **DMR enhancements upstream:** [rohithzmoi/Droidstar-DMR](https://github.com/rohithzmoi/Droidstar-DMR)
+- **DStar+ fork maintainer:** Yury Jajitzky ([@yuryja](https://github.com/yuryja))
 
-This software makes use of software from a number of other open source software projects, including MMDVMHost, MMDVM_CM, mvoice, and others. Not only is software from these projects being used directly, but learning about the various network protocols and encoding/decoding of the various protocols was only possible thanks to the authors of all of these software projects.
+This software is licensed under the **GNU General Public License v2.0 (GPLv2)**. See [LICENSE](LICENSE) for details.
 
-# DudeStar, DroidStar, and Qt
-The DudeStar application used the Qt Widgets UI, while DroidStar uses the Qt Quick UI.  All of the back end C/C++ source code for both projects has always been identical, but because of the different UI APIs, two repositories had to be maintained for the same project. Even though I prefer the Qt widgets UI over the Qt Quick UI for desktop applications, I have combined both projects into a single entity which is now simply called 'DroidStar'. My dudestar repo has been removed from github, but there are plenty of forks of it on github, in case anyone wishes to continue development of that version.
+---
 
-# M17 support 
-The Codec2 vocoder library is open source and is included as a C++ implementation of the original C library taken from the mvoice project.  More info on M17 can be found here: https://m17project.org/
+## What's New in DStar+
 
-M17 SMS type (0x05) packet support has been added to DroidStar.  A text input and SMS send button is available in the log tab when in M17 mode.
+The original DroidStar is a solid engine — DStar+ builds on top of it with a focus on usability and visual clarity for desktop users:
 
-# MMDVM support -- work in progress
-DroidStar supports MMDVM and MMDVM_HS (hotspot) modems, with basic (possibly buggy) support for M17, D-STAR, Fusion, and DMR.  Support for P25 and NXDN coming soon.  When connecting to a digital mode reflector/DMR server and selecting an MMDVM device under Modems, then DroidStar acts as a hotspot/repeater.  When 'MMDVM Direct' (currently M17 only) is selected as the host, then DroidStar becomes a stand-alone transceiver.
+### Redesigned Desktop Interface
+- Premium **LCD amber screen** with a pixel-art font (ARCADE.TTF) embedded in the QRC resource system
+- Smooth **horizontal slider controls** for volume and microphone gain with visual indicator bars
+- LCD-style **raised shadow text** for all on-screen data (S-Meter, mode, slot, callsign)
+- **Theming system** with 5 selectable color palettes: Amber, Blue, Pink, Pastel Red, Pastel Yellow
+- Matching **COLOR and POWER buttons** with visual state feedback
 
-# Software vocoder plugin API
-There is a vocoder plugin API available for loading of vocoder software.  Any vocoder plugin used with DroidStar should be properly licensed by the user if any copyright patents apply.  Do not use any patented vocoder plugin that you are not licensed to use.  I have no information regarding aquiring a software vocoder.
+### Logbook Panel
+- Toggleable **Last Heard** panel that slides open below the main interface
+- Displays the last 5 received stations: Callsign, Name, Country, Date, Time
+- Column layout optimized for legibility — Date column centered, Time right-aligned
 
-# Loading a vocoder plugin
-A vocoder plugin can be downloaded from a URL, which will place the vocoder into the correct location for the platform.  Add a full http url, including the filename, to the Vocoder URL option on the settings tab, and click the Download vocoder button.
+### Persistent Station Log
+- Automatic CSV database at `~/.config/dudetronics/station_log.csv`
+- Dedicated Station Log tab with sortable history (newest first)
+- One-click CSV export to Documents folder, with a confirmation dialog to clear records
 
-For Android and iOS devices, the vocoder URL download method is the only way to load a vocoder plugin.  For Linux/MacOS/Windows, a vocoder can also be manually placed.  Copy the plugin to the system settings file location.  On Linux, this is ~/.config/dudetronics.  It is the same place where the host and id files are located (DMRHosts.txt, DMRIDs.data, etc).
+### Controls & UX
+- **QSY button** with 3-stripe visual design and real-time talkgroup switching
+- **SWTX, SWRX, AGC** toggle buttons styled to match the active screen theme
+- Physical volume buttons mapped as PTT on mobile (toggle or hold modes)
+- ITU callsign prefix parser for automatic country resolution
 
-The vocoder plugin filename must be named vocoder_plugin.platform.arch where platform and arch can be any of the following:
-platform: linux, darwin, winnt, android, ios
-arch: x86_64, arm, arm64
+---
 
-The platform and arch for your device are identified on the About tab.
+## Supported Protocols
 
-There are no software vocoder plugins available in this repository, and I have no information on obtaining one.  DONT ASK!
+| Protocol | Modes |
+|---|---|
+| M17 | Voice + SMS (type 0x05 packets) |
+| YSF / FCS | DN and VW modes |
+| DMR | BrandMeister, DMR+, TGIF and others |
+| P25 | Phase 1 |
+| NXDN | Voice |
+| D-STAR | REF, XRF, DCS reflectors |
+| AllStar | IAX2 client + Web Transceiver mode |
 
-# Optional FLite Text-to-speech build
-I added Flite TTS TX capability so I didn't have to talk to myself all of the time during development and testing.  To build DroidStar with Flite TTS support, uncomment the line 'DEFINES += USE_FLITE' from the top of DroidStar.pro (and run/re-run qmake). You will need the Flite library and development header files installed on your system.  When built with Flite support, 3 TTS options and a Mic in option will be available at the bottom of the window.  TTS1-TTS3 are 3 voice choices, and Mic in turns off TTS and uses the microphone for input.  The text to be converted to speech and transmitted goes in the text box under the TTS options.
+AMBE hardware support: ThumbDV, DVstick 30, DVSI, and any compatible USB AMBE device.
+MMDVM hotspot and direct modem mode are also supported.
 
-# Usage
-Linux users with USB AMBE and/or MMDVM dongles will need to make sure they have permission to use the USB serial device, and disable the archaic ModeManager service that still exists on many Linux systems. On most systems this means adding your user to the 'dialout' group, and running 'sudo systemctl disable ModemManager.service' and rebooting.  This is a requirement for any serial device to be accessed.
+---
 
-Host/Mod: Select the desired host and module (for D-STAR and M17) from the selections.
+## Requirements
 
-Callsign:  Enter your amateur radio callsign.  A valid license is required to use this software.
+| Tool | Version |
+|---|---|
+| Qt | 6.5 or later (6.8.x recommended) |
+| CMake | 3.16 or later |
+| Xcode Command Line Tools | (macOS only) |
+| Homebrew | (macOS recommended) |
 
-DMRID: A valid DMR ID is required to connect to DMR servers.
-Latitude/Longitude/Location/Description:  These are DMR config options, sent to the DMR server during connect.   Some servers require specific values here, some do not.  This is specific to the server you are connecting to, so please dont ask what these values should be.
+---
 
-DMR+ IPSC2 hosts:  The format for the DMR+ options string is the complete string including 'Options='.  Create your options string and check 'Send DMR+ options on connect' before connecting.  A description of the DMR+ options string can be found here: https://github.com/g4klx/MMDVMHost/blob/master/DMRplus_startup_options.md .
+## Installation
 
-Talkgroup:  For DMR, enter the talkgroup ID number.  A very active TG for testing functionality on Brandmeister is 91 (Brandmeister Worldwide).  You must TX with a talkgroup entered to link to that talkgroup, just like a real radio.  Any statics you have defined in BM selfcare will work the same way they do if you were using a hotspot/radio.
+### macOS — Development Build
 
-MYCALL/URCALL/RPTR1/RPTR2 are for Dstar modes REF/DCS/XRF.  These fields need to be entered correctly before attempting to TX on any DSTAR reflector.  All fields are populated with suggested values upon connect, but can still be modified for advanced users.  RPT2 is always overwritten with the current reflector upon connected.
+Install Qt via Homebrew (recommended for Apple Silicon):
 
-# IAX Client for AllStar
-DroidStar can connect to an AllStar node as an IAX(2) client.  See the AllStar wiki and other AllStar, Asterisk, and IAX2 protocal related websites for the technical details of IAX2 for AllStar.  This is a basic client and currently only uLaw audio codec is supported.  This is the default codec on most AllStar nodes.
-
-All IAX nodes are now defined on the Hosts tab.  The example shows the format.  Once there are one or more IAX nodes defined on the Hosts tab, they will be available to select when IAX mode is selected from the Main tab.  This change allows multiple IAX nodes to be defined.
-
-Add DTMF commands like \*3node, \*1node, \*70, etc in the IAX DTMF box and hit send to send the DTMF string. Details on various commands can be found at the AllStar wiki and others.
-
-# AllStar web transceiver support
-In order to connect to an AllStar node via the ASL WT portal, add a line in the Host tab as follows:
+```bash
+brew install qt
 ```
-IAX 12345 wt 4569 allstar-public allstar
+
+Clone and configure the project:
+
+```bash
+git clone https://github.com/yuryja/droidstar-enhanced.git
+cd droidstar-enhanced
+cmake -B build -DCMAKE_PREFIX_PATH=$(brew --prefix qt)
 ```
-When 'wt' is used instead of an IP address, then wt will be replaced by XXXXX.nodes.allstarlink.org, where XXXXX is the specified none number.  Then you must add you ASL web portal password to ASL password under settings.  This is *NOT* the password for your node, this is the password you made to login to the ASL website.
 
-# General building instructions
-This software is written primarily in C++ on Linux and requires Qt6 >= Qt6.5, and naturally the devel packages to build.  Java, QML (Javascript based), and C# code is also used where necessary.  The preferred way to obtain Qt is to use the Qt open source online installer from the Qt website.  Run this installer as a user (not root) to keep the Qt installation separate from your system libs.  Select the option as shown in this pic https://imgur.com/i0WuFCY which will install everything under ~/Qt.
+Build and run:
 
-In an effort to encourage others to build from source on multiple platforms, there are no longer any external build dependencies.  In order to build DroidStar with no internal AMBE vocoder, uncomment the the following line in the CMakeLists.txt file:
+```bash
+cmake --build build
+open build/DroidStar.app
 ```
-DEFINES+=VOCODER_PLUGIN
+
+The app will open directly. No extra steps needed for local development.
+
+---
+
+### macOS — Production DMG
+
+The following script produces a fully self-contained, distributable `.dmg` installer.
+Run it from the project root after a successful build.
+
+```bash
+# 1. Build
+cmake --build build
+
+# 2. Deploy Qt frameworks into the bundle
+macdeployqt build/DroidStar.app -qmldir=ui
+
+# 3. Copy QtDBus (macdeployqt leaves it as a symlink — this fixes it)
+rm -rf build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+cp -RL /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework \
+       build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+
+# 4. Make QtDBus relocatable
+install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
+  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+
+# 5. Fix plugin rpaths to point inside the bundle (not to Homebrew)
+find build/DroidStar.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
+    install_name_tool -delete_rpath "@loader_path/../../../../lib" "$lib" 2>/dev/null || true
+    install_name_tool -add_rpath "@loader_path/../../Frameworks" "$lib" 2>/dev/null || true
+done
+
+# 6. Fix ownership and permissions on QtDBus (copied as root)
+chmod -R 755 build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+chown -R $USER build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+
+# 7. Sign QtDBus before the full bundle (avoids "ambiguous format" error)
+codesign --sign - --force \
+  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+
+# 8. Sign the full bundle
+codesign --sign - --force --deep build/DroidStar.app
+
+# 9. Strip quarantine attributes before packaging
+xattr -cr build/DroidStar.app
+
+# 10. Create the DMG
+rm -f build/DroidStar.dmg
+hdiutil create -volname "DStar+" \
+               -srcfolder build/DroidStar.app \
+               -ov -format UDZO \
+               build/DroidStar.dmg
 ```
-Building DroidStar with this line commented out will build with internal AMBE support.  If you choose to do this, it is your responsibility to determine if you will violate any patents in your area.
 
-## Note for building on RaspiOS (Also applies to debian based Linux desktops)
-The following commands should install everything necessary to build and run DroidStar:
+> **Note:** If you update Qt via Homebrew, update the path in step 3 accordingly.
+
+---
+
+### Linux
+
+Install Qt6 and required packages:
+
+```bash
+# Debian / Ubuntu / Raspberry Pi OS
+sudo apt install libqt6* qml6* qt6-*-dev
 ```
-sudo apt install libqt6*
-sudo apt install qml6*
-sudo apt install qt6-*-dev
+
+Build:
+
+```bash
+git clone https://github.com/yuryja/droidstar-enhanced.git
+cd droidstar-enhanced
+cmake -B build
+cmake --build build
+./build/DroidStar
 ```
-Then to build:
+
+---
+
+### Windows
+
+Install [Qt 6.x for Windows](https://www.qt.io/download-open-source) using the Qt online installer. Then:
+
+```powershell
+cmake -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.x.x/msvc20xx_64"
+cmake --build build --config Release
+windeployqt build/Release/DroidStar.exe
+```
+
+---
+
+### Android
+
+A complete Android build requires the Android NDK and SDK. Gradle build files are included in the `android/` directory. Refer to the Qt documentation for [Qt for Android](https://doc.qt.io/qt-6/android.html) for setup details.
+
+---
+
+## Installing on macOS (End Users)
+
+1. Download `DStar+.dmg` from the [Releases](https://github.com/yuryja/droidstar-enhanced/releases) page
+2. Open the `.dmg` and drag **DStar+.app** to your **Applications** folder
+3. On first launch, if macOS shows *"developer cannot be verified"*:
+   - Go to **System Settings → Privacy & Security → Open Anyway**
+   - This is a one-time step. The app is not signed with an Apple Developer ID.
+
+---
+
+## Vocoder Plugin
+
+DStar+ supports a software vocoder plugin API compatible with the original DroidStar plugin format.
+
+> **Important:** Only use vocoder plugins you are properly licensed to use. No vocoder plugin is included in this repository.
+
+To install a vocoder, add a download URL to the **Vocoder URL** field in Settings and click **Download Vocoder**. The file will be placed in:
+
+- **macOS / Linux:** `~/.config/dudetronics/`
+- **Windows:** `%APPDATA%\dudetronics\`
+
+The plugin filename format is: `vocoder_plugin.<platform>.<arch>`
+
+Supported platforms: `linux`, `darwin`, `winnt`, `android`, `ios`  
+Supported architectures: `x86_64`, `arm`, `arm64`
+
+---
+
+## Configuration Notes
+
+| Setting | Description |
+|---|---|
+| **Callsign** | Your valid amateur radio callsign. Required for all modes. |
+| **DMR ID** | Your registered DMR ID. Required for DMR connections. |
+| **Talkgroup** | For DMR, enter the talkgroup number (e.g. 91 for BrandMeister Worldwide). |
+| **MYCALL / URCALL / RPTR1 / RPTR2** | For D-STAR modes. Pre-populated on connect but editable. |
+| **IAX Nodes** | Defined in the Hosts tab. Format: `IAX <node> <ip|wt> <port> <user> <pass>` |
+
+---
+
+## Project Structure
 
 ```
-git clone https://github.com/nostar/DroidStar.git
-cd DroidStar
-mkdir build
-cd build
-cmake ..
-make
+droidstar-enhanced/
+├── core/           # All C++ business logic: DSP, vocoders, network protocols
+├── ui/
+│   ├── shared/     # Common fonts, textures, and resources
+│   ├── desktop/    # QML UI for macOS, Windows, Linux
+│   └── mobile/     # QML UI for Android and iOS
+├── Info.plist      # macOS bundle metadata
+├── CMakeLists.txt  # Cross-platform build configuration
+└── Gemini.md       # Internal build notes and packaging roadmap
 ```
-If building an an arm based platform like rpi or using dynarmic on x64/arm64, the md380 vocoder can be used.  In order to build with this, uncomment the following line in DroidStar.pro:
-```
-#DEFINES += USE_MD380_VOCODER
-```
-This requires the md380_vocoder library to be installed: https://github.com/nostar/md380_vocoder
-You must make sure that you are not in violation of any patent laws in your area if you decide to use this.
 
-My primary development platform is Fedora Linux.  With a proper build environment, the build instructions apply to all other platforms/distributions, including Windows and macOS.
+---
 
-All of the gradle build files are provided to create an APK file ready to be installed on an Android device.  A proper Android build system including the Android NDK is required and beyond the scope of this document.
+## Contributing
 
-# No builds are available on Github
-No builds for any platform are available on this Github site.  This is and always will be an open source project, to be used for educational and development purposes only. I am currently providing a Windows build which is *not* to be confused as any sort of official release of any kind.  No support will be provided for any build at any time.
+Pull requests are welcome. Please keep all code, comments, and commit messages in **English**. This project follows the architecture conventions described in [Gemini.md](Gemini.md).
 
-# DroidStar for iOS
-DroidStar used to be available for iOS via the TestFlight program.  I got fed up with Apple and its developer policies (not to mention the cost) so I cancelled my paid developer account.  DroidStar can now be installed to an iOS device by using a marvelous program called Sideloadly:
+---
 
-https://sideloadly.io/
+## Support this Project
 
-The instructions here are pretty thorough.  It is important to read the FAQ section of the website to understand how sideloading works.  I suggest enabling Wifi development on the iOS device, as explained on the website. This allows you to load/re-load DroidStar without connecting to USB.
+DStar+ is free, open-source software maintained in my spare time. If you find it useful and want to support continued development, improvements, and macOS build maintenance, donations are welcome and greatly appreciated.
 
-There are static builds for all platforms out there on a few 3rd party sites such as this one:
+**PayPal:** [paypal.me/yuryja](https://paypal.me/yuryja)
 
-http://pizzanbeer.net/
+I'm also open to collaborating with other developers and ham radio operators who want to contribute features, bug fixes, or support for additional platforms. Feel free to open an issue or pull request on GitHub.
 
-The ipa file is the iOS package.
+---
+
+*DStar+ is built on the shoulders of open-source ham radio software. Special thanks to Doug McLain and all contributors to the DroidStar ecosystem.*

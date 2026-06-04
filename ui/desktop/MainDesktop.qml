@@ -18,28 +18,39 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Dialogs
+import QtQuick.Layouts
 import org.dudetronics.droidstar
+import "../mobile"
 
 ApplicationWindow {
     id: main
 	visible: true
-	width: 340
-	height: 480
-	title: qsTr("DroidStar")
-
-	palette.window: "#252424"
-	palette.button: "#252424"
-	palette.buttonText: "white"
-	palette.base: "black"
-	palette.text: "white"
-	palette.windowText: "white"
-	palette.highlight: "steelblue"
+	width: 800
+	height: 310
+    minimumHeight: 310
+    maximumHeight: 310
+	title: qsTr("DStar+")
+    Material.theme: Material.Dark
+    Material.accent: Material.Teal
+    Material.primary: Material.BlueGrey
 
 	MessageDialog {
 		id: errorDialog
 		title: "Error"
 	}
+
+    background: Rectangle {
+        id: bgRect
+        color: "#161B22"
+        Image {
+            anchors.fill: parent
+            source: "../shared/bg_texture.bmp"
+            fillMode: Image.Tile
+            opacity: 0.8
+        }
+    }
 	MessageDialog {
 		id: updateDialog
 		title: "Updating..."
@@ -51,64 +62,154 @@ ApplicationWindow {
 		text: "No hardware or software vocoder found for this mode. You can still connect, but you will not RX or TX any audio. See the project website (url on the About tab) for info on loading a sw vocoder, or use a USB AMBE dongle (and an OTG adapter on Android devices)"
 	}
 
-	TabBar {
-		id: bar
-		width: parent.width
-		currentIndex: swiper.currentIndex
-		background: Rectangle {
-			color: "steelblue"
-		}
-		TabButton {
-			id: mainButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 0 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Main")
-		}
-		TabButton {
-			id: settingsButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 1 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Settings")
-		}
-		TabButton {
-			id: logButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 2 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Log")
-		}
-		TabButton {
-			id: hostsButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 3 ? "steelblue" : "#353535"
-			}
-			text: qsTr("Hosts")
-		}
-		TabButton {
-			id: aboutButton
-			padding: 10
-			background: Rectangle {
-				color: bar.currentIndex === 4 ? "steelblue" : "#353535"
-			}
-			text: qsTr("About")
-		}
-	}
+    header: ToolBar {
+        background: Rectangle { color: "#222222" }
+        RowLayout {
+            anchors.fill: parent
+            spacing: 6
+            
+            ToolButton {
+                text: "☰"
+                font.pixelSize: 24
+                onClicked: drawer.open()
+                contentItem: Text {
+                    text: parent.text
+                    font: parent.font
+                    color: "white"
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+            
+            Label {
+                text: "DStar+"
+                font.pixelSize: 20
+                font.bold: true
+                color: "white"
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            Item { Layout.fillWidth: true } // Spacer to push Power to the far right
+            
+            // Power Toggle Button in Header
+            Item {
+                width: 100
+                height: 42
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                Layout.rightMargin: 8
+                
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+                    
+                    Text {
+                        text: "POWER"
+                        color: "white"
+                        font.family: "Monospace"
+                        font.pixelSize: 9
+                        font.bold: true
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    
+                    Rectangle {
+                        width: 42; height: 42; radius: 10
+                        color: "#2A2A2A"
+                        border.color: "#555555"; border.width: 3
+                        anchors.verticalCenter: parent.verticalCenter
+                        
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width - 16; height: 4; radius: 2
+                            color: (mainTab && mainTab.connectbutton && mainTab.connectbutton.isconnected) ? "#FF3333" : "#888888"
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (mainTab && mainTab.connectbutton) {
+                                    mainTab.connectbutton.clickConnect();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Drawer {
+        id: drawer
+        width: Math.min(main.width, main.height) / 3 * 2
+        height: main.height
+
+        ListView {
+            id: menuList
+            anchors.fill: parent
+            model: ListModel {
+                ListElement { name: "Main"; index: 0 }
+                ListElement { name: "Settings"; index: 1 }
+                ListElement { name: "Log"; index: 2 }
+                ListElement { name: "Hosts"; index: 3 }
+                ListElement { name: "Station Log"; index: 4 }
+                ListElement { name: "About"; index: 5 }
+            }
+            delegate: ItemDelegate {
+                width: parent.width
+                text: model.name
+                highlighted: ListView.isCurrentItem
+                onClicked: {
+                    swiper.currentIndex = model.index
+                    drawer.close()
+                }
+            }
+        }
+    }
+
 	SwipeView {
 		id: swiper
-		width: parent.width
-		height: parent.height - 50
-		x: 0
-		y: 50
-		currentIndex: bar.currentIndex
+		anchors.fill: parent
+		currentIndex: 0
 		interactive: false
+        focus: true
 
-		MainTab{
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown) {
+                if (event.isAutoRepeat) {
+                    event.accepted = true;
+                    return;
+                }
+                event.accepted = true;
+                if (settingsTab.toggleTX.checked) {
+                    mainTab.buttonTX.tx = !mainTab.buttonTX.tx;
+                    droidstar.click_tx(mainTab.buttonTX.tx);
+                    if (mainTab.buttonTX.tx) {
+                        mainTab.buttonTX.cnt = 0;
+                        mainTab.txtimer.running = true;
+                    } else {
+                        mainTab.txtimer.running = false;
+                    }
+                } else {
+                    mainTab.buttonTX.tx = true;
+                    droidstar.press_tx();
+                }
+            }
+        }
+        Keys.onReleased: (event) => {
+            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown) {
+                if (event.isAutoRepeat) {
+                    event.accepted = true;
+                    return;
+                }
+                event.accepted = true;
+                if (!settingsTab.toggleTX.checked) {
+                    mainTab.buttonTX.tx = false;
+                    droidstar.release_tx();
+                }
+            }
+        }
+
+		MainTabDesktop{
 			id: mainTab
 		}
 		SettingsTab{
@@ -120,10 +221,24 @@ ApplicationWindow {
 		HostsTab{
 			id: hostsTab
 		}
+		StationLogTab{
+			id: stationLogTab
+		}
 		AboutTab{}
 	}
     DroidStar {
         id: droidstar
+    }
+
+    Timer {
+        id: qsyDelayTimer
+        interval: 5000
+        repeat: false
+        running: false
+        onTriggered: {
+            droidstar.set_dmrtgid(mainTab.dmrtgidEdit.text);
+            mainTab.connectbutton.clickConnect();
+        }
     }
 
     Connections {
@@ -135,12 +250,12 @@ ApplicationWindow {
             settingsTab.comboModem.model = droidstar.get_modems();
             settingsTab.comboPlayback.model = droidstar.get_playbacks();
             settingsTab.comboCapture.model = droidstar.get_captures();
-			mainTab.data1.font.family = droidstar.get_monofont();
-			mainTab.data2.font.family = droidstar.get_monofont();
-			mainTab.data3.font.family = droidstar.get_monofont();
-			mainTab.data4.font.family = droidstar.get_monofont();
-			mainTab.data5.font.family = droidstar.get_monofont();
-			mainTab.data6.font.family = droidstar.get_monofont();
+			// mainTab.data1.font.family = droidstar.get_monofont();
+			// mainTab.data2.font.family = droidstar.get_monofont();
+			// mainTab.data3.font.family = droidstar.get_monofont();
+			// mainTab.data4.font.family = droidstar.get_monofont();
+			// mainTab.data5.font.family = droidstar.get_monofont();
+			// mainTab.data6.font.family = droidstar.get_monofont();
 		}
 		function onSwtx_state(s){
 			mainTab.swtxBox.checked = s;
@@ -378,6 +493,10 @@ ApplicationWindow {
 			mainTab.mmdvmstatus.text = droidstar.get_mmdvmstatustxt();
 			mainTab.netstatus.text = droidstar.get_netstatustxt();
 			++mainTab.uitimer.rxcnt;
+			
+			if (mainTab.data1.text !== "") {
+				mainTab.addLastHeard(mainTab.data1.text, mainTab.data6.text, mainTab.data5.text);
+			}
         }
 		function onUpdate_settings() {
 			//console.log("update_settings comboHost == ", mainTab.comboHost.find(droidstar.get_host()));
@@ -470,25 +589,34 @@ ApplicationWindow {
 					mainTab.buttonTX.tx = false;
 					droidstar.tx_clicked(false);
 					mainTab.txtimer.running = false;
-					mainTab.btntxt.color = "black";
-					mainTab.btntxt.text = "TX";
 				}
-				mainTab.connectbutton.text = "Connect";
-				mainTab.comboMode.enabled = true;
-				mainTab.comboHost.enabled = true;
-				mainTab.comboModule.enabled = true;
-				mainTab.buttonTX.enabled = false;
-				mainTab.btntxt.color = "steelblue";
-				mainTab.data1.text = "";
-				mainTab.data2.text = "";
-				mainTab.data3.text = "";
-				mainTab.data4.text = "";
-				mainTab.data5.text = "";
-				mainTab.data6.text = "";
-				mainTab.netstatus.text = "Not connected";
+				if (mainTab.isQSYing) {
+					mainTab.connectbutton.text = "QSY...";
+					mainTab.netstatus.text = "QSY to " + mainTab.dmrtgidEdit.text + "...";
+					qsyDelayTimer.start();
+				} else {
+					mainTab.connectbutton.text = "Connect";
+					mainTab.connectbutton.isconnected = false;
+					mainTab.connectedTG = "";
+					mainTab.comboMode.enabled = true;
+					mainTab.comboHost.enabled = true;
+					mainTab.comboModule.enabled = true;
+					mainTab.buttonTX.enabled = false;
+					mainTab.data1.text = "";
+					mainTab.data2.text = "";
+					mainTab.data3.text = "";
+					mainTab.data4.text = "";
+					mainTab.data5.text = "";
+					mainTab.data6.text = "";
+					mainTab.netstatus.text = "Not connected";
+				}
             }
 			if(c === 1){
-				mainTab.connectbutton.text = "Connecting";
+				if (mainTab.connectbutton.text === "QSY...") {
+					// Keep showing QSY... for a transparent user experience
+				} else {
+					mainTab.connectbutton.text = "Connecting";
+				}
 				mainTab.comboMode.enabled = false;
 				mainTab.comboHost.enabled = false;
 				if(mainTab.comboMode.currentText != "REF"){
@@ -497,7 +625,10 @@ ApplicationWindow {
 				droidstar.set_debug(settingsTab.debugBox.checked);
             }
 			if(c === 2){
+				mainTab.isQSYing = false; // Reset QSY flag on successful connection!
 				mainTab.connectbutton.text = "Disconnect";
+				mainTab.connectbutton.isconnected = true;
+				mainTab.connectedTG = mainTab.dmrtgidEdit.text;
 				mainTab.comboMode.enabled = false;
 				mainTab.comboHost.enabled = false;
 
@@ -520,16 +651,17 @@ ApplicationWindow {
 				}
 
 				mainTab.buttonTX.enabled = true;
-				mainTab.btntxt.color = "black";
 				mainTab.agcBox.checked = true;
 			}
 			if(c === 3){
 			}
 			if(c === 4){
+				mainTab.isQSYing = false; // Reset QSY flag
 				idcheckDialog.open();
 				onConnect_status_changed(0);
 			}
 			if(c === 5){
+				mainTab.isQSYing = false; // Reset QSY flag
 				errorDialog.text = droidstar.get_error_text();
                 if(errorDialog.text == ""){
                     errorDialog.text = "Banned!"

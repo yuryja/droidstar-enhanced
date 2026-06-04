@@ -3,12 +3,15 @@
 #include <QQuickStyle>
 #include <QIcon>
 #include <QQmlContext>
-#include "droidstar.h"
+#include "core/droidstar.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-    QQuickStyle::setStyle("Fusion");
+    qputenv("QT_QUICK_CONTROLS_MATERIAL_THEME", "Dark");
+    qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "Teal");
+    qputenv("QT_QUICK_CONTROLS_MATERIAL_PRIMARY", "BlueGrey");
+    QQuickStyle::setStyle("Material");
     app.setWindowIcon(QIcon(":/images/droidstar.png"));
     qmlRegisterType<DroidStar>("org.dudetronics.droidstar", 1, 0, "DroidStar");
     QQmlApplicationEngine engine;
@@ -24,7 +27,12 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
+
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
     engine.loadFromModule("DroidStarApp", "Main");
+#else
+    engine.loadFromModule("DroidStarApp", "MainDesktop");
+#endif
     return app.exec();
 
 }

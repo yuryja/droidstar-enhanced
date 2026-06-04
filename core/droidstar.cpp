@@ -24,6 +24,7 @@
 #endif
 #include <QStandardPaths>
 #include <QFile>
+#include <QTextStream>
 #include <QFileInfo>
 #include <QDir>
 #include <QFont>
@@ -294,15 +295,16 @@ void DroidStar::process_connect()
             emit connect_status_changed(5);
         }
 		connect_status = Mode::DISCONNECTED;
-		m_modethread->quit();
+		if (m_modethread) {
+			m_modethread->quit();
+			m_modethread = nullptr;
+		}
 		m_data1.clear();
 		m_data2.clear();
 		m_data3.clear();
 		m_data4.clear();
 		m_data5.clear();
 		m_data6.clear();
-		emit connect_status_changed(0);
-		emit update_log("Disconnected");
 #ifdef Q_OS_ANDROID
         QJniObject::callStaticMethod<void>(
             "org/dudetronics/droidstar/NotificationClient",
@@ -417,7 +419,15 @@ void DroidStar::process_connect()
         connect(m_mode, SIGNAL(update_log(QString)), this, SLOT(updatelog(QString)));
 		connect(m_mode, SIGNAL(update_output_level(unsigned short)), this, SLOT(update_output_level(unsigned short)));
         connect(m_modethread, SIGNAL(started()), m_mode, SLOT(begin_connect()));
-		connect(m_modethread, SIGNAL(finished()), m_mode, SLOT(deleteLater()));
+		connect(m_modethread, &QThread::finished, this, [this]() {
+			if (m_mode) {
+				delete m_mode;
+				m_mode = nullptr;
+			}
+			emit connect_status_changed(0);
+			emit update_log("Disconnected");
+		});
+		connect(m_modethread, SIGNAL(finished()), m_modethread, SLOT(deleteLater()));
 		connect(this, SIGNAL(input_source_changed(int,QString)), m_mode, SLOT(input_src_changed(int,QString)));
 		connect(this, SIGNAL(swrx_state_changed(int)), m_mode, SLOT(swrx_state_changed(int)));
 		connect(this, SIGNAL(swtx_state_changed(int)), m_mode, SLOT(swtx_state_changed(int)));
@@ -426,6 +436,7 @@ void DroidStar::process_connect()
 		connect(this, SIGNAL(tx_pressed()), m_mode, SLOT(start_tx()));
 		connect(this, SIGNAL(tx_released()), m_mode, SLOT(stop_tx()));
 		connect(this, SIGNAL(in_audio_vol_changed(qreal)), m_mode, SLOT(in_audio_vol_changed(qreal)));
+		connect(this, SIGNAL(out_audio_vol_changed(qreal)), m_mode, SLOT(out_audio_vol_changed(qreal)));
 		connect(this, SIGNAL(mycall_changed(QString)), m_mode, SLOT(mycall_changed(QString)));
 		connect(this, SIGNAL(urcall_changed(QString)), m_mode, SLOT(urcall_changed(QString)));
 		connect(this, SIGNAL(rptr1_changed(QString)), m_mode, SLOT(rptr1_changed(QString)));
@@ -1511,6 +1522,11 @@ void DroidStar::set_input_volume(qreal v)
 	//audioin->setVolume(v * 0.01);
 }
 
+void DroidStar::set_output_volume(qreal v)
+{
+	emit out_audio_vol_changed(v);
+}
+
 void DroidStar::press_tx()
 {
 	emit tx_pressed();
@@ -1525,3 +1541,64 @@ void DroidStar::click_tx(bool tx)
 {
 	emit tx_clicked(tx);
 }
+
+void DroidStar::appendToStationLog(const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country)
+{
+    QFile f(config_path + "/station_log.csv");
+    if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&f);
+        
+        // Escape commas and quotes for CSV compliance
+        QString escName = name;
+        escName.replace("\"", "\"\"");
+        if (escName.contains(",")) escName = "\"" + escName + "\"";
+
+        // Fallback to Country text escaping
+        QString escCountry = country;
+        escCountry.replace("\"", "\"\"");
+        if (escCountry.contains(",")) escCountry = "\"" + escCountry + "\"";
+
+        out << dateStr << "," << timeStr << "," << callsign << "," << escName << "," << escCountry << "\n";
+        f.close();
+    }
+}
+
+QString DroidStar::readStationLog()
+{
+    QFile f(config_path + "/station_log.csv");
+    if (f.exists() && f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&f);
+        QString content = in.readAll();
+        f.close();
+        return content;
+    }
+    return "";
+}
+
+QString DroidStar::exportStationLog()
+{
+    QString srcPath = config_path + "/station_log.csv";
+    QFile srcFile(srcPath);
+    if (!srcFile.exists()) {
+        return "EMPTY";
+    }
+
+    QString destDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    QDir().mkpath(destDir);
+    QString destPath = destDir + "/station_log.csv";
+
+    if (QFile::exists(destPath)) {
+        QFile::remove(destPath);
+    }
+
+    if (QFile::copy(srcPath, destPath)) {
+        return destPath;
+    }
+    return "ERROR";
+}
+
+void DroidStar::clearStationLog()
+{
+    QFile::remove(config_path + "/station_log.csv");
+}
+
