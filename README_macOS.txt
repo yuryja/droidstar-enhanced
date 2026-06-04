@@ -8,11 +8,11 @@ Because this application is open-source and not signed with a paid Apple Develop
 
 To fix this and run the app normally, please follow these steps:
 
-1. Drag the 'DStar+.app' to your 'Applications' folder.
+1. Drag the application to your 'Applications' folder.
 2. Open the 'Terminal' app on your Mac (you can find it using Spotlight search).
 3. Copy and paste the following command into the Terminal and press Enter:
 
-   xattr -cr /Applications/DStar+.app
+   xattr -cr /Applications/DroidStar.app
 
 4. Now you can open DStar+ from your Applications folder normally. (If macOS asks for permission to open it the first time, go to System Settings -> Privacy & Security -> Click "Open Anyway").
 
