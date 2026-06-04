@@ -31,7 +31,7 @@ ApplicationWindow {
 	height: 310
     minimumHeight: 310
     maximumHeight: 310
-	title: qsTr("DroidStar")
+	title: qsTr("DStar+")
     Material.theme: Material.Dark
     Material.accent: Material.Teal
     Material.primary: Material.BlueGrey
@@ -82,7 +82,7 @@ ApplicationWindow {
             }
             
             Label {
-                text: "DroidStar"
+                text: "DStar+"
                 font.pixelSize: 20
                 font.bold: true
                 color: "white"
