@@ -17,6 +17,7 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtCore
 
 Item {
 	id: mainTab
@@ -42,6 +43,22 @@ Item {
 
     property bool isQSYing: false
     property string connectedTG: ""
+    property bool isAppConnected: _connectbutton.isconnected
+
+    Settings {
+        id: uiSettings
+        category: "UI"
+        property int colorTheme: 0
+    }
+
+    property int colorTheme: uiSettings.colorTheme
+    onColorThemeChanged: {
+        uiSettings.colorTheme = colorTheme
+    }
+
+    property string themeBgColor: !isAppConnected ? "#9FB58B" : (colorTheme === 0 ? "#FFA100" : (colorTheme === 1 ? "#A1C6FF" : "#E6A8D7"))
+    property string themeTextColor: !isAppConnected ? "#2E3A23" : (colorTheme === 0 ? "#4A2B00" : (colorTheme === 1 ? "#0A3066" : "#4A104A"))
+    property string themeMeterColor: !isAppConnected ? "#889A7E" : (colorTheme === 0 ? "#D97B00" : (colorTheme === 1 ? "#6FA0DB" : "#C985BC"))
 
     function triggerQSY() {
         if (mainTab.connectbutton.isconnected) {
@@ -287,7 +304,7 @@ Item {
             id: glassCard
             anchors.fill: parent
             anchors.margins: 4
-            color: "#FFA100"
+            color: mainTab.themeBgColor
             radius: 4
             border.color: "transparent"
 
@@ -320,7 +337,7 @@ Item {
                 x: 10
                 y: 15
                 text: "" 
-                color: "#4A2B00"
+                color: mainTab.themeTextColor
                 font.family: llpixelFont.name
                 font.pixelSize: 34
                 font.bold: true
@@ -344,7 +361,7 @@ Item {
                 anchors.top: _data1.bottom
                 anchors.topMargin: -4
                 anchors.left: _data1.left
-                color: "#4A2B00"
+                color: mainTab.themeTextColor
                 font.family: llpixelFont.name
                 font.pixelSize: 16
                 font.bold: true
@@ -374,7 +391,7 @@ Item {
                                 anchors.bottom: parent.bottom
                                 width: 14
                                 height: 10 + (index * 2)
-                                color: (parent.parent.levelRatio > (index / 10.0)) ? "#4A2B00" : "#D97B00"
+                                color: (parent.parent.levelRatio > (index / 10.0)) ? mainTab.themeTextColor : mainTab.themeMeterColor
                                 radius: 2
                                 
                                 // Dot inside the bar for 1, 5, 9
@@ -383,7 +400,7 @@ Item {
                                     width: 4
                                     height: 4
                                     radius: 2
-                                    color: "#FFA100"
+                                    color: mainTab.themeBgColor
                                     visible: index === 0 || index === 4 || index === 8
                                 }
                             }
@@ -392,9 +409,9 @@ Item {
                 }
                 Row {
                     width: parent.width
-                    Text { text: "1"; color: smeterRow.levelRatio > 0.0 ? "#4A2B00" : "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
-                    Text { text: "5"; color: smeterRow.levelRatio > 0.4 ? "#4A2B00" : "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
-                    Text { text: "9"; color: smeterRow.levelRatio > 0.8 ? "#4A2B00" : "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "1"; color: smeterRow.levelRatio > 0.0 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "5"; color: smeterRow.levelRatio > 0.4 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "9"; color: smeterRow.levelRatio > 0.8 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter }
                 }
             }
 
@@ -422,7 +439,7 @@ Item {
                         x: 10; y: 0
                         width: lblDest.width + 8
                         height: lblDest.height
-                        color: "#FFA100"
+                        color: mainTab.themeBgColor
                     }
                     Text {
                         id: lblDest
@@ -441,7 +458,7 @@ Item {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: 4
                         text: ""
-                        color: "#4A2B00"
+                        color: mainTab.themeTextColor
                         font.family: llpixelFont.name
                         font.pixelSize: 26
                         font.bold: true
@@ -465,7 +482,7 @@ Item {
                         x: 10; y: 0
                         width: lblGateway.width + 8
                         height: lblGateway.height + 1
-                        color: "#FFA100"
+                        color: mainTab.themeBgColor
                     }
                     Text {
                         id: lblGateway
@@ -484,7 +501,7 @@ Item {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: 4
                         text: ""
-                        color: "#4A2B00"
+                        color: mainTab.themeTextColor
                         font.family: llpixelFont.name
                         font.pixelSize: 26
                         font.bold: true
@@ -500,17 +517,17 @@ Item {
                 anchors.bottomMargin: 10
                 spacing: 2
                 
-                Text { id: _ambestatus; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _mmdvmstatus; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _netstatus; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _data5; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _ambestatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _mmdvmstatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _netstatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _data5; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
             }
 
             Text {
                 id: qsySearchingText
                 anchors.centerIn: parent
                 text: "changing TG, please wait..."
-                color: "#4A2B00"
+                color: mainTab.themeTextColor
                 font.family: llpixelFont.name
                 font.bold: true
                 font.pixelSize: 24
@@ -540,7 +557,7 @@ Item {
                 Text { text: "PTT"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 Rectangle {
                     id: _buttonTX
-                    width: 100; height: 50; radius: 14
+                    width: 64; height: 64; radius: 10
                     color: tx ? "#FF3333" : "#2A2A2A"
                     border.color: tx ? "#FF8888" : "#555555"; border.width: 3
                     property bool tx: false; property int cnt: 0
@@ -585,7 +602,7 @@ Item {
 
             // VOL CONTROL (Horizontal Slider)
             Column {
-                spacing: 8
+                spacing: 6
                 Text { text: "VOL"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 
                 Row {
@@ -602,7 +619,8 @@ Item {
                 
                 Slider {
                     id: volDial
-                    width: 120; height: 38
+                    transform: Translate { y: 5 }
+                    width: 120; height: 20
                     from: 0.0; to: 1.0; value: volValue
                     anchors.horizontalCenter: parent.horizontalCenter
                     onValueChanged: {
@@ -629,15 +647,14 @@ Item {
                     handle: Rectangle {
                         x: volDial.leftPadding + volDial.visualPosition * (volDial.availableWidth - width)
                         y: volDial.topPadding + volDial.availableHeight / 2 - height / 2
-                        width: 38; height: 38
+                        width: 20; height: 20
                         color: "#181818"
-                        radius: 19
+                        radius: 4
                         border.color: "#555555"
                         border.width: 1.5
                         Rectangle {
-                            width: 8; height: 8
-                            color: "#AAAAAA"
-                            radius: 4
+                            width: 2; height: 12
+                            color: "#FFFFFF"
                             anchors.centerIn: parent
                         }
                     }
@@ -646,7 +663,7 @@ Item {
 
             // MIC CONTROL (Horizontal Slider)
             Column {
-                spacing: 8
+                spacing: 6
                 Text { text: "MIC"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 
                 Row {
@@ -663,7 +680,8 @@ Item {
                 
                 Slider {
                     id: micDial
-                    width: 120; height: 38
+                    transform: Translate { y: 5 }
+                    width: 120; height: 20
                     from: 0.0; to: 1.0; value: micValue
                     anchors.horizontalCenter: parent.horizontalCenter
                     onValueChanged: {
@@ -691,17 +709,38 @@ Item {
                     handle: Rectangle {
                         x: micDial.leftPadding + micDial.visualPosition * (micDial.availableWidth - width)
                         y: micDial.topPadding + micDial.availableHeight / 2 - height / 2
-                        width: 38; height: 38
+                        width: 20; height: 20
                         color: "#181818"
-                        radius: 19
+                        radius: 4
                         border.color: "#555555"
                         border.width: 1.5
                         Rectangle {
-                            width: 8; height: 8
-                            color: "#AAAAAA"
-                            radius: 4
+                            width: 2; height: 12
+                            color: "#FFFFFF"
                             anchors.centerIn: parent
                         }
+                    }
+                }
+            }
+
+            // COLOR BUTTON
+            Column {
+                spacing: 12
+                Text { text: "COLOR"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                Rectangle {
+                    width: 42; height: 42; radius: 10
+                    color: "#2A2A2A"
+                    border.color: "#555555"; border.width: 3
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            mainTab.colorTheme = (mainTab.colorTheme + 1) % 3;
+                        }
+                    }
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 16; height: 16; radius: 8
+                        color: mainTab.themeBgColor
                     }
                 }
             }
@@ -951,6 +990,7 @@ Item {
                                     }
                                     ComboBox {
                                         id: _comboHost
+                                        property string searchText: ""
                                         anchors { left: parent.left; right: parent.right; bottom: parent.bottom; top: parent.top; topMargin: 12; margins: 2 }
                                         background: Rectangle { color: "transparent" }
                                         contentItem: Text {
@@ -958,6 +998,56 @@ Item {
                                             font.pixelSize: 12; font.bold: true
                                             verticalAlignment: Text.AlignVCenter; leftPadding: 6
                                             elide: Text.ElideRight
+                                        }
+                                        popup: Popup {
+                                            y: _comboHost.height - 1
+                                            width: _comboHost.width
+                                            implicitHeight: Math.min(300, contentItem.implicitHeight + 10)
+                                            padding: 4
+                                            background: Rectangle { color: "#2A2A2A"; border.color: "#555555" }
+                                            onOpened: { searchInput.text = ""; searchInput.forceActiveFocus(); }
+                                            contentItem: Column {
+                                                spacing: 4
+                                                TextField {
+                                                    id: searchInput
+                                                    width: parent.width
+                                                    height: 28
+                                                    placeholderText: "Search..."
+                                                    placeholderTextColor: "white"
+                                                    color: "white"
+                                                    font.pixelSize: 12
+                                                    verticalAlignment: TextInput.AlignVCenter
+                                                    leftPadding: 6
+                                                    background: Rectangle { color: "#181818"; border.color: "#444"; border.width: 1 }
+                                                    onTextChanged: _comboHost.searchText = text.toLowerCase()
+                                                }
+                                                ListView {
+                                                    id: listview
+                                                    clip: true
+                                                    width: parent.width
+                                                    implicitHeight: contentHeight > 250 ? 250 : contentHeight
+                                                    model: _comboHost.popup.visible ? _comboHost.delegateModel : null
+                                                    currentIndex: _comboHost.highlightedIndex
+                                                    ScrollIndicator.vertical: ScrollIndicator { }
+                                                }
+                                            }
+                                        }
+                                        delegate: ItemDelegate {
+                                            width: _comboHost.width
+                                            height: visible ? 35 : 0
+                                            visible: _comboHost.searchText === "" || modelData.toLowerCase().includes(_comboHost.searchText)
+                                            text: modelData
+                                            font.pixelSize: 12
+                                            contentItem: Text {
+                                                text: parent.text
+                                                color: parent.highlighted ? "#FFA100" : "white"
+                                                elide: Text.ElideRight
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+                                            background: Rectangle {
+                                                color: parent.highlighted ? "#333333" : "transparent"
+                                            }
+                                            highlighted: _comboHost.highlightedIndex === index
                                         }
                                         onCurrentTextChanged: {
                                             if(settingsTab.mmdvmBox.checked){ droidstar.set_dst(_comboHost.currentText); }
