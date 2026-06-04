@@ -256,4 +256,14 @@ Pull requests are welcome. Please keep all code, comments, and commit messages i
 
 ---
 
+## Support this Project
+
+DStar+ is free, open-source software maintained in my spare time. If you find it useful and want to support continued development, improvements, and macOS build maintenance, donations are welcome and greatly appreciated.
+
+**PayPal:** [paypal.me/yuryja](https://paypal.me/yuryja)
+
+I'm also open to collaborating with other developers and ham radio operators who want to contribute features, bug fixes, or support for additional platforms. Feel free to open an issue or pull request on GitHub.
+
+---
+
 *DStar+ is built on the shoulders of open-source ham radio software. Special thanks to Doug McLain and all contributors to the DroidStar ecosystem.*
