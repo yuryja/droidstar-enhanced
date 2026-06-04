@@ -93,14 +93,14 @@ ApplicationWindow {
             
             // Power Toggle Button in Header
             Item {
-                width: 60
-                height: 38
+                width: 100
+                height: 42
                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                 Layout.rightMargin: 8
                 
                 Row {
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 12
                     
                     Text {
                         text: "POWER"
@@ -112,17 +112,16 @@ ApplicationWindow {
                     }
                     
                     Rectangle {
-                        width: 18; height: 28; radius: 9
-                        color: "#111111"
-                        border.color: "#555555"
-                        border.width: 1.5
+                        width: 42; height: 42; radius: 10
+                        color: "#2A2A2A"
+                        border.color: "#555555"; border.width: 3
                         anchors.verticalCenter: parent.verticalCenter
                         
                         Rectangle {
-                            width: 14; height: 14; radius: 7; x: 2
-                            y: (mainTab && mainTab.connectbutton && mainTab.connectbutton.isconnected) ? 2 : 12
-                            color: (mainTab && mainTab.connectbutton && mainTab.connectbutton.isconnected) ? "#00FF00" : "#FF3333"
-                            Behavior on y { NumberAnimation { duration: 100 } }
+                            anchors.centerIn: parent
+                            width: parent.width - 16; height: 4; radius: 2
+                            color: (mainTab && mainTab.connectbutton && mainTab.connectbutton.isconnected) ? "#FF3333" : "#888888"
+                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
                         
                         MouseArea {
