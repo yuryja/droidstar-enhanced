@@ -89,10 +89,17 @@ codesign --sign - --force --deep build/DroidStar.app
 # 9. Clear Gatekeeper quarantine xattrs BEFORE creating the DMG
 xattr -cr build/DroidStar.app
 
-# 10. Create the final DMG
+# 10. Prepare DMG Staging Directory
+rm -rf build/dmg_stage
+mkdir -p build/dmg_stage
+cp -R build/DroidStar.app build/dmg_stage/
+ln -s /Applications build/dmg_stage/Applications
+cp README_macOS.txt build/dmg_stage/
+
+# 11. Create the final DMG
 rm -f build/DroidStar.dmg
 hdiutil create -volname "DStar+" \
-               -srcfolder build/DroidStar.app \
+               -srcfolder build/dmg_stage \
                -ov -format UDZO \
                build/DroidStar.dmg
 ```
