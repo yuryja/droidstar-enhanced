@@ -41,7 +41,7 @@ xattr -cr build/DroidStar.app
 # 10. Create the final DMG
 rm -f build/DroidStar.dmg
 mkdir -p build/dmg_staging
-mv build/DroidStar.app build/dmg_staging/
+mv build/DroidStar.app "build/dmg_staging/DStar+.app"
 cp README_macOS.txt build/dmg_staging/README.txt
 ln -s /Applications build/dmg_staging/Applications
 
