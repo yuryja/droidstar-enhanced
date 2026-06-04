@@ -2,7 +2,7 @@
 set -e
 
 # 1. Compile
-cmake -B build -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+cmake -B build
 cmake --build build
 
 # 2. Deploy Qt dependencies
@@ -10,8 +10,8 @@ macdeployqt build/DroidStar.app -qmldir=ui
 
 # 3. Replace QtDBus symlink with the real framework
 rm -rf build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-cp -RL /opt/homebrew/Cellar/qt/6.11.1/lib/QtDBus.framework \
-       build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+REAL_QTDBUS="$(readlink -f /opt/homebrew/Cellar/qt/6.11.1/lib/QtDBus.framework)"
+cp -R "$REAL_QTDBUS" build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 
 # 4. Fix QtDBus install name so it is relocatable
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
@@ -23,13 +23,14 @@ find build/DroidStar.app/Contents/PlugIns -name "*.dylib" | while read -r lib; d
     install_name_tool -add_rpath "@loader_path/../../Frameworks"  "$lib" 2>/dev/null || true
 done
 
-# 6. Fix QtDBus permissions (it was copied as root)
+# 6. Fix QtDBus permissions
 chmod -R 755 build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 chown -R $USER build/DroidStar.app/Contents/Frameworks/QtDBus.framework
 
-# 7. Sign QtDBus individually FIRST (avoids "ambiguous format" error)
-codesign --sign - --force \
-  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+# 7. Resign everything inside Frameworks and PlugIns because install_name_tool breaks signatures
+find build/DroidStar.app/Contents/Frameworks -name "*.dylib" -exec codesign --sign - --force {} \;
+find build/DroidStar.app/Contents/PlugIns -name "*.dylib" -exec codesign --sign - --force {} \;
+codesign --sign - --force build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
 # 8. Sign the entire bundle
 codesign --sign - --force --deep build/DroidStar.app
@@ -39,7 +40,12 @@ xattr -cr build/DroidStar.app
 
 # 10. Create the final DMG
 rm -f build/DroidStar.dmg
+mkdir -p build/dmg_staging
+mv build/DroidStar.app build/dmg_staging/
+cp README_macOS.txt build/dmg_staging/LEEME.txt
+ln -s /Applications build/dmg_staging/Applications
+
 hdiutil create -volname "DStar+" \
-               -srcfolder build/DroidStar.app \
+               -srcfolder build/dmg_staging \
                -ov -format UDZO \
                build/DroidStar.dmg
