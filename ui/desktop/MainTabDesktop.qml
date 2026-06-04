@@ -38,18 +38,23 @@ Item {
 		}
 	}
 
-	property real volValue: 0.5
-	property real micValue: 0.1
-
-    property bool isQSYing: false
-    property string connectedTG: ""
-    property bool isAppConnected: _connectbutton.isconnected
-
     Settings {
         id: uiSettings
         category: "UI"
         property int colorTheme: 0
+        property real volValue: 0.5
+        property real micValue: 0.1
     }
+
+    property real volValue: uiSettings.volValue
+    onVolValueChanged: { uiSettings.volValue = volValue }
+
+    property real micValue: uiSettings.micValue
+    onMicValueChanged: { uiSettings.micValue = micValue }
+
+    property bool isQSYing: false
+    property string connectedTG: ""
+    property bool isAppConnected: _connectbutton.isconnected
 
     property int colorTheme: uiSettings.colorTheme
     onColorThemeChanged: {
@@ -341,6 +346,7 @@ Item {
                 font.family: llpixelFont.name
                 font.pixelSize: 34
                 font.bold: true
+                style: Text.Raised; styleColor: "#40000000"
                 onTextChanged: {
                     if (text && text.trim() !== "") {
                         var callsign = text.trim().split(/\s+/)[0].toUpperCase();
@@ -365,6 +371,7 @@ Item {
                 font.family: llpixelFont.name
                 font.pixelSize: 16
                 font.bold: true
+                style: Text.Raised; styleColor: "#40000000"
             }
 
             // Top Right: Custom S-Meter
@@ -388,6 +395,14 @@ Item {
                             width: 14
                             height: 28
                             Rectangle {
+                                anchors.bottom: parent.bottom; anchors.bottomMargin: -1
+                                anchors.left: parent.left; anchors.leftMargin: 1
+                                width: 14
+                                height: 10 + (index * 2)
+                                color: "#40000000"
+                                radius: 2
+                            }
+                            Rectangle {
                                 anchors.bottom: parent.bottom
                                 width: 14
                                 height: 10 + (index * 2)
@@ -409,9 +424,9 @@ Item {
                 }
                 Row {
                     width: parent.width
-                    Text { text: "1"; color: smeterRow.levelRatio > 0.0 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
-                    Text { text: "5"; color: smeterRow.levelRatio > 0.4 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
-                    Text { text: "9"; color: smeterRow.levelRatio > 0.8 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "1"; color: smeterRow.levelRatio > 0.0 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter; style: Text.Raised; styleColor: "#40000000" }
+                    Text { text: "5"; color: smeterRow.levelRatio > 0.4 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter; style: Text.Raised; styleColor: "#40000000" }
+                    Text { text: "9"; color: smeterRow.levelRatio > 0.8 ? mainTab.themeTextColor : mainTab.themeMeterColor; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter; style: Text.Raised; styleColor: "#40000000" }
                 }
             }
 
@@ -462,6 +477,7 @@ Item {
                         font.family: llpixelFont.name
                         font.pixelSize: 26
                         font.bold: true
+                        style: Text.Raised; styleColor: "#40000000"
                     }
                 }
 
@@ -505,6 +521,7 @@ Item {
                         font.family: llpixelFont.name
                         font.pixelSize: 26
                         font.bold: true
+                        style: Text.Raised; styleColor: "#40000000"
                     }
                 }
             }
@@ -517,10 +534,10 @@ Item {
                 anchors.bottomMargin: 10
                 spacing: 2
                 
-                Text { id: _ambestatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _mmdvmstatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _netstatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _data5; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _ambestatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true; style: Text.Raised; styleColor: "#40000000" }
+                Text { id: _mmdvmstatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true; style: Text.Raised; styleColor: "#40000000" }
+                Text { id: _netstatus; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true; style: Text.Raised; styleColor: "#40000000" }
+                Text { id: _data5; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true; style: Text.Raised; styleColor: "#40000000" }
             }
 
             Text {
@@ -530,6 +547,7 @@ Item {
                 color: mainTab.themeTextColor
                 font.family: llpixelFont.name
                 font.bold: true
+                style: Text.Raised; styleColor: "#40000000"
                 font.pixelSize: 24
                 horizontalAlignment: Text.AlignHCenter
                 visible: mainTab.isQSYing
@@ -606,6 +624,7 @@ Item {
                 Text { text: "VOL"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 
                 Row {
+                    transform: Translate { y: 5 }
                     spacing: 6
                     anchors.horizontalCenter: parent.horizontalCenter
                     Repeater {
@@ -667,6 +686,7 @@ Item {
                 Text { text: "MIC"; color: "white"; font.bold: true; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
                 
                 Row {
+                    transform: Translate { y: 5 }
                     spacing: 6
                     anchors.horizontalCenter: parent.horizontalCenter
                     Repeater {
@@ -739,7 +759,7 @@ Item {
                     }
                     Rectangle {
                         anchors.centerIn: parent
-                        width: 16; height: 16; radius: 8
+                        width: parent.width - 16; height: 4; radius: 2
                         color: mainTab.themeBgColor
                     }
                 }
