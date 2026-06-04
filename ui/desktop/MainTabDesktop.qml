@@ -318,9 +318,9 @@ Item {
             Text {
                 id: _data1
                 x: 10
-                y: 10
+                y: 15
                 text: "" 
-                color: "#6B3E00"
+                color: "#4A2B00"
                 font.family: llpixelFont.name
                 font.pixelSize: 34
                 font.bold: true
@@ -344,7 +344,7 @@ Item {
                 anchors.top: _data1.bottom
                 anchors.topMargin: -4
                 anchors.left: _data1.left
-                color: "#6B3E00"
+                color: "#4A2B00"
                 font.family: llpixelFont.name
                 font.pixelSize: 16
                 font.bold: true
@@ -354,11 +354,14 @@ Item {
             Column {
                 anchors.right: parent.right
                 anchors.rightMargin: 10
-                anchors.bottom: _data1.bottom
-                anchors.bottomMargin: 2
+                anchors.top: parent.top
+                anchors.topMargin: 20
                 spacing: 2
+                scale: 0.85
+                transformOrigin: Item.TopRight
                 
                 Row {
+                    id: smeterRow
                     spacing: 4
                     property real levelRatio: _levelMeter.width / Math.max(1, hiddenSMeter.width)
                     
@@ -371,7 +374,7 @@ Item {
                                 anchors.bottom: parent.bottom
                                 width: 14
                                 height: 10 + (index * 2)
-                                color: (parent.parent.levelRatio > (index / 10.0)) ? "#6B3E00" : "#D97B00"
+                                color: (parent.parent.levelRatio > (index / 10.0)) ? "#4A2B00" : "#D97B00"
                                 radius: 2
                                 
                                 // Dot inside the bar for 1, 5, 9
@@ -389,9 +392,9 @@ Item {
                 }
                 Row {
                     width: parent.width
-                    Text { text: "1"; color: "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
-                    Text { text: "5"; color: "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
-                    Text { text: "9"; color: "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "1"; color: smeterRow.levelRatio > 0.0 ? "#4A2B00" : "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "5"; color: smeterRow.levelRatio > 0.4 ? "#4A2B00" : "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 4; horizontalAlignment: Text.AlignHCenter }
+                    Text { text: "9"; color: smeterRow.levelRatio > 0.8 ? "#4A2B00" : "#D97B00"; font.pixelSize: 10; font.bold: true; width: 18 * 2; horizontalAlignment: Text.AlignHCenter }
                 }
             }
 
@@ -426,8 +429,7 @@ Item {
                         x: 14; y: 0
                         text: "DestID"
                         color: "#000000"
-                        font.family: llpixelFont.name
-                        font.pixelSize: 14
+                        font.pixelSize: 10
                         font.bold: true
                     }
                     Text {
@@ -439,7 +441,7 @@ Item {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: 4
                         text: ""
-                        color: "#6B3E00"
+                        color: "#4A2B00"
                         font.family: llpixelFont.name
                         font.pixelSize: 26
                         font.bold: true
@@ -470,8 +472,7 @@ Item {
                         x: 14; y: 0
                         text: "GatewayID"
                         color: "#000000"
-                        font.family: llpixelFont.name
-                        font.pixelSize: 14
+                        font.pixelSize: 10
                         font.bold: true
                     }
                     Text {
@@ -483,7 +484,7 @@ Item {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: 4
                         text: ""
-                        color: "#6B3E00"
+                        color: "#4A2B00"
                         font.family: llpixelFont.name
                         font.pixelSize: 26
                         font.bold: true
@@ -499,17 +500,17 @@ Item {
                 anchors.bottomMargin: 10
                 spacing: 2
                 
-                Text { id: _ambestatus; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _mmdvmstatus; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _netstatus; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
-                Text { id: _data5; text: ""; color: "#6B3E00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _ambestatus; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _mmdvmstatus; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _netstatus; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
+                Text { id: _data5; text: ""; color: "#4A2B00"; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true }
             }
 
             Text {
                 id: qsySearchingText
                 anchors.centerIn: parent
                 text: "changing TG, please wait..."
-                color: "#6B3E00"
+                color: "#4A2B00"
                 font.family: llpixelFont.name
                 font.bold: true
                 font.pixelSize: 24
