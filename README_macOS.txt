@@ -1,35 +1,35 @@
-¡Gracias por usar DStar+!
+Thank you for using DStar+!
 
-Esta aplicación es una versión mejorada ("fork") del proyecto original DroidStar creado por Doug McLain.
-Este software se distribuye bajo la licencia GNU General Public License v2.0 (GPLv2).
+This application is an enhanced fork of the original DroidStar project created by Doug McLain.
+This software is distributed under the GNU General Public License v2.0 (GPLv2).
 
 ======================================
-INSTRUCCIONES DE USO
+INSTRUCTIONS FOR USE
 ======================================
-Para instalar la aplicación, simplemente arrastra el icono de DStar+ a la carpeta de Aplicaciones (Applications).
+To install the application, simply drag the DStar+ icon into the Applications folder.
 
-Si tienes algún problema ejecutando la aplicación por las medidas de seguridad de macOS, puedes abrir la terminal y ejecutar el siguiente comando para limpiar los atributos de cuarentena:
+If you have any issues running the application due to macOS security measures, you can open the terminal and run the following command to clear the quarantine attributes:
 
     xattr -cr /Applications/DStar+.app
 
-Alternativamente, si macOS indica que "el desarrollador no puede ser verificado" al abrir la app por primera vez:
-Ve a Ajustes del Sistema -> Privacidad y Seguridad -> "Abrir de todos modos".
+Alternatively, if macOS indicates that the app is from an "unidentified developer" when opening it for the first time:
+Go to System Settings -> Privacy & Security -> "Open Anyway".
 
 ======================================
-DESCARGO DE RESPONSABILIDAD (DISCLAIMER)
+DISCLAIMER
 ======================================
-Esta aplicación es experimental. Al utilizarla, asumes toda la responsabilidad de su uso. No me hago responsable por posibles daños, pérdida de datos o mal funcionamiento derivado del uso de este software.
+This application is experimental. By using it, you assume full responsibility for its use. I am not responsible for any possible damage, data loss, or malfunction resulting from the use of this software.
 
 ======================================
-COLABORA CON EL PROYECTO
+SUPPORT THE PROJECT
 ======================================
-Si te gusta la aplicación y quieres apoyar su desarrollo continuo, puedes colaborar con una donación. 
-Toda ayuda es muy apreciada y me motiva a seguir manteniendo el proyecto.
+If you like the application and want to support its continuous development, you can help with a donation.
+Any help is greatly appreciated and motivates me to keep maintaining the project.
 
-Puedes donar por PayPal a mi cuenta:
+You can donate via PayPal to my account:
 https://paypal.me/yuryja
 
-¡Muchísimas gracias!
+Thank you very much!
 
 73,
-Yury Jajitzky
+Yury Jajitzky - YY3BIG

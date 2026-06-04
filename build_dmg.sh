@@ -42,7 +42,7 @@ xattr -cr build/DroidStar.app
 rm -f build/DroidStar.dmg
 mkdir -p build/dmg_staging
 mv build/DroidStar.app build/dmg_staging/
-cp README_macOS.txt build/dmg_staging/LEEME.txt
+cp README_macOS.txt build/dmg_staging/README.txt
 ln -s /Applications build/dmg_staging/Applications
 
 hdiutil create -volname "DStar+" \
