@@ -37,15 +37,20 @@ Item {
 				width: helpText.width
 				wrapMode: Text.WordWrap
 				color: "white"
-				text: qsTr(	"\nDROID-Star git build " + droidstar.get_software_build() +
+				text: qsTr(	"\nDroidStarEnhaced build " + droidstar.get_software_build() +
 						   "\nPlatform:\t" + droidstar.get_platform() +
 						   "\nArchitecture:\t" + droidstar.get_arch() +
 						   "\nBuild ABI:\t" + droidstar.get_build_abi() +
-						   "\n\nProject page: https://github.com/nostar/DroidStar" +
+						   "\n\nEnhanced version maintained by: Yury Jajitzky" +
+						   "\nSupport this project: https://paypal.me/yuryjajitzky" +
+						   "\n\nBased on the original project by Doug McLain (https://github.com/nostar/DroidStar)" +
+						   "\n\nThis project is an enhanced version created with the sole purpose of improving and expanding upon the incredible original work by Doug McLain AD8DP. All original credits and deep gratitude remain with him." +
 						   "\n\nCopyright (C) 2019-2021 Doug McLain AD8DP\n" +
+						   "Copyright (C) 2026 Yury Jajitzky\n\n" +
 							"This program is free software; " +
 							"you can redistribute it and/or modify it under the terms of the GNU General " +
-							"Public License as published by the Free Software Foundation; version 2.\n\n" +
+							"Public License as published by the Free Software Foundation; either version 2 " +
+							"of the License, or (at your option) any later version.\n\n" +
 							"This program is distributed in the hope that it will be useful, but WITHOUT " +
 							"ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS " +
 							"FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\n" +
