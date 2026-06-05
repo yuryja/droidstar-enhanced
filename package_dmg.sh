@@ -10,6 +10,11 @@ echo "Replacing QtDBus symlink..."
 rm -rf "$APP/Contents/Frameworks/QtDBus.framework"
 cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework "$APP/Contents/Frameworks/"
 
+echo "Adding missing QtQuickTemplates2 framework (macdeployqt omission)..."
+if [ ! -d "$APP/Contents/Frameworks/QtQuickTemplates2.framework" ]; then
+    cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtQuickTemplates2.framework "$APP/Contents/Frameworks/"
+fi
+
 echo "Fixing QtDBus install name..."
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
   "$APP/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
@@ -42,6 +47,10 @@ fi
 echo "Fixing QtDBus permissions..."
 chmod -R 755 "$APP/Contents/Frameworks/QtDBus.framework"
 chown -R $USER "$APP/Contents/Frameworks/QtDBus.framework"
+
+echo "Fixing QtQuickTemplates2 permissions..."
+chmod -R 755 "$APP/Contents/Frameworks/QtQuickTemplates2.framework"
+chown -R $USER "$APP/Contents/Frameworks/QtQuickTemplates2.framework"
 
 echo "Copying README_macOS.txt into bundle..."
 cp README_macOS.txt "$APP/Contents/Resources/"
