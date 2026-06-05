@@ -1,41 +1,69 @@
 #!/bin/bash
 set -e
 
+APP="build/DStar+.app"
+
 echo "Deploying Qt dependencies..."
-macdeployqt "build/DStar+.app" -qmldir=ui
+macdeployqt "$APP" -qmldir=ui
 
 echo "Replacing QtDBus symlink..."
-rm -rf "build/DStar+.app/Contents/Frameworks/QtDBus.framework"
-cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework "build/DStar+.app/Contents/Frameworks/"
+rm -rf "$APP/Contents/Frameworks/QtDBus.framework"
+cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework "$APP/Contents/Frameworks/"
 
 echo "Fixing QtDBus install name..."
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
-  "build/DStar+.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
+  "$APP/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
 
-echo "Fixing rpaths in plugins..."
-find "build/DStar+.app/Contents/PlugIns" -name "*.dylib" | while read -r lib; do
-    install_name_tool -delete_rpath "@loader_path/../../../../lib" "$lib" 2>/dev/null || true
-    install_name_tool -add_rpath "@loader_path/../../Frameworks"  "$lib" 2>/dev/null || true
+echo "Fixing ALL bad rpaths in plugins (any depth)..."
+find "$APP/Contents/PlugIns" -name "*.dylib" | while read -r lib; do
+    # Remove ALL rpaths that point toward /lib (Homebrew-style paths of any depth)
+    while otool -l "$lib" 2>/dev/null | grep -q "path @loader_path/\.\./.*lib"; do
+        bad_rpath=$(otool -l "$lib" 2>/dev/null | grep "path @loader_path/\.\./.*lib" | awk '{print $2}')
+        for rp in $bad_rpath; do
+            install_name_tool -delete_rpath "$rp" "$lib" 2>/dev/null || true
+        done
+    done
+    # Also remove any /opt/homebrew absolute paths
+    while otool -l "$lib" 2>/dev/null | grep -q "path /opt/homebrew"; do
+        bad_rpath=$(otool -l "$lib" 2>/dev/null | grep "path /opt/homebrew" | awk '{print $2}')
+        for rp in $bad_rpath; do
+            install_name_tool -delete_rpath "$rp" "$lib" 2>/dev/null || true
+        done
+    done
+    # Ensure the correct rpath is present
+    if ! otool -l "$lib" 2>/dev/null | grep -q "@loader_path/../../Frameworks"; then
+        install_name_tool -add_rpath "@loader_path/../../Frameworks" "$lib" 2>/dev/null || true
+    fi
 done
 
-echo "Fixing permissions..."
-chmod -R 755 "build/DStar+.app/Contents/Frameworks/QtDBus.framework"
-chown -R $USER "build/DStar+.app/Contents/Frameworks/QtDBus.framework"
+echo "Fixing rpaths in main binary..."
+install_name_tool -delete_rpath "/opt/homebrew/lib" "$APP/Contents/MacOS/DStar+" 2>/dev/null || true
+if ! otool -l "$APP/Contents/MacOS/DStar+" | grep -q "@executable_path/../Frameworks"; then
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/DStar+" 2>/dev/null || true
+fi
 
-echo "Signing QtDBus individually..."
-codesign --sign - --force "build/DStar+.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
+echo "Fixing QtDBus permissions..."
+chmod -R 755 "$APP/Contents/Frameworks/QtDBus.framework"
+chown -R $USER "$APP/Contents/Frameworks/QtDBus.framework"
+
+echo "Copying README_macOS.txt into bundle..."
+cp README_macOS.txt "$APP/Contents/Resources/"
+
+echo "Signing QtDBus individually FIRST..."
+codesign --sign - --force \
+  "$APP/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
 
 echo "Signing entire bundle..."
-codesign --sign - --force --deep "build/DStar+.app"
+codesign --sign - --force --deep "$APP"
 
 echo "Clearing Gatekeeper quarantine xattrs..."
-xattr -cr "build/DStar+.app"
+xattr -cr "$APP"
 
 echo "Creating DMG..."
 rm -f build/DStar+.dmg
 hdiutil create -volname "DStar+" \
-               -srcfolder "build/DStar+.app" \
+               -srcfolder "$APP" \
                -ov -format UDZO \
                build/DStar+.dmg
 
-echo "Done!"
+echo "Done! DMG ready at build/DStar+.dmg"
