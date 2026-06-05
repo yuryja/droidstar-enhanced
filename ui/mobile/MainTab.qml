@@ -1727,7 +1727,6 @@ Item {
                         id: hostCombo
                         width: parent.width; height: 28
                         model: droidstar.get_hosts()
-                        elide: Text.ElideRight
                     }
                 }
 
