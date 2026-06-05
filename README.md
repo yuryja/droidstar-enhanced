@@ -1,6 +1,6 @@
-# DStar+ — Multiplatform Amateur Radio Client
+# DroidStarEnhaced — Multiplatform Amateur Radio Client
 
-**DStar+** is a modern, cross-platform digital amateur radio client that connects to M17, YSF/FCS, DMR, P25, NXDN, D-STAR (REF/XRF/DCS), and AllStar (IAX2) reflectors and nodes over UDP. It runs natively on macOS (Apple Silicon and Intel), Windows, and Linux, with mobile support for Android and iOS.
+**DroidStarEnhaced** is a modern, cross-platform digital amateur radio client that connects to M17, YSF/FCS, DMR, P25, NXDN, D-STAR (REF/XRF/DCS), and AllStar (IAX2) reflectors and nodes over UDP. It runs natively on macOS (Apple Silicon and Intel), Windows, and Linux, with mobile support for Android and iOS.
 
 This project is a significantly enhanced fork of the original **DroidStar** by Doug McLain ([@nostar](https://github.com/nostar)), rebuilt with a redesigned desktop interface, persistent logging, a refined LCD-style visual language, and a streamlined macOS build pipeline.
 
@@ -10,15 +10,15 @@ This project is a significantly enhanced fork of the original **DroidStar** by D
 
 - **Original author:** Doug McLain ([@nostar](https://github.com/nostar)) — [DroidStar](https://github.com/nostar/DroidStar)
 - **DMR enhancements upstream:** [rohithzmoi/Droidstar-DMR](https://github.com/rohithzmoi/Droidstar-DMR)
-- **DStar+ fork maintainer:** Yury Jajitzky ([@yuryja](https://github.com/yuryja))
+- **DroidStarEnhaced fork maintainer:** Yury Jajitzky ([@yuryja](https://github.com/yuryja))
 
 This software is licensed under the **GNU General Public License v2.0 (GPLv2)**. See [LICENSE](LICENSE) for details.
 
 ---
 
-## What's New in DStar+
+## What's New in DroidStarEnhaced
 
-The original DroidStar is a solid engine — DStar+ builds on top of it with a focus on usability and visual clarity for desktop users:
+The original DroidStar is a solid engine — DroidStarEnhaced builds on top of it with a focus on usability and visual clarity for desktop users:
 
 ### Redesigned Desktop Interface
 - Premium **LCD amber screen** with a pixel-art font (ARCADE.TTF) embedded in the QRC resource system
@@ -95,7 +95,7 @@ Build and run:
 
 ```bash
 cmake --build build
-open build/DroidStar.app
+open build/DroidStarEnhaced.app
 ```
 
 The app will open directly. No extra steps needed for local development.
@@ -104,54 +104,19 @@ The app will open directly. No extra steps needed for local development.
 
 ### macOS — Production DMG
 
-The following script produces a fully self-contained, distributable `.dmg` installer.
-Run it from the project root after a successful build.
+Use the included packaging script. It handles all steps automatically:
 
 ```bash
 # 1. Build
 cmake --build build
 
-# 2. Deploy Qt frameworks into the bundle
-macdeployqt build/DroidStar.app -qmldir=ui
-
-# 3. Copy QtDBus (macdeployqt leaves it as a symlink — this fixes it)
-rm -rf build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-cp -RL /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework \
-       build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-
-# 4. Make QtDBus relocatable
-install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
-  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
-
-# 5. Fix plugin rpaths to point inside the bundle (not to Homebrew)
-find build/DroidStar.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
-    install_name_tool -delete_rpath "@loader_path/../../../../lib" "$lib" 2>/dev/null || true
-    install_name_tool -add_rpath "@loader_path/../../Frameworks" "$lib" 2>/dev/null || true
-done
-
-# 6. Fix ownership and permissions on QtDBus (copied as root)
-chmod -R 755 build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-chown -R $USER build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-
-# 7. Sign QtDBus before the full bundle (avoids "ambiguous format" error)
-codesign --sign - --force \
-  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
-
-# 8. Sign the full bundle
-codesign --sign - --force --deep build/DroidStar.app
-
-# 9. Strip quarantine attributes before packaging
-xattr -cr build/DroidStar.app
-
-# 10. Create the DMG
-rm -f build/DroidStar.dmg
-hdiutil create -volname "DStar+" \
-               -srcfolder build/DroidStar.app \
-               -ov -format UDZO \
-               build/DroidStar.dmg
+# 2. Run the packaging script
+./package_dmg.sh
 ```
 
-> **Note:** If you update Qt via Homebrew, update the path in step 3 accordingly.
+The script (`package_dmg.sh`) handles: `macdeployqt`, QtDBus fix, plugin pruning, transitive dependency scanning, rpath cleanup, README copy, code signing, xattr cleanup, and DMG creation. If any dependency is missing, it aborts with a clear error before creating the DMG.
+
+> **Note:** If you update Qt via Homebrew, update the Qt version path in `package_dmg.sh` accordingly.
 
 ---
 
@@ -171,7 +136,7 @@ git clone https://github.com/yuryja/droidstar-enhanced.git
 cd droidstar-enhanced
 cmake -B build
 cmake --build build
-./build/DroidStar
+./build/DroidStarEnhaced
 ```
 
 ---
@@ -183,7 +148,7 @@ Install [Qt 6.x for Windows](https://www.qt.io/download-open-source) using the Q
 ```powershell
 cmake -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.x.x/msvc20xx_64"
 cmake --build build --config Release
-windeployqt build/Release/DroidStar.exe
+windeployqt build/Release/DroidStarEnhaced.exe
 ```
 
 ---
@@ -196,8 +161,8 @@ A complete Android build requires the Android NDK and SDK. Gradle build files ar
 
 ## Installing on macOS (End Users)
 
-1. Download `DStar+.dmg` from the [Releases](https://github.com/yuryja/droidstar-enhanced/releases) page
-2. Open the `.dmg` and drag **DStar+.app** to your **Applications** folder
+1. Download `DroidStarEnhaced.dmg` from the [Releases](https://github.com/yuryja/droidstar-enhanced/releases) page
+2. Open the `.dmg` and drag **DroidStarEnhaced.app** to your **Applications** folder
 3. On first launch, if macOS shows *"developer cannot be verified"*:
    - Go to **System Settings → Privacy & Security → Open Anyway**
    - This is a one-time step. The app is not signed with an Apple Developer ID.
@@ -206,7 +171,7 @@ A complete Android build requires the Android NDK and SDK. Gradle build files ar
 
 ## Vocoder Plugin
 
-DStar+ supports a software vocoder plugin API compatible with the original DroidStar plugin format.
+DroidStarEnhaced supports a software vocoder plugin API compatible with the original DroidStar plugin format.
 
 > **Important:** Only use vocoder plugins you are properly licensed to use. No vocoder plugin is included in this repository.
 
@@ -258,7 +223,7 @@ Pull requests are welcome. Please keep all code, comments, and commit messages i
 
 ## Support this Project
 
-DStar+ is free, open-source software maintained in my spare time. If you find it useful and want to support continued development, improvements, and macOS build maintenance, donations are welcome and greatly appreciated.
+DroidStarEnhaced is free, open-source software maintained in my spare time. If you find it useful and want to support continued development, improvements, and macOS build maintenance, donations are welcome and greatly appreciated.
 
 **PayPal:** [paypal.me/yuryja](https://paypal.me/yuryja)
 
@@ -266,4 +231,4 @@ I'm also open to collaborating with other developers and ham radio operators who
 
 ---
 
-*DStar+ is built on the shoulders of open-source ham radio software. Special thanks to Doug McLain and all contributors to the DroidStar ecosystem.*
+*DroidStarEnhaced is built on the shoulders of open-source ham radio software. Special thanks to Doug McLain and all contributors to the DroidStar ecosystem.*
