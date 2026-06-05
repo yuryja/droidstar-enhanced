@@ -15,6 +15,27 @@ if [ ! -d "$APP/Contents/Frameworks/QtQuickTemplates2.framework" ]; then
     cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtQuickTemplates2.framework "$APP/Contents/Frameworks/"
 fi
 
+echo "Copying missing transitive dylib dependencies..."
+HOMEBREW_LIB="/opt/homebrew/lib"
+FRAMEWORKS="$APP/Contents/Frameworks"
+# Scan all dylibs/frameworks for @rpath references that are missing in the bundle
+find "$FRAMEWORKS" \( -name "*.dylib" -o -name "*.framework" \) | while read lib; do
+    if [ -d "$lib" ]; then
+        bin="$lib/Versions/A/$(basename ${lib%.framework})"
+        [ -f "$bin" ] || continue
+        lib="$bin"
+    fi
+    otool -L "$lib" 2>/dev/null | awk '/\@rpath/{print $1}' | sed 's|@rpath/||' | while read dep; do
+        depname=$(basename "$dep")
+        destpath="$FRAMEWORKS/$depname"
+        srcpath="$HOMEBREW_LIB/$depname"
+        if [ ! -f "$destpath" ] && [ -f "$srcpath" ]; then
+            echo "  -> Copying missing: $depname"
+            cp "$srcpath" "$destpath"
+        fi
+    done
+done
+
 echo "Fixing QtDBus install name..."
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
   "$APP/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
