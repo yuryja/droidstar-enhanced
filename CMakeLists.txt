@@ -4,6 +4,9 @@ if(POLICY CMP0072)
 endif()
 project(DroidStar VERSION 1.0.8 LANGUAGES C CXX)
 
+# Export compile commands for IDE language servers (clangd, etc.)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(IOS)
