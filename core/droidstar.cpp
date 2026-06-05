@@ -419,13 +419,16 @@ void DroidStar::process_connect()
         connect(m_mode, SIGNAL(update_log(QString)), this, SLOT(updatelog(QString)));
 		connect(m_mode, SIGNAL(update_output_level(unsigned short)), this, SLOT(update_output_level(unsigned short)));
         connect(m_modethread, SIGNAL(started()), m_mode, SLOT(begin_connect()));
-		connect(m_modethread, &QThread::finished, this, [this]() {
-			if (m_mode) {
-				delete m_mode;
-				m_mode = nullptr;
+		Mode* current_mode = m_mode;
+		connect(m_modethread, &QThread::finished, this, [this, current_mode]() {
+			if (current_mode) {
+				delete current_mode;
 			}
-			emit connect_status_changed(0);
-			emit update_log("Disconnected");
+			if (m_mode == current_mode) {
+				m_mode = nullptr;
+				emit connect_status_changed(0);
+				emit update_log("Disconnected");
+			}
 		});
 		connect(m_modethread, SIGNAL(finished()), m_modethread, SLOT(deleteLater()));
 		connect(this, SIGNAL(input_source_changed(int,QString)), m_mode, SLOT(input_src_changed(int,QString)));
