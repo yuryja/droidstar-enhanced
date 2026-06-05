@@ -244,6 +244,9 @@ void Mode::toggle_tx(bool tx)
 
 void Mode::start_tx()
 {
+	if (!m_txtimer || !m_rxtimer) {
+		return;
+	}
 #if !defined(Q_OS_IOS)
 	if(m_hwtx){
 		m_ambedev->clear_queue();
