@@ -74,6 +74,64 @@ Item {
         }
     }
 
+    property int activeMemoryIndex: -1
+
+    function isMemActive(index) {
+        if (!mainTab.connectbutton.isconnected) return false;
+        var mem = droidstar.get_memory(index);
+        if (mem["Mode"] === "" || mem["Mode"] === undefined) return false;
+        if (_comboMode.currentText !== mem["Mode"]) return false;
+        if (mem["Mode"] === "DMR") {
+            if (_comboSlot.currentIndex !== mem["Slot"]) return false;
+            if (_comboCC.currentIndex !== mem["CC"]) return false;
+            if (_dmrtgidEdit.text !== mem["TGID"]) return false;
+        } else if (mem["Mode"] === "P25" || mem["Mode"] === "NXDN") {
+            if (_dmrtgidEdit.text !== mem["TGID"]) return false;
+        }
+        if (_comboHost.currentText !== mem["Host"]) return false;
+        return true;
+    }
+
+    Timer {
+        id: memoryQsyTimer
+        interval: 5000
+        repeat: false
+        running: false
+        property int targetIndex: -1
+        onTriggered: {
+            var mem = droidstar.get_memory(targetIndex);
+            if (mem["Mode"] !== "" && mem["Mode"] !== undefined) {
+                _comboMode.currentIndex = _comboMode.find(mem["Mode"]);
+                _comboSlot.currentIndex = mem["Slot"];
+                _comboCC.currentIndex = mem["CC"];
+                _dmrtgidEdit.text = mem["TGID"];
+                droidstar.process_host_change(mem["Host"]);
+                _comboHost.currentIndex = _comboHost.find(mem["Host"]);
+                
+                mainTab.connectbutton.clickConnect();
+            }
+            mainTab.isQSYing = false;
+        }
+    }
+
+    function triggerMemory(index) {
+        var mem = droidstar.get_memory(index);
+        if (mem["Mode"] === "" || mem["Mode"] === undefined) {
+            emptyMemoryDialog.slotIndex = index;
+            emptyMemoryDialog.open();
+            return;
+        }
+        if (isMemActive(index)) return;
+        
+        mainTab.isQSYing = true;
+        memoryQsyTimer.targetIndex = index;
+        
+        if (mainTab.connectbutton.isconnected) {
+            mainTab.connectbutton.clickConnect();
+        }
+        memoryQsyTimer.start();
+    }
+
 	onWidthChanged:{
         if(_comboMode.currentText === "DMR"){
 			_comboMode.width = (mainTab.width / 5) - 5;
@@ -349,6 +407,7 @@ Item {
                 font.pixelSize: 34
                 font.bold: true
                 style: Text.Raised; styleColor: "#40000000"
+                visible: !mainTab.isQSYing
                 onTextChanged: {
                     if (text && text.trim() !== "") {
                         var callsign = text.trim().split(/\s+/)[0].toUpperCase();
@@ -374,6 +433,21 @@ Item {
                 font.pixelSize: 16
                 font.bold: true
                 style: Text.Raised; styleColor: "#40000000"
+                visible: !mainTab.isQSYing
+            }
+
+            // Relocated QSY wait text
+            Text {
+                id: qsySearchingText
+                x: 10
+                y: 20
+                text: "changing TG, please wait..."
+                color: mainTab.themeTextColor
+                font.family: llpixelFont.name
+                font.pixelSize: 24
+                font.bold: true
+                style: Text.Raised; styleColor: "#40000000"
+                visible: mainTab.isQSYing
             }
 
             // Top Right: Custom S-Meter
@@ -542,18 +616,7 @@ Item {
                 Text { id: _data5; text: ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 12; font.bold: true; style: Text.Raised; styleColor: "#40000000" }
             }
 
-            Text {
-                id: qsySearchingText
-                anchors.centerIn: parent
-                text: "changing TG, please wait..."
-                color: mainTab.themeTextColor
-                font.family: llpixelFont.name
-                font.bold: true
-                style: Text.Raised; styleColor: "#40000000"
-                font.pixelSize: 24
-                horizontalAlignment: Text.AlignHCenter
-                visible: mainTab.isQSYing
-            }
+
 
         }
     }
@@ -1348,6 +1411,98 @@ Item {
                                     }
                                 }
                             }
+
+                            // === LINE 5: MEMORY PRESETS ===
+                            Row {
+                                width: parent.width
+                                height: 52
+                                spacing: 4
+
+                                Item {
+                                    width: parent.width; height: 52
+                                    Rectangle {
+                                        anchors.fill: parent; anchors.topMargin: 10
+                                        color: "transparent"
+                                        border.color: "white"; border.width: 1; radius: 4
+                                    }
+                                    Rectangle {
+                                        x: 6; y: 3
+                                        width: lblMemory.width + 4
+                                        height: lblMemory.height
+                                        color: "#161B22"
+                                    }
+                                    Text {
+                                        id: lblMemory
+                                        x: 8; y: 3
+                                        text: "MEMORY"; color: "white"
+                                        font.pixelSize: 10; font.bold: true
+                                    }
+
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.topMargin: 12
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 8
+                                        spacing: 12
+                                        
+                                        Row {
+                                            spacing: 10
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Repeater {
+                                                model: 5
+                                                Rectangle {
+                                                    id: memBtn
+                                                    width: 28; height: 28; radius: 14
+                                                    color: "#2A2A2A"
+                                                    border.color: isMemActive(index) ? mainTab.themeBgColor : "#555555"
+                                                    border.width: isMemActive(index) ? 2.5 : 1
+                                                    
+                                                    Text {
+                                                        anchors.centerIn: parent
+                                                        text: (index + 1).toString()
+                                                        color: "white"
+                                                        font.bold: true
+                                                        font.pixelSize: 12
+                                                    }
+
+                                                    MouseArea {
+                                                        anchors.fill: parent
+                                                        onClicked: {
+                                                            mainTab.triggerMemory(index);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        Item {
+                                            width: parent.width - x - 10
+                                            height: parent.height
+                                            
+                                            Rectangle {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                anchors.right: parent.right
+                                                anchors.rightMargin: 6
+                                                width: 130; height: 28; radius: 6
+                                                color: editMemMouse.pressed ? "#444444" : "#2A2A2A"
+                                                border.color: "#555555"; border.width: 1
+                                                
+                                                Text {
+                                                    text: "MANAGE MEMORIES"; color: "white"; font.bold: true; font.pixelSize: 10
+                                                    anchors.centerIn: parent
+                                                }
+                                                MouseArea {
+                                                    id: editMemMouse
+                                                    anchors.fill: parent
+                                                    onClicked: {
+                                                        memoryConfigPopup.openMemoryConfig(0);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1548,6 +1703,279 @@ Item {
                         Text { width: parent.width * 0.20; text: country; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
                         Text { width: parent.width * 0.30; text: typeof date !== "undefined" ? date : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
                         Text { width: parent.width * 0.10; text: utc; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: emptyMemoryDialog
+        parent: mainTab
+        anchors.centerIn: parent
+        width: 320; height: 140
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        property int slotIndex: 0
+
+        background: Rectangle {
+            color: "#1A1F2C"
+            border.color: mainTab.themeBgColor
+            border.width: 2
+            radius: 10
+        }
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 12
+
+            Text {
+                text: "Memory Slot " + (emptyMemoryDialog.slotIndex + 1) + " is Empty"
+                color: "white"
+                font.bold: true
+                font.pixelSize: 15
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                text: "No talkgroup saved in this memory."
+                color: "#CCCCCC"
+                font.pixelSize: 12
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 16
+                
+                Rectangle {
+                    width: 100; height: 32; radius: 6
+                    color: configureMemMouse.pressed ? "#444444" : "#2A2A2A"
+                    border.color: "#555555"
+                    Text {
+                        text: "Configure"; color: "white"; font.bold: true; font.pixelSize: 11
+                        anchors.centerIn: parent
+                    }
+                    MouseArea {
+                        id: configureMemMouse
+                        anchors.fill: parent
+                        onClicked: {
+                            emptyMemoryDialog.close();
+                            memoryConfigPopup.openMemoryConfig(emptyMemoryDialog.slotIndex);
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 80; height: 32; radius: 6
+                    color: closeEmptyMemMouse.pressed ? "#444444" : "#2A2A2A"
+                    border.color: "#555555"
+                    Text {
+                        text: "Close"; color: "white"; font.bold: true; font.pixelSize: 11
+                        anchors.centerIn: parent
+                    }
+                    MouseArea {
+                        id: closeEmptyMemMouse
+                        anchors.fill: parent
+                        onClicked: {
+                            emptyMemoryDialog.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: memoryConfigPopup
+        parent: mainTab
+        anchors.centerIn: parent
+        width: 420; height: 260
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape
+        property int activeSlot: 0
+
+        background: Rectangle {
+            color: "#161B22"
+            border.color: mainTab.themeBgColor
+            border.width: 2.5
+            radius: 12
+        }
+
+        function openMemoryConfig(slotIdx) {
+            activeSlot = slotIdx;
+            var mem = droidstar.get_memory(slotIdx);
+            if (mem["Mode"] !== "" && mem["Mode"] !== undefined) {
+                modeCombo.currentIndex = modeCombo.find(mem["Mode"]);
+                hostCombo.currentIndex = hostCombo.find(mem["Host"]);
+                slotCombo.currentIndex = mem["Slot"];
+                ccCombo.currentIndex = mem["CC"];
+                tgidInput.text = mem["TGID"];
+            } else {
+                useCurrentValues();
+            }
+            memoryConfigPopup.open();
+        }
+
+        function useCurrentValues() {
+            modeCombo.currentIndex = modeCombo.find(_comboMode.currentText);
+            slotCombo.currentIndex = _comboSlot.currentIndex;
+            ccCombo.currentIndex = _comboCC.currentIndex;
+            tgidInput.text = _dmrtgidEdit.text;
+            hostCombo.currentIndex = hostCombo.find(_comboHost.currentText);
+        }
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 12
+
+            Text {
+                text: "Configure Memory Slot " + (memoryConfigPopup.activeSlot + 1)
+                color: "white"
+                font.bold: true
+                font.pixelSize: 14
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Grid {
+                columns: 2
+                spacing: 8
+                rowSpacing: 10
+                width: parent.width
+                horizontalItemAlignment: Grid.AlignLeft
+                verticalItemAlignment: Grid.AlignVCenter
+
+                Text { text: "Memory Slot:"; color: "white"; font.pixelSize: 11; font.bold: true }
+                ComboBox {
+                    id: slotSelector
+                    width: 120; height: 26
+                    model: ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5"]
+                    currentIndex: memoryConfigPopup.activeSlot
+                    onCurrentIndexChanged: {
+                        if (currentIndex !== memoryConfigPopup.activeSlot) {
+                            memoryConfigPopup.openMemoryConfig(currentIndex);
+                        }
+                    }
+                }
+
+                Text { text: "Mode:"; color: "white"; font.pixelSize: 11; font.bold: true }
+                ComboBox {
+                    id: modeCombo
+                    width: 120; height: 26
+                    model: ["M17", "YSF", "FCS", "DMR", "P25", "NXDN", "REF", "XRF", "DCS", "IAX"]
+                    onCurrentTextChanged: {
+                        droidstar.process_mode_change(currentText);
+                        hostCombo.model = droidstar.get_hosts();
+                    }
+                }
+
+                Text { text: "Server:"; color: "white"; font.pixelSize: 11; font.bold: true }
+                ComboBox {
+                    id: hostCombo
+                    width: 250; height: 26
+                    model: droidstar.get_hosts()
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    text: "DMR Slot / CC:"; color: "white"; font.pixelSize: 11; font.bold: true
+                    visible: modeCombo.currentText === "DMR"
+                }
+                Row {
+                    spacing: 10
+                    visible: modeCombo.currentText === "DMR"
+                    ComboBox {
+                        id: slotCombo
+                        width: 80; height: 26
+                        model: ["S1", "S2"]
+                    }
+                    ComboBox {
+                        id: ccCombo
+                        width: 90; height: 26
+                        model: ["CC0","CC1","CC2","CC3","CC4","CC5","CC6","CC7","CC8","CC9","CC10","CC11","CC12","CC13","CC14","CC15"]
+                    }
+                }
+
+                Text {
+                    text: "TGID:"; color: "white"; font.pixelSize: 11; font.bold: true
+                    visible: modeCombo.currentText === "DMR" || modeCombo.currentText === "P25" || modeCombo.currentText === "NXDN"
+                }
+                TextField {
+                    id: tgidInput
+                    width: 120; height: 26
+                    color: "white"
+                    background: Rectangle { color: "#222222"; border.color: "#555555"; radius: 4 }
+                    visible: modeCombo.currentText === "DMR" || modeCombo.currentText === "P25" || modeCombo.currentText === "NXDN"
+                    selectByMouse: true
+                }
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
+
+                Rectangle {
+                    width: 130; height: 32; radius: 6
+                    color: useCurrentMouse.pressed ? "#444444" : "#2A2A2A"
+                    border.color: "#555555"
+                    Text {
+                        text: "Use Current Config"; color: "white"; font.bold: true; font.pixelSize: 10
+                        anchors.centerIn: parent
+                    }
+                    MouseArea {
+                        id: useCurrentMouse
+                        anchors.fill: parent
+                        onClicked: {
+                            memoryConfigPopup.useCurrentValues();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 80; height: 32; radius: 6
+                    color: saveMemMouse.pressed ? "#444444" : "#2A2A2A"
+                    border.color: "#555555"
+                    Text {
+                        text: "Save"; color: "white"; font.bold: true; font.pixelSize: 10
+                        anchors.centerIn: parent
+                    }
+                    MouseArea {
+                        id: saveMemMouse
+                        anchors.fill: parent
+                        onClicked: {
+                            droidstar.save_memory(
+                                memoryConfigPopup.activeSlot,
+                                modeCombo.currentText,
+                                hostCombo.currentText,
+                                slotCombo.currentIndex,
+                                ccCombo.currentIndex,
+                                tgidInput.text
+                            );
+                            droidstar.process_mode_change(_comboMode.currentText);
+                            memoryConfigPopup.close();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 80; height: 32; radius: 6
+                    color: cancelMemMouse.pressed ? "#444444" : "#2A2A2A"
+                    border.color: "#555555"
+                    Text {
+                        text: "Cancel"; color: "white"; font.bold: true; font.pixelSize: 10
+                        anchors.centerIn: parent
+                    }
+                    MouseArea {
+                        id: cancelMemMouse
+                        anchors.fill: parent
+                        onClicked: {
+                            droidstar.process_mode_change(_comboMode.currentText);
+                            memoryConfigPopup.close();
+                        }
                     }
                 }
             }

@@ -1621,3 +1621,29 @@ void DroidStar::clearStationLog()
     QFile::remove(config_path + "/station_log.csv");
 }
 
+void DroidStar::save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid)
+{
+	m_settings->beginGroup("Memory_" + QString::number(index));
+	m_settings->setValue("Mode", mode);
+	m_settings->setValue("Host", host);
+	m_settings->setValue("Slot", slot);
+	m_settings->setValue("CC", cc);
+	m_settings->setValue("TGID", tgid);
+	m_settings->endGroup();
+	m_settings->sync();
+}
+
+QVariantMap DroidStar::get_memory(int index)
+{
+	QVariantMap map;
+	m_settings->beginGroup("Memory_" + QString::number(index));
+	map["Mode"] = m_settings->value("Mode", "");
+	map["Host"] = m_settings->value("Host", "");
+	map["Slot"] = m_settings->value("Slot", 0);
+	map["CC"] = m_settings->value("CC", 0);
+	map["TGID"] = m_settings->value("TGID", "");
+	m_settings->endGroup();
+	return map;
+}
+
+

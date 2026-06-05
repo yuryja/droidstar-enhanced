@@ -151,4 +151,18 @@ xcrun stapler staple build/DroidStarEnhaced.dmg
 - `com.yuryjajitzky.DroidStarEnhaced` — defined in `Info.plist`
 
 ---
-*(Last update: App renamed to DroidStarEnhaced, packaging script updated with robust rpath fix loop)*
+*(Last update: Added Memory Presets feature supporting 5 config slots for Mode, Server, Slot, CC, and TGID)*
+
+## Memory Presets Feature
+
+A 5-slot Memory Preset system is built into both the desktop and mobile interfaces:
+- **Backend API:**
+  - `void save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid)`
+  - `QVariantMap get_memory(int index)`
+  - Persisted under settings group `Memory_X` (using `QSettings`).
+- **Frontend Behavior:**
+  - Standardized memory slot buttons (1 to 5) are placed below the QSY line.
+  - Active slot indicates its state with a highlighted border (theme-aware).
+  - Clicking an active preset triggers a 5-second connection disconnect, displays QSY indicator text, applies the stored preset variables, and reconnects automatically.
+  - Includes full config popup (`memoryConfigPopup`) to copy current settings, edit values, and save to any of the 5 presets.
+
