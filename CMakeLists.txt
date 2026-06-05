@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 if(POLICY CMP0072)
   cmake_policy(SET CMP0072 NEW)
 endif()
-project(DroidStar VERSION 1.0 LANGUAGES C CXX)
+project(DroidStar VERSION 1.0.8 LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -143,7 +143,7 @@ qt_add_executable(DroidStar WIN32 MACOSX_BUNDLE
 if(ANDROID OR IOS)
     qt_add_qml_module(DroidStar
         URI DroidStarApp
-        VERSION 1.0
+        VERSION 1.0.8
         QML_FILES ui/mobile/Main.qml
         QML_FILES ui/mobile/MainTab.qml
         QML_FILES ui/mobile/SettingsTab.qml
@@ -158,7 +158,7 @@ if(ANDROID OR IOS)
 else()
     qt_add_qml_module(DroidStar
         URI DroidStarApp
-        VERSION 1.0
+        VERSION 1.0.8
         QML_FILES ui/desktop/MainDesktop.qml
         QML_FILES ui/desktop/MainTabDesktop.qml
         QML_FILES ui/mobile/SettingsTab.qml

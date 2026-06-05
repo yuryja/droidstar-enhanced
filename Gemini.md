@@ -58,43 +58,43 @@ Run from the root of the project. Requires the build to already be configured wi
 cmake --build build
 
 # 2. Deploy Qt dependencies
-macdeployqt build/DroidStar.app -qmldir=ui
+macdeployqt build/DStar+.app -qmldir=ui
 
 # 3. Replace QtDBus symlink with the real framework
-rm -rf build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-cp -RL /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework \
-       build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+rm -rf build/DStar+.app/Contents/Frameworks/QtDBus.framework
+cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework \
+       build/DStar+.app/Contents/Frameworks/
 
 # 4. Fix QtDBus install name so it is relocatable
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
-  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+  build/DStar+.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
 # 5. Fix rpaths in all plugins so they do not point to /opt/homebrew
-find build/DroidStar.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
+find build/DStar+.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
     install_name_tool -delete_rpath "@loader_path/../../../../lib" "$lib" 2>/dev/null || true
     install_name_tool -add_rpath "@loader_path/../../Frameworks"  "$lib" 2>/dev/null || true
 done
 
 # 6. Fix QtDBus permissions (it was copied as root)
-chmod -R 755 build/DroidStar.app/Contents/Frameworks/QtDBus.framework
-chown -R $USER build/DroidStar.app/Contents/Frameworks/QtDBus.framework
+chmod -R 755 build/DStar+.app/Contents/Frameworks/QtDBus.framework
+chown -R $USER build/DStar+.app/Contents/Frameworks/QtDBus.framework
 
 # 7. Sign QtDBus individually FIRST (avoids "ambiguous format" error)
 codesign --sign - --force \
-  build/DroidStar.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+  build/DStar+.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
 # 8. Sign the entire bundle
-codesign --sign - --force --deep build/DroidStar.app
+codesign --sign - --force --deep build/DStar+.app
 
 # 9. Clear Gatekeeper quarantine xattrs BEFORE creating the DMG
-xattr -cr build/DroidStar.app
+xattr -cr build/DStar+.app
 
 # 10. Create the final DMG
-rm -f build/DroidStar.dmg
+rm -f build/DStar+.dmg
 hdiutil create -volname "DStar+" \
-               -srcfolder build/DroidStar.app \
+               -srcfolder build/DStar+.app \
                -ov -format UDZO \
-               build/DroidStar.dmg
+               build/DStar+.dmg
 ```
 
 ### Installation for the End User
@@ -111,10 +111,10 @@ Requires an **Apple Developer ID** ($99/year) and the **notarization** process:
 ```bash
 # With Developer ID registered:
 codesign --sign "Developer ID Application: Yury Jajitzky (TEAMID)" \
-         --options runtime --deep --force build/DroidStar.app
-xcrun notarytool submit build/DroidStar.dmg --apple-id your@email.com \
+         --options runtime --deep --force build/DStar+.app
+xcrun notarytool submit build/DStar+.dmg --apple-id your@email.com \
          --password APP_SPECIFIC_PASSWORD --team-id TEAMID --wait
-xcrun stapler staple build/DroidStar.dmg
+xcrun stapler staple build/DStar+.dmg
 ```
 
 ### Installed Qt Version

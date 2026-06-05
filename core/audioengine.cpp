@@ -20,7 +20,11 @@
 #include <cmath>
 
 #if defined (Q_OS_MACOS) || defined(Q_OS_IOS)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #define MACHAK 1
+#else
+#define MACHAK 0
+#endif
 #else
 #define MACHAK 0
 #endif
