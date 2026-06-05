@@ -19,7 +19,7 @@ echo "[1b/9] Pruning unused Qt plugins (prevents missing framework errors)..."
 QUICK_PLUGINS="$APP/Contents/PlugIns/quick"
 QML_RESOURCES="$APP/Contents/Resources/qml"
 # Keep only the plugins actually used by the app
-KEEP="libqtquick2plugin|libqtquickcontrols2plugin|libqtquickcontrols2implplugin|libqtquicktemplates2plugin|libqtquickcontrols2nativestyleplugin|libqtquickcontrols2macosstyleplugin|libqtquickcontrols2macosstyleimplplugin|libqquicklayoutsplugin|libqmlshapesplugin|libqmlplugin|libmodelsplugin|libworkerscriptplugin|libquickwindowplugin"
+KEEP="libqtqmlcoreplugin|libqtquick2plugin|libqtquickcontrols2plugin|libqtquickcontrols2implplugin|libqtquicktemplates2plugin|libqtquickcontrols2nativestyleplugin|libqtquickcontrols2macosstyleplugin|libqtquickcontrols2macosstyleimplplugin|libqquicklayoutsplugin|libqmlshapesplugin|libqmlplugin|libmodelsplugin|libworkerscriptplugin|libquickwindowplugin|libqtquickdialogsplugin|libqtquickdialogs2quickimplplugin|libqtquickcontrols2materialstyleplugin|libqtquickcontrols2materialstyleimplplugin|libqtquickcontrols2basicstyleplugin|libqtquickcontrols2basicstyleimplplugin"
 # Prune from PlugIns/quick
 find "$QUICK_PLUGINS" -name "*.dylib" | while read f; do
     base=$(basename "$f")
@@ -28,7 +28,7 @@ find "$QUICK_PLUGINS" -name "*.dylib" | while read f; do
     fi
 done
 # Also remove entire QML resource directories for unused modules
-for dir in VirtualKeyboard LocalStorage Dialogs Scene3D Effects Timeline PDF "Controls/Universal" "Controls/Basic" "Controls/iOS" "Controls/Material" "Controls/Imagine" "Controls/Fusion" "Controls/FluentWinUI3"; do
+for dir in VirtualKeyboard LocalStorage Scene3D Effects Timeline PDF "Controls/Universal" "Controls/iOS" "Controls/Imagine" "Controls/Fusion" "Controls/FluentWinUI3"; do
     rm -rf "$QML_RESOURCES/QtQuick/$dir" 2>/dev/null || true
 done
 
@@ -50,30 +50,48 @@ for fw in QtQuickTemplates2; do
     fi
 done
 
-# ─── 4. Auto-detect and copy missing transitive dylib dependencies ────────────
-echo "[4/9] Scanning and copying missing transitive dylib dependencies..."
+# ─── 4. Auto-detect and copy missing transitive dependencies ───────────────────
+echo "[4/9] Scanning and copying missing transitive dependencies..."
 # Run multiple passes until no new deps are added (handles chains of deps)
 CHANGED=1
 while [ "$CHANGED" = "1" ]; do
     CHANGED=0
-    find "$FRAMEWORKS" \( -name "*.dylib" \) | while read lib; do
+    find "$FRAMEWORKS" "$APP/Contents/PlugIns" "$APP/Contents/Resources" \
+        \( -name "*.dylib" -o -type f -path "*.framework/Versions/A/*" \) 2>/dev/null | while read lib; do
+        # Ignore Headers directories inside frameworks
+        if [[ "$lib" == */Headers/* ]]; then continue; fi
         otool -L "$lib" 2>/dev/null | awk '/@rpath/{print $1}' | sed 's|@rpath/||' | while read dep; do
-            depname=$(basename "$dep")
-            destpath="$FRAMEWORKS/$depname"
-            srcpath="$HOMEBREW_LIB/$depname"
-            if [ ! -f "$destpath" ] && [ -f "$srcpath" ]; then
-                echo "  -> Copying missing: $depname"
-                cp "$srcpath" "$destpath"
-                fix_perms "$destpath"
-                CHANGED=1
+            if [[ "$dep" == *.framework/* ]]; then
+                fw=$(echo "$dep" | cut -d/ -f1)
+                if [ ! -d "$FRAMEWORKS/$fw" ] && [ -d "$HOMEBREW_QT/$fw" ]; then
+                    echo "  -> Copying missing framework: $fw"
+                    cp -a "$HOMEBREW_QT/$fw" "$FRAMEWORKS/"
+                    fix_perms "$FRAMEWORKS/$fw"
+                    echo "1" > build/.changed
+                fi
+            else
+                depname=$(basename "$dep")
+                destpath="$FRAMEWORKS/$depname"
+                srcpath="$HOMEBREW_LIB/$depname"
+                if [ ! -f "$destpath" ] && [ -f "$srcpath" ]; then
+                    echo "  -> Copying missing dylib: $depname"
+                    cp "$srcpath" "$destpath"
+                    fix_perms "$destpath"
+                    echo "1" > build/.changed
+                fi
             fi
         done
     done
+    if [ -f build/.changed ]; then
+        CHANGED=1
+        rm build/.changed
+    fi
 done
 
 # ─── 5. Fix bad rpaths in plugins ────────────────────────────────────────────
-echo "[5/9] Fixing bad rpaths in plugins..."
-find "$APP/Contents/PlugIns" -name "*.dylib" | while read -r lib; do
+echo "[5/9] Fixing bad rpaths in plugins and resources..."
+find "$APP/Contents/PlugIns" "$APP/Contents/Resources" \( -name "*.dylib" -o -type f -path "*.framework/Versions/A/*" \) 2>/dev/null | while read -r lib; do
+    if [[ "$lib" == */Headers/* ]]; then continue; fi
     while otool -l "$lib" 2>/dev/null | grep -q "path @loader_path/\.\./.*lib"; do
         bad_rpath=$(otool -l "$lib" 2>/dev/null | grep "path @loader_path/\.\./.*lib" | awk '{print $2}')
         for rp in $bad_rpath; do install_name_tool -delete_rpath "$rp" "$lib" 2>/dev/null || true; done
@@ -96,24 +114,25 @@ fi
 
 # ─── 7. PREFLIGHT CHECK: verify all @rpath deps resolve inside the bundle ─────
 echo "[7/9] Running preflight dependency check..."
-MISSING=0
-find "$FRAMEWORKS" "$APP/Contents/PlugIns" "$APP/Contents/MacOS" \
-    \( -name "*.dylib" -o -name "DroidStarEnhaced" \) 2>/dev/null | while read bin; do
+rm -f build/.missing
+find "$FRAMEWORKS" "$APP/Contents/PlugIns" "$APP/Contents/Resources" "$APP/Contents/MacOS" \
+    \( -name "*.dylib" -o -name "DroidStarEnhaced" -o -type f -path "*.framework/Versions/A/*" \) 2>/dev/null | while read bin; do
+    if [[ "$bin" == */Headers/* ]]; then continue; fi
     otool -L "$bin" 2>/dev/null | awk '/@rpath/{print $1}' | sed 's|@rpath/||' | while read dep; do
         depbase=$(basename "$dep")
         if [[ "$dep" == *.framework/* ]]; then
             fw=$(echo "$dep" | cut -d/ -f1)
             if [ ! -d "$FRAMEWORKS/$fw" ]; then
                 echo "  !! MISSING FRAMEWORK: $fw (required by $(basename $bin))"
-                MISSING=1
+                echo "1" > build/.missing
             fi
         elif [ ! -f "$FRAMEWORKS/$depbase" ]; then
             echo "  !! MISSING DYLIB: $depbase (required by $(basename $bin))"
-            MISSING=1
+            echo "1" > build/.missing
         fi
     done
 done
-if [ "$MISSING" = "1" ]; then
+if [ -f build/.missing ]; then
     echo ""
     echo "ERROR: Preflight check failed. Fix missing dependencies before packaging."
     exit 1
