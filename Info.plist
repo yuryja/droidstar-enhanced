@@ -5,15 +5,15 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleDisplayName</key>
-	<string>DStar+</string>
+	<string>DroidStarEnhaced</string>
 	<key>CFBundleExecutable</key>
-	<string>DStar+</string>
+	<string>DroidStarEnhaced</string>
 	<key>CFBundleIconFile</key>
 	<string>droidstar.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.yuryjajitzky.DStarPlus</string>
+	<string>com.yuryjajitzky.DroidStarEnhaced</string>
 	<key>CFBundleName</key>
-	<string>DStar+</string>
+	<string>DroidStarEnhaced</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

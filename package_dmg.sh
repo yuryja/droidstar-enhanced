@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP="build/DStar+.app"
+APP="build/DroidStarEnhaced.app"
 
 echo "Deploying Qt dependencies..."
 macdeployqt "$APP" -qmldir=ui
@@ -16,30 +16,27 @@ install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
 
 echo "Fixing ALL bad rpaths in plugins (any depth)..."
 find "$APP/Contents/PlugIns" -name "*.dylib" | while read -r lib; do
-    # Remove ALL rpaths that point toward /lib (Homebrew-style paths of any depth)
     while otool -l "$lib" 2>/dev/null | grep -q "path @loader_path/\.\./.*lib"; do
         bad_rpath=$(otool -l "$lib" 2>/dev/null | grep "path @loader_path/\.\./.*lib" | awk '{print $2}')
         for rp in $bad_rpath; do
             install_name_tool -delete_rpath "$rp" "$lib" 2>/dev/null || true
         done
     done
-    # Also remove any /opt/homebrew absolute paths
     while otool -l "$lib" 2>/dev/null | grep -q "path /opt/homebrew"; do
         bad_rpath=$(otool -l "$lib" 2>/dev/null | grep "path /opt/homebrew" | awk '{print $2}')
         for rp in $bad_rpath; do
             install_name_tool -delete_rpath "$rp" "$lib" 2>/dev/null || true
         done
     done
-    # Ensure the correct rpath is present
     if ! otool -l "$lib" 2>/dev/null | grep -q "@loader_path/../../Frameworks"; then
         install_name_tool -add_rpath "@loader_path/../../Frameworks" "$lib" 2>/dev/null || true
     fi
 done
 
 echo "Fixing rpaths in main binary..."
-install_name_tool -delete_rpath "/opt/homebrew/lib" "$APP/Contents/MacOS/DStar+" 2>/dev/null || true
-if ! otool -l "$APP/Contents/MacOS/DStar+" | grep -q "@executable_path/../Frameworks"; then
-    install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/DStar+" 2>/dev/null || true
+install_name_tool -delete_rpath "/opt/homebrew/lib" "$APP/Contents/MacOS/DroidStarEnhaced" 2>/dev/null || true
+if ! otool -l "$APP/Contents/MacOS/DroidStarEnhaced" | grep -q "@executable_path/../Frameworks"; then
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/DroidStarEnhaced" 2>/dev/null || true
 fi
 
 echo "Fixing QtDBus permissions..."
@@ -60,10 +57,10 @@ echo "Clearing Gatekeeper quarantine xattrs..."
 xattr -cr "$APP"
 
 echo "Creating DMG..."
-rm -f build/DStar+.dmg
-hdiutil create -volname "DStar+" \
+rm -f build/DroidStarEnhaced.dmg
+hdiutil create -volname "DroidStarEnhaced" \
                -srcfolder "$APP" \
                -ov -format UDZO \
-               build/DStar+.dmg
+               build/DroidStarEnhaced.dmg
 
-echo "Done! DMG ready at build/DStar+.dmg"
+echo "Done! DMG ready at build/DroidStarEnhaced.dmg"

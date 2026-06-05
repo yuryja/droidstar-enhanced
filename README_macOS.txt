@@ -1,4 +1,4 @@
-Thank you for using DStar+!
+Thank you for using DroidStarEnhaced!
 
 This application is an enhanced fork of the original DroidStar project created by Doug McLain.
 This software is distributed under the GNU General Public License v2.0 (GPLv2).
@@ -6,11 +6,11 @@ This software is distributed under the GNU General Public License v2.0 (GPLv2).
 ======================================
 INSTRUCTIONS FOR USE
 ======================================
-To install the application, simply drag the DStar+ icon into the Applications folder.
+To install the application, simply drag the DroidStarEnhaced icon into the Applications folder.
 
 If you have any issues running the application due to macOS security measures, you can open the terminal and run the following command to clear the quarantine attributes:
 
-    xattr -cr /Applications/DStar+.app
+    xattr -cr /Applications/DroidStarEnhaced.app
 
 Alternatively, if macOS indicates that the app is from an "unidentified developer" when opening it for the first time:
 Go to System Settings -> Privacy & Security -> "Open Anyway".
