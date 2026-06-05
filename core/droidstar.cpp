@@ -1490,14 +1490,30 @@ void DroidStar::update_data(Mode::MODEINFO info)
 	}
 	QString t = QDateTime::fromMSecsSinceEpoch(info.ts).toString("yyyy.MM.dd hh:mm:ss.zzz");
 	if((m_protocol == "DMR") || (m_protocol == "P25") || (m_protocol == "NXDN")){
+		QString namecall;
+		if(m_protocol == "NXDN"){
+			namecall = m_nxdnids[info.srcid];
+		}
+		else{
+			namecall = m_dmrids[info.srcid];
+		}
+
+		QString logDetails;
+		if(!namecall.isEmpty()){
+			logDetails = namecall + " (" + QString::number(info.srcid) + ")";
+		}
+		else{
+			logDetails = QString::number(info.srcid);
+		}
+
 		if(info.stream_state == Mode::STREAM_NEW){
-			emit update_log(t + " " + m_protocol + " RX started id: " + " srcid: " + QString::number(info.srcid) + " dstid: " + QString::number(info.dstid));
+			emit update_log(t + " " + m_protocol + " RX started from: " + logDetails + " to: " + QString::number(info.dstid));
 		}
 		if(info.stream_state == Mode::STREAM_END){
-			emit update_log(t + " " + m_protocol + " RX ended id: " + " srcid: " + QString::number(info.srcid) + " dstid: " + QString::number(info.dstid));
+			emit update_log(t + " " + m_protocol + " RX ended from: " + logDetails + " to: " + QString::number(info.dstid));
 		}
 		if(info.stream_state == Mode::STREAM_LOST){
-			emit update_log(t + " " + m_protocol + " RX lost id: " + " srcid: " + QString::number(info.srcid) + " dstid: " + QString::number(info.dstid));
+			emit update_log(t + " " + m_protocol + " RX lost from: " + logDetails + " to: " + QString::number(info.dstid));
 		}
 	}
 	else{
