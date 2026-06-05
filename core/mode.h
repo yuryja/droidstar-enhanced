@@ -192,9 +192,9 @@ protected:
 	cst_voice *voice_awb;
 	cst_wave *tts_audio;
 #endif
-	QTimer *m_ping_timer;
-	QTimer *m_txtimer;
-	QTimer *m_rxtimer;
+	QTimer *m_ping_timer = nullptr;
+	QTimer *m_txtimer = nullptr;
+	QTimer *m_rxtimer = nullptr;
 	AudioEngine *m_audio = nullptr;
 	QString m_audioin;
 	QString m_audioout;
