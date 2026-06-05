@@ -259,4 +259,6 @@ protected:
 	int m_txDCOffset;
 };
 
+Q_DECLARE_METATYPE(Mode::MODEINFO)
+
 #endif // MODE_H
