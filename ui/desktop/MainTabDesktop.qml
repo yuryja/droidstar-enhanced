@@ -1270,7 +1270,7 @@ Item {
                                         spacing: 2
 
                                         Text {
-                                            text: "SET MEM"
+                                            text: "SET MEMORY"
                                             color: mainTab.isSetMemMode ? mainTab.themeBgColor : "#888888"
                                             font.bold: true
                                             font.pixelSize: 9
@@ -1303,7 +1303,7 @@ Item {
                                                 hoverEnabled: true
                                                 onClicked: {
                                                     mainTab.isSetMemMode = !mainTab.isSetMemMode;
-                                                    console.log("[SET MEM] toggled. isSetMemMode =", mainTab.isSetMemMode);
+                                                    console.log("[SET MEMORY] toggled. isSetMemMode =", mainTab.isSetMemMode);
                                                 }
                                             }
                                         }

@@ -152,19 +152,14 @@ ApplicationWindow {
                 ListElement { name: "Log"; index: 2 }
                 ListElement { name: "Hosts"; index: 3 }
                 ListElement { name: "Station Log"; index: 4 }
-                ListElement { name: "Memory Settings"; index: -1 }
                 ListElement { name: "About"; index: 5 }
             }
             delegate: ItemDelegate {
                 width: parent.width
                 text: model.name
-                highlighted: model.index === -1 ? false : ListView.isCurrentItem
+                highlighted: ListView.isCurrentItem
                 onClicked: {
-                    if (model.index === -1) {
-                        mainTab.memoryConfigPopup.openMemoryConfig(0);
-                    } else {
-                        swiper.currentIndex = model.index
-                    }
+                    swiper.currentIndex = model.index
                     drawer.close()
                 }
             }

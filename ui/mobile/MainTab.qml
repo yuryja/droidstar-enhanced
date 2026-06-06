@@ -1240,7 +1240,7 @@ Item {
                                 // SET MEM Button
                                 Item {
                                     id: setMemContainer
-                                    width: 50; height: 52
+                                    width: 65; height: 52
                                     visible: _dmrtgidEdit.visible
 
                                     Column {
@@ -1248,7 +1248,7 @@ Item {
                                         spacing: 2
 
                                         Text {
-                                            text: "SET MEM"
+                                            text: "SET MEMORY"
                                             color: mainTab.isSetMemMode ? mainTab.themeBgColor : "#888888"
                                             font.bold: true
                                             font.pixelSize: 9
@@ -1279,7 +1279,7 @@ Item {
                                                 hoverEnabled: true
                                                 onClicked: {
                                                     mainTab.isSetMemMode = !mainTab.isSetMemMode;
-                                                    console.log("[SET MEM] toggled. isSetMemMode =", mainTab.isSetMemMode);
+                                                    console.log("[SET MEMORY] toggled. isSetMemMode =", mainTab.isSetMemMode);
                                                 }
                                             }
                                         }
