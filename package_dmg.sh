@@ -139,20 +139,20 @@ if [ -f build/.missing ]; then
 fi
 echo "  -> All dependencies resolved. Bundle is complete."
 
-# ─── 8. Copy README, sign, clear xattrs ──────────────────────────────────────
+# ─── 11. Clear Gatekeeper quarantine xattrs BEFORE creating the DMG ───────────
 echo "[8/9] Copying README, signing and clearing quarantine..."
-cp README_macOS.txt "$FRAMEWORKS/../Resources/"
-codesign --sign - --force "$FRAMEWORKS/QtDBus.framework/Versions/A/QtDBus"
+cp README_macOS.txt "$APP/Contents/Resources/" 2>/dev/null || true
+codesign --sign - --force "$APP/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus" 2>/dev/null || true
 codesign --sign - --force --deep "$APP"
-xattr -cr "$APP"
+xattr -cr "$APP" 2>/dev/null || true
 
-# ─── 9. Create DMG ────────────────────────────────────────────────────────────
-echo "[9/9] Creating DMG..."
-rm -f build/DroidStarEnhaced.dmg
+# ─── 12. Create the final DMG ────────────────────────────────────────────────
+echo "[9/9] Creating final DMG..."
+rm -f "build/DroidStarEnhaced.dmg"
 hdiutil create -volname "DroidStarEnhaced" \
                -srcfolder "$APP" \
                -ov -format UDZO \
-               build/DroidStarEnhaced.dmg
+               "build/DroidStarEnhaced.dmg"
 
 echo ""
 echo "Done! DMG ready at build/DroidStarEnhaced.dmg"

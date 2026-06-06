@@ -83,6 +83,12 @@ Item {
                 _comboSlot.currentIndex = mem["Slot"];
                 _comboCC.currentIndex = mem["CC"];
                 _dmrtgidEdit.text = mem["TGID"];
+
+                // Explicitly send values to backend because programmatic assignment bypasses onEditingFinished
+                droidstar.set_slot(mem["Slot"]);
+                droidstar.set_cc(mem["CC"]);
+                droidstar.tgid_text_changed(mem["TGID"]);
+
                 droidstar.process_host_change(mem["Host"]);
                 _comboHost.currentIndex = _comboHost.find(mem["Host"]);
                 
@@ -142,8 +148,11 @@ Item {
 	property alias dtmfsendbutton: _dtmfsendbutton
 	property alias comboModule: _comboModule
 	property alias comboSlot: _comboSlot
+	property alias comboSlotItem: _comboSlotItem
 	property alias comboCC: _comboCC
+	property alias comboCCItem: _comboCCItem
 	property alias dmrtgidEdit: _dmrtgidEdit
+	property alias dmrtgidEditItem: _dmrtgidEditItem
 	property alias comboM17CAN: _comboM17CAN
 	property alias privateBox: _privateBox
 	property alias connectbutton: _connectbutton
@@ -722,7 +731,7 @@ Item {
                         
                         // Value display
                         Rectangle {
-                            width: 68; height: 20; radius: 6
+                            width: 68; height: 20; radius: 8
                             color: "#111111"; border.color: "#444444"; border.width: 1
                             anchors.horizontalCenter: parent.horizontalCenter
                             Text {
@@ -780,7 +789,7 @@ Item {
                         
                         // Value display
                         Rectangle {
-                            width: 68; height: 20; radius: 6
+                            width: 68; height: 20; radius: 8
                             color: "#111111"; border.color: "#444444"; border.width: 1
                             anchors.horizontalCenter: parent.horizontalCenter
                             Text {
@@ -838,7 +847,7 @@ Item {
                     width: parent.width
                     height: 38
                     z: 10
-                    property bool expanded: false
+                    property bool expanded: true
                     
                     // Clickable Header Bar
                     Rectangle {
@@ -920,9 +929,9 @@ Item {
                                 // MODE (Dynamic Width to fill line if Slot & CC are hidden)
                                 Item {
                                     width: {
-                                        if (!_comboSlot.visible && !_comboCC.visible) {
+                                        if (!_comboSlotItem.visible && !_comboCCItem.visible) {
                                             return parent.width;
-                                        } else if (_comboSlot.visible && !_comboCC.visible) {
+                                        } else if (_comboSlotItem.visible && !_comboCCItem.visible) {
                                             return parent.width * 0.60;
                                         } else {
                                             return parent.width * 0.35;
@@ -964,15 +973,15 @@ Item {
 
                                 // SLOT (DMR Slot)
                                 Item {
+                                    id: _comboSlotItem
                                     width: {
-                                        if (!_comboCC.visible) {
+                                        if (!_comboCCItem.visible) {
                                             return parent.width - parent.width * 0.35 - 4;
                                         } else {
                                             return parent.width * 0.30;
                                         }
                                     }
                                     height: 52
-                                    visible: _comboSlot.visible
                                     Rectangle {
                                         anchors.fill: parent; anchors.topMargin: 10
                                         color: "transparent"
@@ -1007,8 +1016,8 @@ Item {
 
                                 // CC (DMR Color Code)
                                 Item {
+                                    id: _comboCCItem
                                     width: parent.width - parent.width * 0.35 - parent.width * 0.30 - 8; height: 52
-                                    visible: _comboCC.visible
                                     Rectangle {
                                         anchors.fill: parent; anchors.topMargin: 10
                                         color: "transparent"
@@ -1049,8 +1058,8 @@ Item {
 
                                 // TGID (Talk Group ID)
                                 Item {
+                                    id: _dmrtgidEditItem
                                     width: parent.width * 0.35; height: 52
-                                    visible: _dmrtgidEdit.visible
                                     Rectangle {
                                         anchors.fill: parent; anchors.topMargin: 10
                                         color: "transparent"
@@ -1081,7 +1090,7 @@ Item {
 
                                 // SERVER (Server hosts list)
                                 Item {
-                                    width: _dmrtgidEdit.visible ? (parent.width - parent.width * 0.35 - 4) : parent.width
+                                    width: _dmrtgidEditItem.visible ? (parent.width - parent.width * 0.35 - 4) : parent.width
                                     height: 52
                                     visible: _comboHost.visible
                                     Rectangle {
@@ -1246,7 +1255,7 @@ Item {
                                             id: qsyBtn
                                             width: 44
                                             height: 38
-                                            radius: 6
+                                            radius: 8
                                             color: qsyContainer.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
                                             border.color: qsyContainer.canQSY ? "#00FF00" : "#444444"
                                             border.width: 1.5
@@ -1371,59 +1380,36 @@ Item {
                                         anchors.topMargin: 12
                                         anchors.leftMargin: 8
                                         anchors.rightMargin: 8
-                                        spacing: 12
-                                        
-                                        Row {
-                                            spacing: 10
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            Repeater {
-                                                model: 5
-                                                Rectangle {
-                                                    id: memBtn
-                                                    width: 28; height: 28; radius: 14
-                                                    color: "#2A2A2A"
-                                                    border.color: isMemActive(index) ? "#FFB000" : "#555555"
-                                                    border.width: isMemActive(index) ? 2.5 : 1
-                                                    
-                                                    Text {
-                                                        anchors.centerIn: parent
-                                                        text: (index + 1).toString()
-                                                        color: "white"
-                                                        font.bold: true
-                                                        font.pixelSize: 12
-                                                    }
+                                        spacing: 10
 
-                                                    MouseArea {
-                                                        anchors.fill: parent
-                                                        onClicked: {
+                                        Repeater {
+                                            model: 5
+                                            Rectangle {
+                                                width: (parent.width - 40) / 5; height: 30; radius: 8
+                                                color: "#2A2A2A"
+                                                border.color: isMemActive(index) ? mainTab.themeBgColor : "#555555"
+                                                border.width: isMemActive(index) ? 2.5 : 1
+
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: (index + 1).toString()
+                                                    color: "white"
+                                                    font.bold: true
+                                                    font.pixelSize: 12
+                                                }
+
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                                    onClicked: function(mouse) {
+                                                        if (mouse.button === Qt.RightButton) {
+                                                            memoryConfigPopup.openMemoryConfig(index);
+                                                        } else {
                                                             mainTab.triggerMemory(index);
                                                         }
                                                     }
-                                                }
-                                            }
-                                        }
-
-                                        Item {
-                                            width: parent.width - x - 10
-                                            height: parent.height
-                                            
-                                            Rectangle {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                anchors.right: parent.right
-                                                anchors.rightMargin: 6
-                                                width: 130; height: 28; radius: 6
-                                                color: editMemMouse.pressed ? "#444444" : "#2A2A2A"
-                                                border.color: "#555555"; border.width: 1
-                                                
-                                                Text {
-                                                    text: "MANAGE MEMORIES"; color: "white"; font.bold: true; font.pixelSize: 10
-                                                    anchors.centerIn: parent
-                                                }
-                                                MouseArea {
-                                                    id: editMemMouse
-                                                    anchors.fill: parent
-                                                    onClicked: {
-                                                        memoryConfigPopup.openMemoryConfig(0);
+                                                    onPressAndHold: {
+                                                        memoryConfigPopup.openMemoryConfig(index);
                                                     }
                                                 }
                                             }
@@ -1592,7 +1578,7 @@ Item {
                 spacing: 16
                 
                 Rectangle {
-                    width: 100; height: 32; radius: 6
+                    width: 100; height: 32; radius: 8
                     color: configureMemMouse.pressed ? "#444444" : "#2A2A2A"
                     border.color: "#555555"
                     Text {
@@ -1610,7 +1596,7 @@ Item {
                 }
 
                 Rectangle {
-                    width: 80; height: 32; radius: 6
+                    width: 80; height: 32; radius: 8
                     color: closeEmptyMemMouse.pressed ? "#444444" : "#2A2A2A"
                     border.color: "#555555"
                     Text {
@@ -1767,7 +1753,7 @@ Item {
                 spacing: 10
 
                 Rectangle {
-                    width: 130; height: 32; radius: 6
+                    width: 130; height: 32; radius: 8
                     color: useCurrentMouse.pressed ? "#444444" : "#2A2A2A"
                     border.color: "#555555"
                     Text {
@@ -1784,7 +1770,7 @@ Item {
                 }
 
                 Rectangle {
-                    width: 70; height: 32; radius: 6
+                    width: 70; height: 32; radius: 8
                     color: saveMemMouse.pressed ? "#444444" : "#2A2A2A"
                     border.color: "#555555"
                     Text {
@@ -1810,7 +1796,7 @@ Item {
                 }
 
                 Rectangle {
-                    width: 70; height: 32; radius: 6
+                    width: 70; height: 32; radius: 8
                     color: cancelMemMouse.pressed ? "#444444" : "#2A2A2A"
                     border.color: "#555555"
                     Text {
