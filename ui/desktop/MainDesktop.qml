@@ -500,7 +500,7 @@ ApplicationWindow {
 			++mainTab.uitimer.rxcnt;
 			
 			if (mainTab.data1.text !== "") {
-				mainTab.addLastHeard(mainTab.data1.text, mainTab.data6.text, mainTab.data5.text);
+				mainTab.addLastHeard(mainTab.data1.text, mainTab.data6.text, mainTab.data5.text, mainTab.data3.text);
 			}
         }
 		function onUpdate_settings() {

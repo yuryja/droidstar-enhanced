@@ -41,8 +41,18 @@ Item {
             }
             parts.push(currentPart);
             
-            if (parts.length >= 5) {
+            if (parts.length >= 6) {
                 stationLogModel.append({
+                    "tg": parts[0],
+                    "date": parts[1],
+                    "time": parts[2],
+                    "callsign": parts[3],
+                    "name": parts[4],
+                    "country": parts[5]
+                });
+            } else if (parts.length === 5) {
+                stationLogModel.append({
+                    "tg": "",
                     "date": parts[0],
                     "time": parts[1],
                     "callsign": parts[2],
@@ -101,11 +111,12 @@ Item {
                 width: parent.width
                 height: 16
 
-                Text { width: parent.width * 0.15; text: "DATE";      color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
-                Text { width: parent.width * 0.15; text: "TIME";      color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
-                Text { width: parent.width * 0.20; text: "CALLSIGN";  color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
-                Text { width: parent.width * 0.25; text: "NAME";      color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
-                Text { width: parent.width * 0.25; text: "COUNTRY";   color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
+                Text { width: parent.width * 0.10; text: "TG";        color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
+                Text { width: parent.width * 0.13; text: "DATE";      color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
+                Text { width: parent.width * 0.12; text: "TIME";      color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
+                Text { width: parent.width * 0.18; text: "CALLSIGN";  color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
+                Text { width: parent.width * 0.24; text: "NAME";      color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
+                Text { width: parent.width * 0.23; text: "COUNTRY";   color: "#888888"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter }
             }
 
             Rectangle {
@@ -139,11 +150,12 @@ Item {
                 Row {
                     anchors.fill: parent
 
-                    Text { width: delegateRect.width * 0.15; text: model.date;      color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
-                    Text { width: delegateRect.width * 0.15; text: model.time;      color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
-                    Text { width: delegateRect.width * 0.20; text: model.callsign;  color: "#FFB000"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
-                    Text { width: delegateRect.width * 0.25; text: model.name;      color: "white"; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
-                    Text { width: delegateRect.width * 0.25; text: model.country;   color: "#9AE6B4"; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
+                    Text { width: delegateRect.width * 0.10; text: typeof model.tg !== "undefined" ? model.tg : ""; color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
+                    Text { width: delegateRect.width * 0.13; text: model.date;      color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
+                    Text { width: delegateRect.width * 0.12; text: model.time;      color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
+                    Text { width: delegateRect.width * 0.18; text: model.callsign;  color: "#FFB000"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter }
+                    Text { width: delegateRect.width * 0.24; text: model.name;      color: "white"; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
+                    Text { width: delegateRect.width * 0.23; text: model.country;   color: "#9AE6B4"; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight }
                 }
             }
 

@@ -275,10 +275,12 @@ Item {
         return "Unknown";
     }
 
-    function addLastHeard(data1Text, data6Text, streamId) {
+    function addLastHeard(data1Text, data6Text, streamId, tg) {
         if (!data1Text || data1Text.trim() === "") {
             return;
         }
+        
+        var tgidText = tg ? tg.trim() : "";
         
         // Parse Callsign and Name
         var tokens = data1Text.trim().split(/\s+/);
@@ -310,6 +312,9 @@ Item {
                 // Update time, country and name if available
                 lastHeardModel.setProperty(0, "utc", utcTime);
                 lastHeardModel.setProperty(0, "date", dateStr);
+                if (tgidText !== "") {
+                    lastHeardModel.setProperty(0, "tg", tgidText);
+                }
                 if (country !== "Unknown" && country !== "") {
                     lastHeardModel.setProperty(0, "country", country);
                 }
@@ -321,7 +326,7 @@ Item {
         }
         
         // Append to C++ persistent station log
-        droidstar.appendToStationLog(dateStr, utcTime, callsign, name, country);
+        droidstar.appendToStationLog(tgidText, dateStr, utcTime, callsign, name, country);
         if (typeof stationLogTab !== "undefined") {
             stationLogTab.refreshLog();
         }
@@ -332,7 +337,8 @@ Item {
             "date": dateStr,
             "callsign": callsign,
             "name": name,
-            "country": country
+            "country": country,
+            "tg": tgidText
         });
         
         // Cap the list to 5 items
@@ -1697,7 +1703,8 @@ Item {
                     Text { width: parent.width * 0.20; text: "CallSign"; color: "black"; font.pixelSize: 10; font.bold: true }
                     Text { width: parent.width * 0.20; text: "Name"; color: "black"; font.pixelSize: 10; font.bold: true }
                     Text { width: parent.width * 0.20; text: "Country"; color: "black"; font.pixelSize: 10; font.bold: true }
-                    Text { width: parent.width * 0.30; text: "Date"; color: "black"; font.pixelSize: 10; font.bold: true; horizontalAlignment: Text.AlignHCenter }
+                    Text { width: parent.width * 0.10; text: "TG"; color: "black"; font.pixelSize: 10; font.bold: true; horizontalAlignment: Text.AlignHCenter }
+                    Text { width: parent.width * 0.20; text: "Date"; color: "black"; font.pixelSize: 10; font.bold: true; horizontalAlignment: Text.AlignHCenter }
                     Text { width: parent.width * 0.10; text: "Time"; color: "black"; font.pixelSize: 10; font.bold: true }
                 }
                 
@@ -1720,7 +1727,8 @@ Item {
                         Text { width: parent.width * 0.20; text: callsign; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
                         Text { width: parent.width * 0.20; text: name; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
                         Text { width: parent.width * 0.20; text: country; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
-                        Text { width: parent.width * 0.30; text: typeof date !== "undefined" ? date : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
+                        Text { width: parent.width * 0.10; text: typeof tg !== "undefined" ? tg : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
+                        Text { width: parent.width * 0.20; text: typeof date !== "undefined" ? date : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
                         Text { width: parent.width * 0.10; text: utc; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
                     }
                 }

@@ -1561,13 +1561,17 @@ void DroidStar::click_tx(bool tx)
 	emit tx_clicked(tx);
 }
 
-void DroidStar::appendToStationLog(const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country)
+void DroidStar::appendToStationLog(const QString &tgStr, const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country)
 {
     QFile f(config_path + "/station_log.csv");
     if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&f);
         
         // Escape commas and quotes for CSV compliance
+        QString escTg = tgStr;
+        escTg.replace("\"", "\"\"");
+        if (escTg.contains(",")) escTg = "\"" + escTg + "\"";
+
         QString escName = name;
         escName.replace("\"", "\"\"");
         if (escName.contains(",")) escName = "\"" + escName + "\"";
@@ -1577,7 +1581,7 @@ void DroidStar::appendToStationLog(const QString &dateStr, const QString &timeSt
         escCountry.replace("\"", "\"\"");
         if (escCountry.contains(",")) escCountry = "\"" + escCountry + "\"";
 
-        out << dateStr << "," << timeStr << "," << callsign << "," << escName << "," << escCountry << "\n";
+        out << escTg << "," << dateStr << "," << timeStr << "," << callsign << "," << escName << "," << escCountry << "\n";
         f.close();
     }
 }

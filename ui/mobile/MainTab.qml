@@ -254,10 +254,12 @@ Item {
         return "Unknown";
     }
 
-    function addLastHeard(data1Text, data6Text, streamId) {
+    function addLastHeard(data1Text, data6Text, streamId, tg) {
         if (!data1Text || data1Text.trim() === "") {
             return;
         }
+        
+        var tgidText = tg ? tg.trim() : "";
         
         // Parse Callsign and Name
         var tokens = data1Text.trim().split(/\s+/);
@@ -285,6 +287,9 @@ Item {
             if (firstItem.callsign === callsign) {
                 // Update time, country and name if available
                 lastHeardModel.setProperty(0, "utc", utcTime);
+                if (tgidText !== "") {
+                    lastHeardModel.setProperty(0, "tg", tgidText);
+                }
                 if (country !== "Unknown" && country !== "") {
                     lastHeardModel.setProperty(0, "country", country);
                 }
@@ -299,7 +304,7 @@ Item {
         var dateStr = d.getUTCFullYear() + "-" + 
                       ("0" + (d.getUTCMonth()+1)).slice(-2) + "-" + 
                       ("0" + d.getUTCDate()).slice(-2);
-        droidstar.appendToStationLog(dateStr, utcTime, callsign, name, country);
+        droidstar.appendToStationLog(tgidText, dateStr, utcTime, callsign, name, country);
         if (typeof stationLogTab !== "undefined") {
             stationLogTab.refreshLog();
         }
@@ -309,7 +314,8 @@ Item {
             "utc": utcTime,
             "callsign": callsign,
             "name": name,
-            "country": country
+            "country": country,
+            "tg": tgidText
         });
         
         // Cap the list to 5 items
@@ -531,7 +537,7 @@ Item {
                         height: 13
 
                         Text {
-                            width: parent.width * 0.20
+                            width: parent.width * 0.18
                             text: "UTC"
                             color: "#111111"
                             font.family: llpixelFont.name
@@ -540,7 +546,16 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                         }
                         Text {
-                            width: parent.width * 0.25
+                            width: parent.width * 0.12
+                            text: "TG"
+                            color: "#111111"
+                            font.family: llpixelFont.name
+                            font.pixelSize: 12
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                        Text {
+                            width: parent.width * 0.22
                             text: "CALLSIGN"
                             color: "#111111"
                             font.family: llpixelFont.name
@@ -549,7 +564,7 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                         }
                         Text {
-                            width: parent.width * 0.28
+                            width: parent.width * 0.25
                             text: "NAME"
                             color: "#111111"
                             font.family: llpixelFont.name
@@ -558,7 +573,7 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                         }
                         Text {
-                            width: parent.width * 0.27
+                            width: parent.width * 0.23
                             text: "COUNTRY"
                             color: "#111111"
                             font.family: llpixelFont.name
@@ -596,7 +611,7 @@ Item {
 
                                 // UTC
                                 Text {
-                                    width: parent.width * 0.20
+                                    width: parent.width * 0.18
                                     text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).utc : ""
                                     color: "#111111"
                                     font.family: llpixelFont.name
@@ -605,9 +620,21 @@ Item {
                                     horizontalAlignment: Text.AlignHCenter
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
+                                // TG
+                                Text {
+                                    width: parent.width * 0.12
+                                    text: (index < lastHeardModel.count && lastHeardModel.get(index) && typeof lastHeardModel.get(index).tg !== "undefined") ? lastHeardModel.get(index).tg : ""
+                                    color: "#111111"
+                                    font.family: llpixelFont.name
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    elide: Text.ElideRight
+                                }
                                 // Callsign
                                 Text {
-                                    width: parent.width * 0.25
+                                    width: parent.width * 0.22
                                     text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).callsign : ""
                                     color: "#111111"
                                     font.family: llpixelFont.name
@@ -619,7 +646,7 @@ Item {
                                 }
                                 // Name
                                 Text {
-                                    width: parent.width * 0.28
+                                    width: parent.width * 0.25
                                     text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).name : ""
                                     color: "#111111"
                                     font.family: llpixelFont.name
@@ -630,7 +657,7 @@ Item {
                                 }
                                 // Country
                                 Text {
-                                    width: parent.width * 0.27
+                                    width: parent.width * 0.23
                                     text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).country : ""
                                     color: "#111111"
                                     font.family: llpixelFont.name
