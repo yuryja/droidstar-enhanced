@@ -1563,6 +1563,12 @@ void DroidStar::click_tx(bool tx)
 
 void DroidStar::appendToStationLog(const QString &tgStr, const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country)
 {
+    m_lastLogDate = dateStr;
+    m_lastLogTime = timeStr;
+    m_lastLogCallsign = callsign;
+    m_lastLogName = name;
+    m_lastLogCountry = country;
+
     QFile f(config_path + "/station_log.csv");
     if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&f);
@@ -1583,6 +1589,52 @@ void DroidStar::appendToStationLog(const QString &tgStr, const QString &dateStr,
 
         out << escTg << "," << dateStr << "," << timeStr << "," << callsign << "," << escName << "," << escCountry << "\n";
         f.close();
+    }
+}
+
+void DroidStar::updateLastStationLogTG(const QString &tgStr)
+{
+    if (m_lastLogCallsign.isEmpty()) return;
+    
+    QFile f(config_path + "/station_log.csv");
+    if (!f.exists()) return;
+    
+    QStringList lines;
+    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&f);
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            if (!line.trimmed().isEmpty()) {
+                lines.append(line);
+            }
+        }
+        f.close();
+    }
+    
+    if (!lines.isEmpty()) {
+        // Rewrite the last line with the new tgStr
+        QString escTg = tgStr;
+        escTg.replace("\"", "\"\"");
+        if (escTg.contains(",")) escTg = "\"" + escTg + "\"";
+
+        QString escName = m_lastLogName;
+        escName.replace("\"", "\"\"");
+        if (escName.contains(",")) escName = "\"" + escName + "\"";
+
+        QString escCountry = m_lastLogCountry;
+        escCountry.replace("\"", "\"\"");
+        if (escCountry.contains(",")) escCountry = "\"" + escCountry + "\"";
+
+        QString newLastLine = escTg + "," + m_lastLogDate + "," + m_lastLogTime + "," + m_lastLogCallsign + "," + escName + "," + escCountry;
+        lines.last() = newLastLine;
+        
+        if (f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+            QTextStream out(&f);
+            for (const QString &line : lines) {
+                out << line << "\n";
+            }
+            f.close();
+        }
     }
 }
 

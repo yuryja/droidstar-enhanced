@@ -259,6 +259,7 @@ public slots:
 	void tts_text_changed(QString);
 	void obtain_asl_wt_creds();
 	void appendToStationLog(const QString &tgStr, const QString &dateStr, const QString &timeStr, const QString &callsign, const QString &name, const QString &country);
+	void updateLastStationLogTG(const QString &tgStr);
 	QString readStationLog();
 	QString exportStationLog();
 	void clearStationLog();
@@ -382,6 +383,11 @@ private:
 #ifdef Q_OS_ANDROID
     AndroidSerialPort *m_USBmonitor;
 #endif
+	QString m_lastLogDate;
+	QString m_lastLogTime;
+	QString m_lastLogCallsign;
+	QString m_lastLogName;
+	QString m_lastLogCountry;
 
 private slots:
 #ifdef Q_OS_ANDROID

@@ -313,7 +313,14 @@ Item {
                 lastHeardModel.setProperty(0, "utc", utcTime);
                 lastHeardModel.setProperty(0, "date", dateStr);
                 if (tgidText !== "") {
+                    var oldTg = firstItem.tg;
                     lastHeardModel.setProperty(0, "tg", tgidText);
+                    if (oldTg === "" || typeof oldTg === "undefined") {
+                        droidstar.updateLastStationLogTG(tgidText);
+                        if (typeof stationLogTab !== "undefined") {
+                            stationLogTab.refreshLog();
+                        }
+                    }
                 }
                 if (country !== "Unknown" && country !== "") {
                     lastHeardModel.setProperty(0, "country", country);
@@ -1724,12 +1731,12 @@ Item {
                     delegate: Row {
                         spacing: 0
                         width: parent.width
-                        Text { width: parent.width * 0.20; text: callsign; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
-                        Text { width: parent.width * 0.20; text: name; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
-                        Text { width: parent.width * 0.20; text: country; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
-                        Text { width: parent.width * 0.10; text: typeof tg !== "undefined" ? tg : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
-                        Text { width: parent.width * 0.20; text: typeof date !== "undefined" ? date : ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
-                        Text { width: parent.width * 0.10; text: utc; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.20; text: model.callsign; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.20; text: model.name; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.20; text: model.country; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
+                        Text { width: parent.width * 0.10; text: model.tg || ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
+                        Text { width: parent.width * 0.20; text: model.date || ""; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter }
+                        Text { width: parent.width * 0.10; text: model.utc; color: mainTab.themeTextColor; font.family: llpixelFont.name; font.pixelSize: 22; font.bold: true; style: Text.Raised; styleColor: "#40000000"; elide: Text.ElideRight }
                     }
                 }
             }

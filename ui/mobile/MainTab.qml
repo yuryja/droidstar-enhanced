@@ -288,7 +288,14 @@ Item {
                 // Update time, country and name if available
                 lastHeardModel.setProperty(0, "utc", utcTime);
                 if (tgidText !== "") {
+                    var oldTg = firstItem.tg;
                     lastHeardModel.setProperty(0, "tg", tgidText);
+                    if (oldTg === "" || typeof oldTg === "undefined") {
+                        droidstar.updateLastStationLogTG(tgidText);
+                        if (typeof stationLogTab !== "undefined") {
+                            stationLogTab.refreshLog();
+                        }
+                    }
                 }
                 if (country !== "Unknown" && country !== "") {
                     lastHeardModel.setProperty(0, "country", country);
@@ -596,7 +603,7 @@ Item {
                     spacing: 2
 
                     Repeater {
-                        model: 5
+                        model: lastHeardModel
 
                         delegate: Rectangle {
                             width: parent.width
@@ -612,7 +619,7 @@ Item {
                                 // UTC
                                 Text {
                                     width: parent.width * 0.18
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).utc : ""
+                                    text: model.utc
                                     color: "#111111"
                                     font.family: llpixelFont.name
                                     font.pixelSize: 12
@@ -623,7 +630,7 @@ Item {
                                 // TG
                                 Text {
                                     width: parent.width * 0.12
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index) && typeof lastHeardModel.get(index).tg !== "undefined") ? lastHeardModel.get(index).tg : ""
+                                    text: model.tg || ""
                                     color: "#111111"
                                     font.family: llpixelFont.name
                                     font.pixelSize: 12
@@ -635,7 +642,7 @@ Item {
                                 // Callsign
                                 Text {
                                     width: parent.width * 0.22
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).callsign : ""
+                                    text: model.callsign
                                     color: "#111111"
                                     font.family: llpixelFont.name
                                     font.pixelSize: 12
@@ -647,7 +654,7 @@ Item {
                                 // Name
                                 Text {
                                     width: parent.width * 0.25
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).name : ""
+                                    text: model.name
                                     color: "#111111"
                                     font.family: llpixelFont.name
                                     font.pixelSize: 12
@@ -658,7 +665,7 @@ Item {
                                 // Country
                                 Text {
                                     width: parent.width * 0.23
-                                    text: (index < lastHeardModel.count && lastHeardModel.get(index)) ? lastHeardModel.get(index).country : ""
+                                    text: model.country
                                     color: "#111111"
                                     font.family: llpixelFont.name
                                     font.pixelSize: 12
