@@ -77,6 +77,25 @@ Item {
         }
     }
 
+    function applyMemory(index) {
+        var mem = droidstar.get_memory(index);
+        if (mem["Mode"] !== "" && mem["Mode"] !== undefined) {
+            _comboMode.currentIndex = _comboMode.find(mem["Mode"]);
+            _comboSlot.currentIndex = mem["Slot"];
+            _comboCC.currentIndex = mem["CC"];
+            _dmrtgidEdit.text = mem["TGID"];
+            
+            // Explicitly send values to backend
+            droidstar.set_slot(mem["Slot"]);
+            droidstar.set_cc(mem["CC"]);
+            droidstar.set_dmrtgid(mem["TGID"]);
+            droidstar.tgid_text_changed(mem["TGID"]);
+
+            droidstar.process_host_change(mem["Host"]);
+            _comboHost.currentIndex = _comboHost.find(mem["Host"]);
+        }
+    }
+
     Timer {
         id: memoryQsyTimer
         interval: 5000
@@ -84,23 +103,8 @@ Item {
         running: false
         property int targetIndex: -1
         onTriggered: {
-            var mem = droidstar.get_memory(targetIndex);
-            if (mem["Mode"] !== "" && mem["Mode"] !== undefined) {
-                _comboMode.currentIndex = _comboMode.find(mem["Mode"]);
-                _comboSlot.currentIndex = mem["Slot"];
-                _comboCC.currentIndex = mem["CC"];
-                _dmrtgidEdit.text = mem["TGID"];
-
-                // Explicitly send values to backend because programmatic assignment bypasses onEditingFinished
-                droidstar.set_slot(mem["Slot"]);
-                droidstar.set_cc(mem["CC"]);
-                droidstar.tgid_text_changed(mem["TGID"]);
-
-                droidstar.process_host_change(mem["Host"]);
-                _comboHost.currentIndex = _comboHost.find(mem["Host"]);
-                
-                mainTab.connectbutton.clickConnect();
-            }
+            applyMemory(targetIndex);
+            mainTab.connectbutton.clickConnect();
             mainTab.isQSYing = false;
         }
     }
@@ -113,13 +117,14 @@ Item {
         }
         if (isMemActive(index)) return;
         
-        mainTab.isQSYing = true;
-        memoryQsyTimer.targetIndex = index;
-        
         if (mainTab.connectbutton.isconnected) {
+            mainTab.isQSYing = true;
+            memoryQsyTimer.targetIndex = index;
             mainTab.connectbutton.clickConnect();
+            memoryQsyTimer.start();
+        } else {
+            applyMemory(index);
         }
-        memoryQsyTimer.start();
     }
 
 	onWidthChanged:{
