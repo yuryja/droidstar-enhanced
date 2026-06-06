@@ -262,6 +262,8 @@ public slots:
 	QString readStationLog();
 	QString exportStationLog();
 	void clearStationLog();
+	void save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid);
+	QVariantMap get_memory(int index);
 private:
 	int connect_status;
 	bool m_update_host_files;
@@ -400,8 +402,6 @@ private slots:
 	void update_data(Mode::MODEINFO);
     void updatelog(QString);
 	void save_settings();
-	void save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid);
-	QVariantMap get_memory(int index);
 	void update_output_level(unsigned short l){ m_outlevel = l;}
 	//void load_md380_fw();
 };
