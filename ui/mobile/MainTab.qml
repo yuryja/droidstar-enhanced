@@ -41,16 +41,9 @@ Item {
 	property real micValue: 0.1
 
     property bool isQSYing: false
+    property bool isSetMemMode: false
+    property string themeBgColor: "#A8E6CF"
     property string connectedTG: ""
-
-    function triggerQSY() {
-        if (mainTab.connectbutton.isconnected) {
-            _dmrtgidEdit.focus = false;
-            mainTab.forceActiveFocus();
-            mainTab.isQSYing = true;
-            mainTab.connectbutton.clickConnect();
-        }
-    }
 
     property int activeMemoryIndex: -1
 
@@ -1231,51 +1224,48 @@ Item {
                                     }
                                 }
 
-                                // QSY Button
+                                // SET MEM Button
                                 Item {
-                                    id: qsyContainer
+                                    id: setMemContainer
                                     width: 50; height: 52
                                     visible: _dmrtgidEdit.visible
-
-                                    property bool canQSY: mainTab.connectbutton.isconnected && _dmrtgidEdit.text.trim() !== "" && _dmrtgidEdit.text !== mainTab.connectedTG
 
                                     Column {
                                         anchors.fill: parent
                                         spacing: 2
 
                                         Text {
-                                            text: "QSY"
-                                            color: qsyContainer.canQSY ? "#00FF00" : "#888888"
+                                            text: "SET MEM"
+                                            color: mainTab.isSetMemMode ? mainTab.themeBgColor : "#888888"
                                             font.bold: true
                                             font.pixelSize: 9
                                             anchors.horizontalCenter: parent.horizontalCenter
                                         }
 
                                         Rectangle {
-                                            id: qsyBtn
+                                            id: setMemBtn
                                             width: 44
                                             height: 38
                                             radius: 8
-                                            color: qsyContainer.canQSY ? (qsyMouse.pressed ? "#004D40" : (qsyMouse.containsMouse ? "#00796B" : "#00695C")) : "#222222"
-                                            border.color: qsyContainer.canQSY ? "#00FF00" : "#444444"
-                                            border.width: 1.5
+                                            color: mainTab.isSetMemMode ? Qt.darker(mainTab.themeBgColor, 1.2) : (setMemMouse.pressed ? "#444444" : "#222222")
+                                            border.color: mainTab.isSetMemMode ? Qt.lighter(mainTab.themeBgColor, 1.2) : "#444444"
+                                            border.width: mainTab.isSetMemMode ? 2 : 1.5
                                             anchors.horizontalCenter: parent.horizontalCenter
 
                                             Text {
-                                                text: "QSY"
-                                                color: qsyContainer.canQSY ? "white" : "#666666"
+                                                text: "SET"
+                                                color: mainTab.isSetMemMode ? "white" : "#888888"
                                                 font.bold: true
                                                 font.pixelSize: 11
                                                 anchors.centerIn: parent
                                             }
 
                                             MouseArea {
-                                                id: qsyMouse
+                                                id: setMemMouse
                                                 anchors.fill: parent
                                                 hoverEnabled: true
-                                                enabled: qsyContainer.canQSY
                                                 onClicked: {
-                                                    mainTab.triggerQSY();
+                                                    mainTab.isSetMemMode = !mainTab.isSetMemMode;
                                                 }
                                             }
                                         }
@@ -1387,8 +1377,8 @@ Item {
                                             Rectangle {
                                                 width: (parent.width - 40) / 5; height: 30; radius: 8
                                                 color: "#2A2A2A"
-                                                border.color: isMemActive(index) ? mainTab.themeBgColor : "#555555"
-                                                border.width: isMemActive(index) ? 2.5 : 1
+                                                border.color: mainTab.isSetMemMode ? mainTab.themeBgColor : (isMemActive(index) ? mainTab.themeBgColor : "#555555")
+                                                border.width: mainTab.isSetMemMode ? 2 : (isMemActive(index) ? 2.5 : 1)
 
                                                 Text {
                                                     anchors.centerIn: parent
@@ -1400,16 +1390,24 @@ Item {
 
                                                 MouseArea {
                                                     anchors.fill: parent
-                                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                                                     onClicked: function(mouse) {
-                                                        if (mouse.button === Qt.RightButton) {
-                                                            memoryConfigPopup.openMemoryConfig(index);
+                                                        if (mainTab.isSetMemMode) {
+                                                            droidstar.save_memory(
+                                                                index,
+                                                                _comboMode.currentText,
+                                                                _comboHost.currentText,
+                                                                _comboSlot.currentIndex,
+                                                                _comboCC.currentIndex,
+                                                                _dmrtgidEdit.text
+                                                            );
+                                                            mainTab.isSetMemMode = false;
                                                         } else {
                                                             mainTab.triggerMemory(index);
                                                         }
                                                     }
                                                     onPressAndHold: {
-                                                        memoryConfigPopup.openMemoryConfig(index);
+                                                        droidstar.save_memory(index, "", "", 0, 0, ""); // clear
+                                                        mainTab.isSetMemMode = false;
                                                     }
                                                 }
                                             }
@@ -1536,283 +1534,4 @@ Item {
         }
     }
 
-    Popup {
-        id: emptyMemoryDialog
-        parent: mainTab
-        anchors.centerIn: parent
-        width: Math.min(mainTab.width * 0.9, 320); height: 140
-        modal: true
-        focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        property int slotIndex: 0
-
-        background: Rectangle {
-            color: "#1A1F2C"
-            border.color: "#FFB000"
-            border.width: 2
-            radius: 10
-        }
-
-        Column {
-            anchors.fill: parent
-            anchors.margins: 16
-            spacing: 12
-
-            Text {
-                text: "Memory Slot " + (emptyMemoryDialog.slotIndex + 1) + " is Empty"
-                color: "white"
-                font.bold: true
-                font.pixelSize: 15
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-
-            Text {
-                text: "No talkgroup saved in this memory."
-                color: "#CCCCCC"
-                font.pixelSize: 12
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 16
-                
-                Rectangle {
-                    width: 100; height: 32; radius: 8
-                    color: configureMemMouse.pressed ? "#444444" : "#2A2A2A"
-                    border.color: "#555555"
-                    Text {
-                        text: "Configure"; color: "white"; font.bold: true; font.pixelSize: 11
-                        anchors.centerIn: parent
-                    }
-                    MouseArea {
-                        id: configureMemMouse
-                        anchors.fill: parent
-                        onClicked: {
-                            emptyMemoryDialog.close();
-                            memoryConfigPopup.openMemoryConfig(emptyMemoryDialog.slotIndex);
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 80; height: 32; radius: 8
-                    color: closeEmptyMemMouse.pressed ? "#444444" : "#2A2A2A"
-                    border.color: "#555555"
-                    Text {
-                        text: "Close"; color: "white"; font.bold: true; font.pixelSize: 11
-                        anchors.centerIn: parent
-                    }
-                    MouseArea {
-                        id: closeEmptyMemMouse
-                        anchors.fill: parent
-                        onClicked: {
-                            emptyMemoryDialog.close();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Popup {
-        id: memoryConfigPopup
-        parent: mainTab
-        anchors.centerIn: parent
-        width: Math.min(mainTab.width * 0.95, 380)
-        height: modeCombo.currentText === "DMR" ? 380 : (modeCombo.currentText === "P25" || modeCombo.currentText === "NXDN" ? 340 : 300)
-        modal: true
-        focus: true
-        closePolicy: Popup.CloseOnEscape
-        property int activeSlot: 0
-
-        background: Rectangle {
-            color: "#161B22"
-            border.color: "#FFB000"
-            border.width: 2.5
-            radius: 12
-        }
-
-        function openMemoryConfig(slotIdx) {
-            activeSlot = slotIdx;
-            var mem = droidstar.get_memory(slotIdx);
-            if (mem["Mode"] !== "" && mem["Mode"] !== undefined) {
-                modeCombo.currentIndex = modeCombo.find(mem["Mode"]);
-                hostCombo.currentIndex = hostCombo.find(mem["Host"]);
-                slotCombo.currentIndex = mem["Slot"];
-                ccCombo.currentIndex = mem["CC"];
-                tgidInput.text = mem["TGID"];
-            } else {
-                useCurrentValues();
-            }
-            memoryConfigPopup.open();
-        }
-
-        function useCurrentValues() {
-            modeCombo.currentIndex = modeCombo.find(_comboMode.currentText);
-            slotCombo.currentIndex = _comboSlot.currentIndex;
-            ccCombo.currentIndex = _comboCC.currentIndex;
-            tgidInput.text = _dmrtgidEdit.text;
-            hostCombo.currentIndex = hostCombo.find(_comboHost.currentText);
-        }
-
-        Column {
-            anchors.fill: parent
-            anchors.margins: 14
-            spacing: 12
-
-            Text {
-                text: "Configure Memory Slot " + (memoryConfigPopup.activeSlot + 1)
-                color: "white"
-                font.bold: true
-                font.pixelSize: 14
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-
-            Column {
-                width: parent.width
-                spacing: 8
-
-                Row {
-                    width: parent.width
-                    spacing: 10
-                    Text { text: "Memory:"; color: "white"; font.pixelSize: 11; font.bold: true; width: 60; anchors.verticalCenter: parent.verticalCenter }
-                    ComboBox {
-                        id: slotSelector
-                        width: 120; height: 28
-                        model: ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5"]
-                        currentIndex: memoryConfigPopup.activeSlot
-                        onCurrentIndexChanged: {
-                            if (currentIndex !== memoryConfigPopup.activeSlot) {
-                                memoryConfigPopup.openMemoryConfig(currentIndex);
-                            }
-                        }
-                    }
-                }
-
-                Row {
-                    width: parent.width
-                    spacing: 10
-                    Text { text: "Mode:"; color: "white"; font.pixelSize: 11; font.bold: true; width: 60; anchors.verticalCenter: parent.verticalCenter }
-                    ComboBox {
-                        id: modeCombo
-                        width: 120; height: 28
-                        model: ["M17", "YSF", "FCS", "DMR", "P25", "NXDN", "REF", "XRF", "DCS", "IAX"]
-                        onCurrentTextChanged: {
-                            droidstar.process_mode_change(currentText);
-                            hostCombo.model = droidstar.get_hosts();
-                        }
-                    }
-                }
-
-                Column {
-                    width: parent.width
-                    spacing: 4
-                    Text { text: "Server:"; color: "white"; font.pixelSize: 11; font.bold: true }
-                    ComboBox {
-                        id: hostCombo
-                        width: parent.width; height: 28
-                        model: droidstar.get_hosts()
-                    }
-                }
-
-                Row {
-                    width: parent.width
-                    spacing: 10
-                    visible: modeCombo.currentText === "DMR"
-                    Text { text: "Slot / CC:"; color: "white"; font.pixelSize: 11; font.bold: true; width: 60; anchors.verticalCenter: parent.verticalCenter }
-                    ComboBox {
-                        id: slotCombo
-                        width: 80; height: 28
-                        model: ["S1", "S2"]
-                    }
-                    ComboBox {
-                        id: ccCombo
-                        width: 90; height: 28
-                        model: ["CC0","CC1","CC2","CC3","CC4","CC5","CC6","CC7","CC8","CC9","CC10","CC11","CC12","CC13","CC14","CC15"]
-                    }
-                }
-
-                Row {
-                    width: parent.width
-                    spacing: 10
-                    visible: modeCombo.currentText === "DMR" || modeCombo.currentText === "P25" || modeCombo.currentText === "NXDN"
-                    Text { text: "TGID:"; color: "white"; font.pixelSize: 11; font.bold: true; width: 60; anchors.verticalCenter: parent.verticalCenter }
-                    TextField {
-                        id: tgidInput
-                        width: 120; height: 28
-                        color: "white"
-                        background: Rectangle { color: "#222222"; border.color: "#555555"; radius: 4 }
-                        selectByMouse: true
-                    }
-                }
-            }
-
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 10
-
-                Rectangle {
-                    width: 130; height: 32; radius: 8
-                    color: useCurrentMouse.pressed ? "#444444" : "#2A2A2A"
-                    border.color: "#555555"
-                    Text {
-                        text: "Use Current Config"; color: "white"; font.bold: true; font.pixelSize: 10
-                        anchors.centerIn: parent
-                    }
-                    MouseArea {
-                        id: useCurrentMouse
-                        anchors.fill: parent
-                        onClicked: {
-                            memoryConfigPopup.useCurrentValues();
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 70; height: 32; radius: 8
-                    color: saveMemMouse.pressed ? "#444444" : "#2A2A2A"
-                    border.color: "#555555"
-                    Text {
-                        text: "Save"; color: "white"; font.bold: true; font.pixelSize: 10
-                        anchors.centerIn: parent
-                    }
-                    MouseArea {
-                        id: saveMemMouse
-                        anchors.fill: parent
-                        onClicked: {
-                            droidstar.save_memory(
-                                memoryConfigPopup.activeSlot,
-                                modeCombo.currentText,
-                                hostCombo.currentText,
-                                slotCombo.currentIndex,
-                                ccCombo.currentIndex,
-                                tgidInput.text
-                            );
-                            droidstar.process_mode_change(_comboMode.currentText);
-                            memoryConfigPopup.close();
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 70; height: 32; radius: 8
-                    color: cancelMemMouse.pressed ? "#444444" : "#2A2A2A"
-                    border.color: "#555555"
-                    Text {
-                        text: "Cancel"; color: "white"; font.bold: true; font.pixelSize: 10
-                        anchors.centerIn: parent
-                    }
-                    MouseArea {
-                        id: cancelMemMouse
-                        anchors.fill: parent
-                        onClicked: {
-                            droidstar.process_mode_change(_comboMode.currentText);
-                            memoryConfigPopup.close();
-                        }
-                    }
-                }
-            }
-        }
-    }
 }

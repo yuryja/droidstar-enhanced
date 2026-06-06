@@ -162,7 +162,9 @@ A 5-slot Memory Preset system is built into both the desktop and mobile interfac
   - Persisted under settings group `Memory_X` (using `QSettings`).
 - **Frontend Behavior:**
   - Standardized memory slot buttons (1 to 5) are placed below the QSY line.
-  - Active slot indicates its state with a highlighted border (theme-aware).
-  - Clicking an active preset triggers a 5-second connection disconnect, displays QSY indicator text, applies the stored preset variables, and reconnects automatically.
-  - Includes full config popup (`memoryConfigPopup`) to copy current settings, edit values, and save to any of the 5 presets.
+  - Replaced the old QSY button with a **SET MEM** mode button.
+  - **Saving Memory:** Pressing `SET MEM` highlights its border and the borders of the memory buttons. Clicking any memory slot in this mode instantly saves the current UI config to that slot and exits the mode.
+  - **Clearing Memory:** Long-pressing a memory slot clears its saved configuration.
+  - **Loading Memory:** Clicking an active preset triggers a 5-second connection disconnect, displays QSY indicator text, applies the stored preset variables, and reconnects automatically.
+  - The previous `memoryConfigPopup` and `emptyMemoryDialog` have been entirely removed in favor of this native workflow.
 
