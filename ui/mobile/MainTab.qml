@@ -48,19 +48,33 @@ Item {
     property int activeMemoryIndex: -1
 
     function isMemActive(index) {
-        if (!mainTab.connectbutton.isconnected) return false;
-        var mem = droidstar.get_memory(index);
-        if (mem["Mode"] === "" || mem["Mode"] === undefined) return false;
-        if (_comboMode.currentText !== mem["Mode"]) return false;
-        if (mem["Mode"] === "DMR") {
-            if (_comboSlot.currentIndex !== mem["Slot"]) return false;
-            if (_comboCC.currentIndex !== mem["CC"]) return false;
-            if (_dmrtgidEdit.text !== mem["TGID"]) return false;
-        } else if (mem["Mode"] === "P25" || mem["Mode"] === "NXDN") {
-            if (_dmrtgidEdit.text !== mem["TGID"]) return false;
+        if (!mainTab || !mainTab.connectbutton) return false;
+        try {
+            if (!mainTab.connectbutton.isconnected) return false;
+            var mem = droidstar.get_memory(index);
+            if (!mem || mem["Mode"] === "" || mem["Mode"] === undefined) return false;
+            
+            var modeText = _comboMode ? _comboMode.currentText : "";
+            if (modeText !== mem["Mode"]) return false;
+            
+            if (mem["Mode"] === "DMR") {
+                var slotIdx = _comboSlot ? _comboSlot.currentIndex : -1;
+                var ccIdx = _comboCC ? _comboCC.currentIndex : -1;
+                var tgidText = _dmrtgidEdit ? _dmrtgidEdit.text : "";
+                if (slotIdx !== mem["Slot"]) return false;
+                if (ccIdx !== mem["CC"]) return false;
+                if (tgidText !== mem["TGID"]) return false;
+            } else if (mem["Mode"] === "P25" || mem["Mode"] === "NXDN") {
+                var tgidText = _dmrtgidEdit ? _dmrtgidEdit.text : "";
+                if (tgidText !== mem["TGID"]) return false;
+            }
+            
+            var hostText = _comboHost ? _comboHost.currentText : "";
+            if (hostText !== mem["Host"]) return false;
+            return true;
+        } catch (e) {
+            return false;
         }
-        if (_comboHost.currentText !== mem["Host"]) return false;
-        return true;
     }
 
     Timer {
@@ -1266,6 +1280,7 @@ Item {
                                                 hoverEnabled: true
                                                 onClicked: {
                                                     mainTab.isSetMemMode = !mainTab.isSetMemMode;
+                                                    console.log("[SET MEM] toggled. isSetMemMode =", mainTab.isSetMemMode);
                                                 }
                                             }
                                         }
@@ -1363,51 +1378,72 @@ Item {
                                         x: 8; y: 3
                                         text: "MEMORY"; color: "white"
                                         font.pixelSize: 10; font.bold: true
-                                    }
-
-                                    Row {
-                                        anchors.fill: parent
-                                        anchors.topMargin: 12
-                                        anchors.leftMargin: 8
-                                        anchors.rightMargin: 8
-                                        spacing: 10
-
-                                        Repeater {
-                                            model: 5
-                                            Rectangle {
-                                                width: (parent.width - 40) / 5; height: 30; radius: 8
-                                                color: "#2A2A2A"
-                                                border.color: mainTab.isSetMemMode ? mainTab.themeBgColor : (isMemActive(index) ? mainTab.themeBgColor : "#555555")
-                                                border.width: mainTab.isSetMemMode ? 2 : (isMemActive(index) ? 2.5 : 1)
-
-                                                Text {
-                                                    anchors.centerIn: parent
-                                                    text: (index + 1).toString()
-                                                    color: "white"
-                                                    font.bold: true
-                                                    font.pixelSize: 12
-                                                }
-
-                                                MouseArea {
-                                                    anchors.fill: parent
-                                                    onClicked: function(mouse) {
-                                                        if (mainTab.isSetMemMode) {
-                                                            droidstar.save_memory(
-                                                                index,
-                                                                _comboMode.currentText,
-                                                                _comboHost.currentText,
-                                                                _comboSlot.currentIndex,
-                                                                _comboCC.currentIndex,
-                                                                _dmrtgidEdit.text
-                                                            );
-                                                            mainTab.isSetMemMode = false;
-                                                        } else {
-                                                            mainTab.triggerMemory(index);
-                                                        }
+                                        Row {
+                                            id: memButtonsRow
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            anchors.top: parent.top
+                                            anchors.topMargin: 15
+                                            height: 30
+                                            spacing: 10
+                                            
+                                            Repeater {
+                                                model: 5
+                                                Rectangle {
+                                                    property int slotIndex: index
+                                                    width: (parent.width - 40) / 5
+                                                    height: 30
+                                                    radius: 8
+                                                    color: "#2A2A2A"
+                                                    border.color: mainTab.isSetMemMode ? mainTab.themeBgColor : (isMemActive(slotIndex) ? mainTab.themeBgColor : "#555555")
+                                                    border.width: mainTab.isSetMemMode ? 2 : (isMemActive(slotIndex) ? 2.5 : 1)
+                                                    
+                                                    Text {
+                                                        anchors.centerIn: parent
+                                                        text: (slotIndex + 1).toString()
+                                                        color: "white"
+                                                        font.bold: true
+                                                        font.pixelSize: 12
                                                     }
-                                                    onPressAndHold: {
-                                                        droidstar.save_memory(index, "", "", 0, 0, ""); // clear
-                                                        mainTab.isSetMemMode = false;
+
+                                                    MouseArea {
+                                                        anchors.fill: parent
+                                                        onClicked: {
+                                                            console.log("Memory slot", slotIndex, "clicked. isSetMemMode =", mainTab.isSetMemMode);
+                                                            if (mainTab.isSetMemMode) {
+                                                                try {
+                                                                    var modeText = _comboMode ? _comboMode.currentText : "";
+                                                                    var hostText = _comboHost ? _comboHost.currentText : "";
+                                                                    var slotVal = _comboSlot ? _comboSlot.currentIndex : 0;
+                                                                    var ccVal = _comboCC ? _comboCC.currentIndex : 0;
+                                                                    var tgidVal = _dmrtgidEdit ? _dmrtgidEdit.text : "";
+                                                                    
+                                                                    if (slotVal < 0) slotVal = 0;
+                                                                    if (ccVal < 0) ccVal = 0;
+                                                                    
+                                                                    console.log("Saving memory slot:", slotIndex, "Mode:", modeText, "Host:", hostText, "Slot:", slotVal, "CC:", ccVal, "TGID:", tgidVal);
+                                                                    droidstar.save_memory(slotIndex, modeText, hostText, slotVal, ccVal, tgidVal);
+                                                                    console.log("Memory saved successfully!");
+                                                                } catch (e) {
+                                                                    console.log("Error saving memory:", e.message);
+                                                                }
+                                                                mainTab.isSetMemMode = false;
+                                                            } else {
+                                                                mainTab.triggerMemory(slotIndex);
+                                                            }
+                                                        }
+                                                        onPressAndHold: {
+                                                            console.log("Memory slot", slotIndex, "pressAndHold (clear).");
+                                                            try {
+                                                                droidstar.save_memory(slotIndex, "", "", 0, 0, "");
+                                                                console.log("Memory cleared successfully!");
+                                                            } catch (e) {
+                                                                console.log("Error clearing memory:", e.message);
+                                                            }
+                                                            mainTab.isSetMemMode = false;
+                                                        }
                                                     }
                                                 }
                                             }
