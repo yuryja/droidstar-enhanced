@@ -4,6 +4,8 @@
 
 This project is a significantly enhanced fork of the original **DroidStar** by Doug McLain ([@nostar](https://github.com/nostar)), rebuilt with a redesigned desktop interface, persistent logging, a refined LCD-style visual language, and a streamlined macOS build pipeline.
 
+> 📢 **Release Notice:** A Release Candidate (RC) version will be released soon! Stay tuned.
+
 ---
 
 ## Credits & License
@@ -29,15 +31,19 @@ The original DroidStar is a solid engine — DroidStarEnhaced builds on top of i
 
 ### Logbook Panel
 - Toggleable **Last Heard** panel that slides open below the main interface
-- Displays the last 5 received stations: Callsign, Name, Country, Date, Time
-- Column layout optimized for legibility — Date column centered, Time right-aligned
+- Displays the last 5 received stations: Talkgroup (TG), Callsign, Name, Country, Date, Time (with dynamic QML model reactivity and automatic country lookup)
+- Column layout optimized for legibility — TG and Date columns centered, Time right-aligned
 
 ### Persistent Station Log
 - Automatic CSV database at `~/.config/dudetronics/station_log.csv`
 - Dedicated Station Log tab with sortable history (newest first)
+- Includes Talkgroup (TG) as the first column, with backward compatibility for older 5-column log databases
+- Real-time updates to the CSV log file when Talkgroup details are resolved during a transmission
 - One-click CSV export to Documents folder, with a confirmation dialog to clear records
 
 ### Controls & UX
+- **5-Slot Memory Preset System**: Save current configurations (Mode, Host, Slot, CC, TGID) into slots 1-5 by toggling `SET MEMORY` mode, and reload them with a single click (automatically disconnects, updates parameters, and reconnects). Long press clears a slot.
+- **Custom Keyboard PTT Shortcut**: Configure any keyboard key as a PTT button in Settings (mapped dynamically via `QKeySequence` names). Suppresses PTT trigger when typing in input fields to avoid interference.
 - **QSY button** with 3-stripe visual design and real-time talkgroup switching
 - **SWTX, SWRX, AGC** toggle buttons styled to match the active screen theme
 - Physical volume buttons mapped as PTT on mobile (toggle or hold modes)
