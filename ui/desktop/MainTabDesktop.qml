@@ -129,8 +129,7 @@ Item {
     function triggerMemory(index) {
         var mem = droidstar.get_memory(index);
         if (mem["Mode"] === "" || mem["Mode"] === undefined) {
-            emptyMemoryDialog.slotIndex = index;
-            emptyMemoryDialog.open();
+            console.log("Memory slot", index, "is empty, ignoring click.");
             return;
         }
         if (isMemActive(index)) return;
