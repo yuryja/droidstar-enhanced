@@ -151,7 +151,7 @@ xcrun stapler staple build/DroidStarEnhaced.dmg
 - `com.yuryjajitzky.DroidStarEnhaced` — defined in `Info.plist`
 
 ---
-*(Last update: Added Memory Presets feature supporting 5 config slots for Mode, Server, Slot, CC, and TGID)*
+*(Last update: Added Memory Presets feature and Custom PTT Keyboard Key setting)*
 
 ## Memory Presets Feature
 
@@ -167,4 +167,20 @@ A 5-slot Memory Preset system is built into both the desktop and mobile interfac
   - **Clearing Memory:** Long-pressing a memory slot clears its saved configuration.
   - **Loading Memory:** Clicking an active preset triggers a 5-second connection disconnect, displays QSY indicator text, applies the stored preset variables, and reconnects automatically.
   - The previous `memoryConfigPopup` and `emptyMemoryDialog` have been entirely removed in favor of this native workflow.
+
+## Custom PTT Key Setting
+
+A custom keyboard shortcut mapping for Push-To-Talk (PTT) is integrated:
+- **Backend API:**
+  - `int get_ptt_key()`
+  - `void set_ptt_key(int key)`
+  - `QString get_key_name(int key)`
+  - Persisted under the setting key `"PTT_KEY"` (using `QSettings`).
+- **Frontend Behavior:**
+  - Placed at the bottom of the Settings tab.
+  - Clicking **SET** initiates keyboard capturing (via focus grabber `keyGrabber`). Pressing any key grabs the key code.
+  - Clicking **OK** saves the key, and clicking **Clear** removes the mapping.
+  - The custom key functions identically to the volume keys in the main view for starting and stopping transmission.
+  - **Typing Prevention:** The PTT logic checks `activeFocusItem` in QML to suppress transmission triggers when focusing input fields (`TextField`, `TextInput`, `TextArea`).
+
 

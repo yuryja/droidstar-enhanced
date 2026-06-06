@@ -23,6 +23,7 @@
 #include <QtCore/private/qandroidextras_p.h>
 #endif
 #include <QStandardPaths>
+#include <QKeySequence>
 #include <QFile>
 #include <QTextStream>
 #include <QFileInfo>
@@ -690,6 +691,7 @@ void DroidStar::save_settings()
 	m_settings->setValue("ModemTxInvert", m_modemTxInvert ? "true" : "false");
 	m_settings->setValue("ModemRxInvert", m_modemRxInvert ? "true" : "false");
 	m_settings->setValue("ModemPTTInvert", m_modemPTTInvert ? "true" : "false");
+	m_settings->setValue("PTT_KEY", m_pttKey);
 }
 
 void DroidStar::process_settings()
@@ -732,6 +734,7 @@ void DroidStar::process_settings()
 	m_dstarusertxt = m_settings->value("USRTXT").toString().simplified();
 	m_xrf2ref = (m_settings->value("XRF2REF").toString().simplified() == "true") ? true : false;
 	m_localhosts = m_settings->value("LOCALHOSTS").toString();
+	m_pttKey = m_settings->value("PTT_KEY", 0).toInt();
 
 	m_modemRxFreq = m_settings->value("ModemRxFreq", "438800000").toString().simplified();
 	m_modemTxFreq = m_settings->value("ModemTxFreq", "438800000").toString().simplified();
@@ -1700,6 +1703,12 @@ QVariantMap DroidStar::get_memory(int index)
 	map["TGID"] = m_settings->value("TGID", "");
 	m_settings->endGroup();
 	return map;
+}
+
+QString DroidStar::get_key_name(int key)
+{
+    if (key <= 0) return "None";
+    return QKeySequence(Qt::Key(key)).toString();
 }
 
 

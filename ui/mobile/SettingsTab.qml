@@ -68,13 +68,16 @@ Item {
 	property alias modemBaudEdit: _modemBaudEdit
     property alias mmdvmBox: _mmdvmBox
     property alias debugBox: _debugBox
+    property bool isListeningForKey: false
+    property int tempKey: 0
+    property string tempKeyName: ""
 
 	Flickable {
 		id: flickable
 		anchors.fill: parent
 		contentWidth: parent.width
-        contentHeight: _debugBox.y +
-                       _debugBox.height + 10
+        contentHeight: pttKeyRowItem.y +
+                       pttKeyRowItem.height + 20
 		flickableDirection: Flickable.VerticalFlick
 		clip: true
 		ScrollBar.vertical: ScrollBar {}
@@ -1055,6 +1058,121 @@ Item {
                 droidstar.set_debug(_debugBox.checked)
             }
             topPadding: 0
+        }
+
+        Item {
+            id: keyGrabber
+            focus: settingsTab.isListeningForKey
+            Keys.onPressed: (event) => {
+                if (settingsTab.isListeningForKey) {
+                    settingsTab.tempKey = event.key;
+                    settingsTab.tempKeyName = droidstar.get_key_name(event.key);
+                    settingsTab.isListeningForKey = false;
+                    event.accepted = true;
+                }
+            }
+        }
+
+        Item {
+            id: pttKeyRowItem
+            x: 0
+            y: 1200
+            width: parent.width
+            height: 40
+
+            Text {
+                id: pttLabel
+                x: 10
+                anchors.verticalCenter: parent.verticalCenter
+                width: 80
+                text: qsTr("PTT Key")
+                color: "white"
+                font.bold: true
+            }
+
+            Text {
+                id: pttStatusText
+                x: 100
+                anchors.verticalCenter: parent.verticalCenter
+                width: 150
+                text: settingsTab.isListeningForKey ? qsTr("Press any key...") : (settingsTab.tempKey > 0 ? qsTr("Captured: ") + settingsTab.tempKeyName : qsTr("Current: ") + droidstar.get_key_name(droidstar.get_ptt_key()))
+                color: settingsTab.isListeningForKey ? "#FFB000" : (settingsTab.tempKey > 0 ? "#FFB000" : "#9AE6B4")
+                font.italic: settingsTab.isListeningForKey
+                font.bold: true
+                elide: Text.ElideRight
+            }
+
+            Button {
+                id: pttSetBtn
+                x: 260
+                width: 80
+                height: 30
+                anchors.verticalCenter: parent.verticalCenter
+                text: settingsTab.isListeningForKey ? "..." : (settingsTab.tempKey > 0 ? "OK" : "SET")
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                
+                background: Rectangle {
+                    color: parent.pressed ? "#333" : (settingsTab.tempKey > 0 ? "#1B4332" : "#444")
+                    border.color: settingsTab.tempKey > 0 ? "#52B788" : "#666"
+                    border.width: 1
+                    radius: 4
+                }
+
+                onClicked: {
+                    if (settingsTab.isListeningForKey) {
+                        settingsTab.isListeningForKey = false;
+                    } else if (settingsTab.tempKey > 0) {
+                        droidstar.set_ptt_key(settingsTab.tempKey);
+                        settingsTab.tempKey = 0;
+                        settingsTab.tempKeyName = "";
+                    } else {
+                        settingsTab.tempKey = 0;
+                        settingsTab.tempKeyName = "";
+                        settingsTab.isListeningForKey = true;
+                        keyGrabber.forceActiveFocus();
+                    }
+                }
+            }
+
+            Button {
+                id: pttClearBtn
+                x: 350
+                width: 80
+                height: 30
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Clear"
+                visible: !settingsTab.isListeningForKey && settingsTab.tempKey === 0 && droidstar.get_ptt_key() > 0
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                
+                background: Rectangle {
+                    color: parent.pressed ? "#5C1D24" : "#590D22"
+                    border.color: "#FF4D6D"
+                    border.width: 1
+                    radius: 4
+                }
+
+                onClicked: {
+                    droidstar.set_ptt_key(0);
+                    settingsTab.tempKey = 0;
+                    settingsTab.tempKeyName = "";
+                }
+            }
         }
 	}
 }

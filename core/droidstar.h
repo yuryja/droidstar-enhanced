@@ -65,6 +65,7 @@ signals:
     void dst_changed(QString);
     void debug_changed(bool);
     void update_devices();
+	void ptt_key_changed(int key);
 public slots:
 	void set_callsign(const QString &callsign) {  m_callsign = callsign.simplified(); save_settings(); }
 	void set_dmrtgid(const QString &dmrtgid) { m_dmr_destid = dmrtgid.simplified().toUInt(); save_settings(); }
@@ -265,6 +266,9 @@ public slots:
 	void clearStationLog();
 	void save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid);
 	QVariantMap get_memory(int index);
+	int get_ptt_key() { return m_pttKey; }
+	void set_ptt_key(int key) { m_pttKey = key; save_settings(); emit ptt_key_changed(key); }
+	QString get_key_name(int key);
 private:
 	int connect_status;
 	bool m_update_host_files;
@@ -388,6 +392,7 @@ private:
 	QString m_lastLogCallsign;
 	QString m_lastLogName;
 	QString m_lastLogCountry;
+	int m_pttKey;
 
 private slots:
 #ifdef Q_OS_ANDROID

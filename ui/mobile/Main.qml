@@ -172,7 +172,13 @@ ApplicationWindow {
         focus: true
 
         Keys.onPressed: (event) => {
-            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown) {
+            var customPttKey = droidstar.get_ptt_key();
+            var isTyping = main.activeFocusItem && 
+                (main.activeFocusItem.toString().indexOf("TextField") !== -1 || 
+                 main.activeFocusItem.toString().indexOf("TextInput") !== -1 || 
+                 main.activeFocusItem.toString().indexOf("TextArea") !== -1);
+
+            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown || (customPttKey > 0 && event.key === customPttKey && !isTyping)) {
                 if (event.isAutoRepeat) {
                     event.accepted = true;
                     return;
@@ -194,7 +200,8 @@ ApplicationWindow {
             }
         }
         Keys.onReleased: (event) => {
-            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown) {
+            var customPttKey = droidstar.get_ptt_key();
+            if (event.key === Qt.Key_VolumeUp || event.key === Qt.Key_VolumeDown || (customPttKey > 0 && event.key === customPttKey)) {
                 if (event.isAutoRepeat) {
                     event.accepted = true;
                     return;
