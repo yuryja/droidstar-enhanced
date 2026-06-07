@@ -4,6 +4,10 @@
 
 This project is a significantly enhanced fork of the original **DroidStar** by Doug McLain ([@nostar](https://github.com/nostar)), rebuilt with a redesigned desktop interface, persistent logging, a refined LCD-style visual language, and a streamlined macOS build pipeline.
 
+<p align="center">
+  <img src="images/screenshot.png" alt="DroidStarEnhaced Screenshot" width="700"/>
+</p>
+
 > 📢 **Release Notice:** A Release Candidate (RC) version will be released soon! Stay tuned.
 
 ---
