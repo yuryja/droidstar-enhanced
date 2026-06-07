@@ -7,3 +7,7 @@ Makefile
 *.user
 *.log
 .vscode/
+.cache/
+.gemini/
+.github/
+plan.md
