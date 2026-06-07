@@ -44,7 +44,6 @@ The original DroidStar is a solid engine — DroidStarEnhaced builds on top of i
 ### Controls & UX
 - **5-Slot Memory Preset System**: Save current configurations (Mode, Host, Slot, CC, TGID) into slots 1-5 by toggling `SET MEMORY` mode, and reload them with a single click (automatically disconnects, updates parameters, and reconnects). Long press clears a slot.
 - **Custom Keyboard PTT Shortcut**: Configure any keyboard key as a PTT button in Settings (mapped dynamically via `QKeySequence` names). Suppresses PTT trigger when typing in input fields to avoid interference.
-- **QSY button** with 3-stripe visual design and real-time talkgroup switching
 - **SWTX, SWRX, AGC** toggle buttons styled to match the active screen theme
 - Physical volume buttons mapped as PTT on mobile (toggle or hold modes)
 - ITU callsign prefix parser for automatic country resolution
