@@ -29,9 +29,10 @@ The project is divided into components to allow cross-compilation across differe
 - The CMake file uses the `if(ANDROID OR IOS)` condition to include mobile `.qml` files and package them as QRC resources (`qt_add_qml_module`). Otherwise, it loads the desktop version.
 - The `main.cpp` file initializes the QML engine and dynamically selects the correct loading path (`MainMobile.qml` or `MainDesktop.qml`).
 - On macOS, the `OUTPUT_NAME` is `DroidStarEnhaced`, producing `DroidStarEnhaced.app`.
+- **Target OS Compatibility:** macOS builds explicitly set `CMAKE_OSX_DEPLOYMENT_TARGET` to `"11.0"` in `CMakeLists.txt` to ensure compatibility with older macOS versions and prevent crashes on versions prior to macOS Tahoe (macOS 26).
 
 ---
-*(Last update: App renamed from DStar+ to DroidStarEnhaced to avoid Gatekeeper issues with special characters)*
+*(Last update: Set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0 to resolve crashes on older macOS versions)*
 
 ---
 

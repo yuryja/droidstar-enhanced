@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 if(POLICY CMP0072)
   cmake_policy(SET CMP0072 NEW)
 endif()
+
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
+endif()
+
 project(DroidStar VERSION 1.0.9 LANGUAGES C CXX)
 
 # Export compile commands for IDE language servers (clangd, etc.)
