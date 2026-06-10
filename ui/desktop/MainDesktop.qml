@@ -627,6 +627,7 @@ ApplicationWindow {
 				} else {
 					mainTab.connectbutton.text = "Connect";
 					mainTab.connectbutton.isconnected = false;
+					mainTab.isAppConnected = false;
 					mainTab.connectedTG = "";
 					mainTab.comboMode.enabled = true;
 					mainTab.comboHost.enabled = true;
@@ -658,6 +659,7 @@ ApplicationWindow {
 				mainTab.isQSYing = false; // Reset QSY flag on successful connection!
 				mainTab.connectbutton.text = "Disconnect";
 				mainTab.connectbutton.isconnected = true;
+				mainTab.isAppConnected = true;
 				mainTab.connectedTG = mainTab.dmrtgidEdit.text;
 				mainTab.comboMode.enabled = false;
 				mainTab.comboHost.enabled = false;

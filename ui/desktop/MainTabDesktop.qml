@@ -55,7 +55,7 @@ Item {
     property bool isQSYing: false
     property bool isSetMemMode: false
     property string connectedTG: ""
-    property bool isAppConnected: _connectbutton.isconnected
+    property bool isAppConnected: false
 
     property int colorTheme: uiSettings.colorTheme
     onColorThemeChanged: {
@@ -843,7 +843,7 @@ Item {
                     Rectangle {
                         anchors.centerIn: parent
                         width: parent.width - 16; height: 4; radius: 2
-                        color: isAppConnected ? themeBgColor : "#888888"
+                        color: mainTab.isAppConnected ? mainTab.themeBgColor : "#888888"
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }
                 }

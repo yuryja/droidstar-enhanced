@@ -987,6 +987,10 @@ void encode_ambe(const IMBE_PARAM *imbe_param, int b[], mbe_parms*cur_mp, mbe_pa
 	
     MBEVocoder::~MBEVocoder()
 	{
+		if (m_mbelibParms) {
+			delete m_mbelibParms;
+			m_mbelibParms = nullptr;
+		}
 	}
 	
     void MBEVocoder::decode_2400x1200(int16_t *pcm, uint8_t *ambe)

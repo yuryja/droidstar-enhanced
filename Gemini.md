@@ -32,7 +32,7 @@ The project is divided into components to allow cross-compilation across differe
 - **Target OS Compatibility:** macOS builds explicitly set `CMAKE_OSX_DEPLOYMENT_TARGET` to `"11.0"` in `CMakeLists.txt` to ensure compatibility with older macOS versions and prevent crashes on versions prior to macOS Tahoe (macOS 26).
 
 ---
-*(Last update: Set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0, resolved Homebrew dependencies in packaging, and fixed QML memory preset reconnect logic)*
+*(Last update: Set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0, resolved Homebrew dependencies in packaging, resolved C++ memory leaks and audio device locks, and fixed COLOR button and memory preset reconnect logic)*
 
 ---
 
@@ -153,7 +153,7 @@ xcrun stapler staple build/DroidStarEnhaced.dmg
 - `com.yuryjajitzky.DroidStarEnhaced` — defined in `Info.plist`
 
 ---
-*(Last update: Added Memory Presets feature and Custom PTT Keyboard Key setting)*
+*(Last update: Fixed COLOR button indicator line color and resolved C++ audio leaks and resource locks)*
 
 ## Memory Presets Feature
 

@@ -34,6 +34,8 @@ AudioEngine::AudioEngine(QString in, QString out) :
 	m_inputdevice(in),
 	m_out(nullptr),
 	m_in(nullptr),
+	m_outdev(nullptr),
+	m_indev(nullptr),
 	m_srm(1)
 {
 	m_audio_out_temp_buf_p = m_audio_out_temp_buf;
@@ -46,6 +48,16 @@ AudioEngine::AudioEngine(QString in, QString out) :
 
 AudioEngine::~AudioEngine()
 {
+	stop_capture();
+	stop_playback();
+	if (m_in) {
+		delete m_in;
+		m_in = nullptr;
+	}
+	if (m_out) {
+		delete m_out;
+		m_out = nullptr;
+	}
 }
 
 QStringList AudioEngine::discover_audio_devices(uint8_t d)
@@ -158,7 +170,7 @@ void AudioEngine::start_capture()
 
 void AudioEngine::stop_capture()
 {
-	if(m_in != nullptr){
+	if(m_in != nullptr && m_indev != nullptr){
 		m_indev->disconnect();
 		m_in->stop();
 	}

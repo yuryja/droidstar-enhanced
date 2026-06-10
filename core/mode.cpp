@@ -79,6 +79,39 @@ Mode::Mode()
 
 Mode::~Mode()
 {
+    if (m_audio) {
+        delete m_audio;
+        m_audio = nullptr;
+    }
+    if (m_ping_timer) {
+        m_ping_timer->stop();
+        delete m_ping_timer;
+        m_ping_timer = nullptr;
+    }
+    if (m_txtimer) {
+        m_txtimer->stop();
+        delete m_txtimer;
+        m_txtimer = nullptr;
+    }
+    if (m_rxtimer) {
+        m_rxtimer->stop();
+        delete m_rxtimer;
+        m_rxtimer = nullptr;
+    }
+    if (m_mbevocoder) {
+        delete m_mbevocoder;
+        m_mbevocoder = nullptr;
+    }
+#if !defined(Q_OS_IOS)
+    if (m_modem) {
+        delete m_modem;
+        m_modem = nullptr;
+    }
+    if (m_ambedev) {
+        delete m_ambedev;
+        m_ambedev = nullptr;
+    }
+#endif
 }
 
 void Mode::init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, QString refname, QString host, int port, bool ipv6, QString vocoder, QString modem, QString audioin, QString audioout, bool mdirect)
