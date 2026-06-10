@@ -248,7 +248,7 @@ ApplicationWindow {
 
     Timer {
         id: presetDelayTimer
-        interval: 2000
+        interval: 5000
         repeat: false
         running: false
         onTriggered: {
