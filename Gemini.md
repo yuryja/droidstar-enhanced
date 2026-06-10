@@ -32,7 +32,7 @@ The project is divided into components to allow cross-compilation across differe
 - **Target OS Compatibility:** macOS builds explicitly set `CMAKE_OSX_DEPLOYMENT_TARGET` to `"11.0"` in `CMakeLists.txt` to ensure compatibility with older macOS versions and prevent crashes on versions prior to macOS Tahoe (macOS 26).
 
 ---
-*(Last update: Released version 1.1.0, set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0, resolved Homebrew dependencies in packaging, resolved C++ memory leaks and audio device locks, fixed COLOR button, screen QSY wait feedback, memory preset reconnect logic, and fixed HTTP host list downloads via HTTPS and ATS exceptions)*
+*(Last update: Released version 1.1.1, set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0, resolved Homebrew dependencies in packaging, resolved C++ memory leaks and audio device locks, fixed COLOR button, screen QSY wait feedback, memory preset reconnect logic, and fixed HTTP host list downloads via HTTPS and ATS exceptions)*
 
 ---
 
@@ -153,7 +153,7 @@ xcrun stapler staple build/DroidStarEnhaced.dmg
 - `com.yuryjajitzky.DroidStarEnhaced` — defined in `Info.plist`
 
 ---
-*(Last update: Released version 1.1.0, fixed COLOR button indicator line color, resolved C++ audio leaks and resource locks, added screen QSY wait overlay, and fixed cleartext HTTP ATS blocks by switching default host list downloads to HTTPS and adding ATS exceptions in Info.plist)*
+*(Last update: Released version 1.1.1, fixed COLOR button indicator line color, resolved C++ audio leaks and resource locks, added screen QSY wait overlay, and fixed cleartext HTTP ATS blocks by switching default host list downloads to HTTPS and adding ATS exceptions in Info.plist)*
 
 ## Memory Presets Feature
 
