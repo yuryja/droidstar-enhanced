@@ -248,6 +248,20 @@ ApplicationWindow {
         }
     }
 
+    Timer {
+        id: presetDelayTimer
+        interval: 2000
+        repeat: false
+        running: false
+        onTriggered: {
+            if (mainTab && mainTab.targetMemoryIndex !== -1) {
+                mainTab.applyMemory(mainTab.targetMemoryIndex);
+                mainTab.targetMemoryIndex = -1;
+                mainTab.connectbutton.clickConnect();
+            }
+        }
+    }
+
     Connections {
         target: droidstar
 		Component.onCompleted: {
@@ -602,7 +616,11 @@ ApplicationWindow {
 					droidstar.tx_clicked(false);
 					mainTab.txtimer.running = false;
 				}
-				if (mainTab.isQSYing) {
+				if (mainTab.targetMemoryIndex !== -1) {
+					mainTab.connectbutton.text = "QSY...";
+					mainTab.netstatus.text = "Loading preset " + (mainTab.targetMemoryIndex + 1) + "...";
+					presetDelayTimer.start();
+				} else if (mainTab.isQSYing) {
 					mainTab.connectbutton.text = "QSY...";
 					mainTab.netstatus.text = "QSY to " + mainTab.dmrtgidEdit.text + "...";
 					qsyDelayTimer.start();

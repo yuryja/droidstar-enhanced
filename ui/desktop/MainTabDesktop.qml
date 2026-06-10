@@ -67,6 +67,7 @@ Item {
     property string themeMeterColor: !isAppConnected ? "#889A7E" : (colorTheme === 0 ? "#82C7AC" : (colorTheme === 1 ? "#6FA0DB" : (colorTheme === 2 ? "#C985BC" : (colorTheme === 3 ? "#D97878" : "#D3B651"))))
 
     property int activeMemoryIndex: -1
+    property int targetMemoryIndex: -1
 
     function isMemActive(index) {
         if (!mainTab || !mainTab.connectbutton) return false;
@@ -117,19 +118,6 @@ Item {
         }
     }
 
-    Timer {
-        id: memoryQsyTimer
-        interval: 5000
-        repeat: false
-        running: false
-        property int targetIndex: -1
-        onTriggered: {
-            applyMemory(targetIndex);
-            mainTab.connectbutton.clickConnect();
-            mainTab.isQSYing = false;
-        }
-    }
-
     function triggerMemory(index) {
         var mem = droidstar.get_memory(index);
         if (mem["Mode"] === "" || mem["Mode"] === undefined) {
@@ -139,10 +127,8 @@ Item {
         if (isMemActive(index)) return;
         
         if (mainTab.connectbutton.isconnected) {
-            mainTab.isQSYing = true;
-            memoryQsyTimer.targetIndex = index;
+            mainTab.targetMemoryIndex = index;
             mainTab.connectbutton.clickConnect();
-            memoryQsyTimer.start();
         } else {
             applyMemory(index);
         }

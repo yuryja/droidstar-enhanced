@@ -32,7 +32,7 @@ The project is divided into components to allow cross-compilation across differe
 - **Target OS Compatibility:** macOS builds explicitly set `CMAKE_OSX_DEPLOYMENT_TARGET` to `"11.0"` in `CMakeLists.txt` to ensure compatibility with older macOS versions and prevent crashes on versions prior to macOS Tahoe (macOS 26).
 
 ---
-*(Last update: Set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0 to resolve crashes on older macOS versions)*
+*(Last update: Set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0, resolved Homebrew dependencies in packaging, and fixed QML memory preset reconnect logic)*
 
 ---
 
@@ -51,6 +51,7 @@ This section documents the **complete and tested** process for generating a func
 | `codesign --deep` fails: "ambiguous format" | QtDBus.framework inside the bundle is not properly signed | Sign QtDBus individually first, then `--force --deep` the main bundle |
 | Users need `xattr -cr` or `sudo` | Gatekeeper quarantine on files copied from DMG | Clean xattrs from the bundle **before** creating the DMG |
 | Gatekeeper blocks app with "verify with developer" dialog | App name contains `+` special character | Renamed app to `DroidStarEnhaced` (no special characters) |
+| App crashes on clean systems without Homebrew | Absolute paths to `/opt/homebrew` inside frameworks (e.g. QtDBus -> libdbus, QtPdf -> libpng) | Scan `/opt/homebrew` dependencies and bundle/re-link them recursively in `package_dmg.sh` |
 
 ### Recommended: Use the packaging script
 

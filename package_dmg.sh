@@ -56,27 +56,67 @@ echo "[4/9] Scanning and copying missing transitive dependencies..."
 CHANGED=1
 while [ "$CHANGED" = "1" ]; do
     CHANGED=0
-    find "$FRAMEWORKS" "$APP/Contents/PlugIns" "$APP/Contents/Resources" \
-        \( -name "*.dylib" -o -type f -path "*.framework/Versions/A/*" \) 2>/dev/null | while read lib; do
-        # Ignore Headers directories inside frameworks
+    find "$APP/Contents/MacOS" "$FRAMEWORKS" "$APP/Contents/PlugIns" "$APP/Contents/Resources" \
+        -type f 2>/dev/null | while read lib; do
         if [[ "$lib" == */Headers/* ]]; then continue; fi
-        otool -L "$lib" 2>/dev/null | awk '/@rpath/{print $1}' | sed 's|@rpath/||' | while read dep; do
-            if [[ "$dep" == *.framework/* ]]; then
-                fw=$(echo "$dep" | cut -d/ -f1)
-                if [ ! -d "$FRAMEWORKS/$fw" ] && [ -d "$HOMEBREW_QT/$fw" ]; then
-                    echo "  -> Copying missing framework: $fw"
-                    cp -a "$HOMEBREW_QT/$fw" "$FRAMEWORKS/"
-                    fix_perms "$FRAMEWORKS/$fw"
-                    echo "1" > build/.changed
-                fi
+        if ! file "$lib" | grep -qE "Mach-O|dynamically linked shared library"; then continue; fi
+
+        # Change own ID if it is absolute in /opt/homebrew
+        own_id=$(otool -D "$lib" 2>/dev/null | tail -n 1)
+        if [[ "$own_id" == /opt/homebrew* ]]; then
+            if [[ "$lib" == *.framework/* ]]; then
+                fw_path=$(echo "$lib" | sed -E 's|.*/(Qt[^/]+\.framework/.*)|\1|')
+                new_id="@rpath/$fw_path"
             else
+                new_id="@rpath/$(basename "$lib")"
+            fi
+            echo "  -> Changing own ID of $(basename "$lib") to $new_id"
+            install_name_tool -id "$new_id" "$lib" 2>/dev/null || true
+            echo "1" > build/.changed
+        fi
+
+        # Scan for dependencies
+        otool -L "$lib" 2>/dev/null | tail -n +2 | awk '{print $1}' | while read dep; do
+            if [[ "$dep" == /usr/lib/* || "$dep" == /System/* ]]; then continue; fi
+            if [[ "$dep" == @executable_path* || "$dep" == @loader_path* ]]; then continue; fi
+
+            if [[ "$dep" == /opt/homebrew* || "$dep" == @rpath* ]]; then
                 depname=$(basename "$dep")
-                destpath="$FRAMEWORKS/$depname"
-                srcpath="$HOMEBREW_LIB/$depname"
-                if [ ! -f "$destpath" ] && [ -f "$srcpath" ]; then
-                    echo "  -> Copying missing dylib: $depname"
-                    cp "$srcpath" "$destpath"
-                    fix_perms "$destpath"
+                
+                if [[ "$dep" == *.framework/* ]]; then
+                    fw_name=$(echo "$dep" | sed -E 's|.*/(Qt[^/]+\.framework).*|\1|' | cut -d. -f1)
+                    if [ ! -d "$FRAMEWORKS/${fw_name}.framework" ]; then
+                        if [ -d "$HOMEBREW_QT/${fw_name}.framework" ]; then
+                            echo "  -> Copying missing framework: $fw_name"
+                            cp -a "$HOMEBREW_QT/${fw_name}.framework" "$FRAMEWORKS/"
+                            fix_perms "$FRAMEWORKS/${fw_name}.framework"
+                            echo "1" > build/.changed
+                        fi
+                    fi
+                    fw_rel_path=$(echo "$dep" | sed -E 's|.*/(Qt[^/]+\.framework/.*)|\1|')
+                    new_dep_path="@rpath/$fw_rel_path"
+                else
+                    destpath="$FRAMEWORKS/$depname"
+                    srcpath=""
+                    if [[ "$dep" == /opt/homebrew* ]]; then
+                        srcpath="$dep"
+                    fi
+                    if [ ! -f "$srcpath" ] && [ -f "$HOMEBREW_LIB/$depname" ]; then
+                        srcpath="$HOMEBREW_LIB/$depname"
+                    fi
+
+                    if [ -f "$srcpath" ] && [ ! -f "$destpath" ]; then
+                        echo "  -> Copying missing dylib: $depname"
+                        cp "$srcpath" "$destpath"
+                        fix_perms "$destpath"
+                        echo "1" > build/.changed
+                    fi
+                    new_dep_path="@rpath/$depname"
+                fi
+
+                if [ "$dep" != "$new_dep_path" ]; then
+                    echo "  -> Updating dependency in $(basename "$lib"): $dep -> $new_dep_path"
+                    install_name_tool -change "$dep" "$new_dep_path" "$lib" 2>/dev/null || true
                     echo "1" > build/.changed
                 fi
             fi
