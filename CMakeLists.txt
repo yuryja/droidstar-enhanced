@@ -7,7 +7,7 @@ if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 endif()
 
-project(DroidStar VERSION 1.0.9 LANGUAGES C CXX)
+project(DroidStar VERSION 1.1.0 LANGUAGES C CXX)
 
 # Export compile commands for IDE language servers (clangd, etc.)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -151,7 +151,7 @@ qt_add_executable(DroidStar WIN32 MACOSX_BUNDLE
 if(ANDROID OR IOS)
     qt_add_qml_module(DroidStar
         URI DroidStarApp
-        VERSION 1.0.9
+        VERSION 1.1.0
         QML_FILES ui/mobile/Main.qml
         QML_FILES ui/mobile/MainTab.qml
         QML_FILES ui/mobile/SettingsTab.qml
@@ -166,7 +166,7 @@ if(ANDROID OR IOS)
 else()
     qt_add_qml_module(DroidStar
         URI DroidStarApp
-        VERSION 1.0.9
+        VERSION 1.1.0
         QML_FILES ui/desktop/MainDesktop.qml
         QML_FILES ui/desktop/MainTabDesktop.qml
         QML_FILES ui/mobile/SettingsTab.qml

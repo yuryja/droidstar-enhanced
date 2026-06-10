@@ -8,7 +8,7 @@ This project is a significantly enhanced fork of the original **DroidStar** by D
   <img src="images/screenshot.png" alt="DroidStarEnhaced Screenshot" width="700"/>
 </p>
 
-> 📢 **Release Notice:** A Release Candidate (RC) version will be released soon! Stay tuned.
+> 📢 **Latest Release:** Version [v1.1.0](https://github.com/yuryja/droidstar-enhanced/releases/tag/v1.1.0) is now available! See the Releases page for details.
 
 ---
 
