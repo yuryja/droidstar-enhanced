@@ -127,6 +127,7 @@ Item {
         if (isMemActive(index)) return;
         
         if (mainTab.connectbutton.isconnected) {
+            mainTab.isQSYing = true;
             mainTab.targetMemoryIndex = index;
             mainTab.connectbutton.clickConnect();
         } else {
