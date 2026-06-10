@@ -843,7 +843,8 @@ Item {
                     Rectangle {
                         anchors.centerIn: parent
                         width: parent.width - 16; height: 4; radius: 2
-                        color: mainTab.themeBgColor
+                        color: isAppConnected ? themeBgColor : "#888888"
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                 }
             }
