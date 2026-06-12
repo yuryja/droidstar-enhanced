@@ -217,6 +217,9 @@ public slots:
 	QStringList get_modems() { return m_modems; }
 	QStringList get_playbacks() { return m_playbacks; }
 	QStringList get_captures() { return m_captures; }
+	QString get_vocoder() { return m_vocoder; }
+	QString get_playback() { return m_playback; }
+	QString get_capture() { return m_capture; }
 	QString get_modemRxFreq() { return m_modemRxFreq; }
 	QString get_modemTxFreq() { return m_modemTxFreq; }
 	QString get_modemRxOffset() { return m_modemRxOffset; }

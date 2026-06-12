@@ -97,6 +97,9 @@ NV_EXPORT int nv_get_mmdvmstatustxt(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_netstatustxt(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_error_text(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_dmrtgid(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_vocoder(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_playback(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_capture(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_ptt_key(nv_handle h);
 
 NV_EXPORT int nv_get_output_level(nv_handle h);

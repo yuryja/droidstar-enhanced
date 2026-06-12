@@ -606,6 +606,33 @@ class NvController extends ChangeNotifier {
     return res;
   }
 
+  String getVocoder() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetVocoder(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getPlayback() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(512);
+    _bindings.nvGetPlayback(_handle!, buf.cast<Utf8>(), 512);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getCapture() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(512);
+    _bindings.nvGetCapture(_handle!, buf.cast<Utf8>(), 512);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
   String getAmbeStatusTxt() {
     if (_handle == null) return '';
     final buf = malloc<Char>(512);

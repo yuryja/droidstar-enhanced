@@ -54,10 +54,27 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
     _captures = nv.getCaptures();
     _vocoders = nv.getVocoders();
     
-    // Default fallback selection
-    if (_playbacks.isNotEmpty) _selectedPlayback = _playbacks.first;
-    if (_captures.isNotEmpty) _selectedCapture = _captures.first;
-    if (_vocoders.isNotEmpty) _selectedVocoder = _vocoders.first;
+    final savedPlayback = nv.getPlayback();
+    final savedCapture = nv.getCapture();
+    final savedVocoder = nv.getVocoder();
+
+    if (savedPlayback.isNotEmpty && _playbacks.contains(savedPlayback)) {
+      _selectedPlayback = savedPlayback;
+    } else if (_playbacks.isNotEmpty) {
+      _selectedPlayback = _playbacks.first;
+    }
+
+    if (savedCapture.isNotEmpty && _captures.contains(savedCapture)) {
+      _selectedCapture = savedCapture;
+    } else if (_captures.isNotEmpty) {
+      _selectedCapture = _captures.first;
+    }
+
+    if (savedVocoder.isNotEmpty && _vocoders.contains(savedVocoder)) {
+      _selectedVocoder = savedVocoder;
+    } else if (_vocoders.isNotEmpty) {
+      _selectedVocoder = _vocoders.first;
+    }
   }
 
   void _saveSettings() {
@@ -153,6 +170,13 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
                     value: _selectedCapture,
                     items: _captures,
                     onChanged: (val) => setState(() => _selectedCapture = val),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDropdown(
+                    label: 'VOCODER',
+                    value: _selectedVocoder,
+                    items: _vocoders,
+                    onChanged: (val) => setState(() => _selectedVocoder = val),
                   ),
                   const SizedBox(height: 16),
                   

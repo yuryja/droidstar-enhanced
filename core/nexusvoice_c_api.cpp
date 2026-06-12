@@ -425,6 +425,21 @@ NV_EXPORT int nv_get_dmrtgid(nv_handle h, char* out_buf, int buf_size) {
     return copy_to_buf(static_cast<nv_context*>(h)->instance->get_dmrtgid(), out_buf, buf_size);
 }
 
+NV_EXPORT int nv_get_vocoder(nv_handle h, char* out_buf, int buf_size) {
+    if (!h) return -1;
+    return copy_to_buf(static_cast<nv_context*>(h)->instance->get_vocoder(), out_buf, buf_size);
+}
+
+NV_EXPORT int nv_get_playback(nv_handle h, char* out_buf, int buf_size) {
+    if (!h) return -1;
+    return copy_to_buf(static_cast<nv_context*>(h)->instance->get_playback(), out_buf, buf_size);
+}
+
+NV_EXPORT int nv_get_capture(nv_handle h, char* out_buf, int buf_size) {
+    if (!h) return -1;
+    return copy_to_buf(static_cast<nv_context*>(h)->instance->get_capture(), out_buf, buf_size);
+}
+
 NV_EXPORT int nv_get_ptt_key(nv_handle h) {
     if (!h) return 0;
     return static_cast<nv_context*>(h)->instance->get_ptt_key();

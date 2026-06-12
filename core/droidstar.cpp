@@ -43,6 +43,7 @@ DroidStar::DroidStar(QObject *parent) :
     m_mdirect(false),
     m_tts(0)
 {
+	m_vocoder = "Software vocoder";
 	qRegisterMetaType<Mode::MODEINFO>("Mode::MODEINFO");
 	m_settings_processed = false;
 	m_modelchange = false;
@@ -635,8 +636,9 @@ void DroidStar::process_mode_change(const QString &m)
 
 void DroidStar::save_settings()
 {
-	//m_settings->setValue("PLAYBACK", ui->comboPlayback->currentText());
-	//m_settings->setValue("CAPTURE", ui->comboCapture->currentText());
+	m_settings->setValue("PLAYBACK", m_playback);
+	m_settings->setValue("CAPTURE", m_capture);
+	m_settings->setValue("VOCODER", m_vocoder);
 	m_settings->setValue("IPV6", m_ipv6 ? "true" : "false");
 	m_settings->setValue("MODE", m_protocol);
 	m_settings->setValue("REFHOST", m_saved_refhost);
@@ -702,6 +704,9 @@ void DroidStar::save_settings()
 
 void DroidStar::process_settings()
 {
+	m_playback = m_settings->value("PLAYBACK").toString().simplified();
+	m_capture = m_settings->value("CAPTURE").toString().simplified();
+	m_vocoder = m_settings->value("VOCODER", "Software vocoder").toString().simplified();
 	m_ipv6 = (m_settings->value("IPV6").toString().simplified() == "true") ? true : false;
 	process_mode_change(m_settings->value("MODE").toString().simplified());
 	m_saved_refhost = m_settings->value("REFHOST").toString().simplified();
