@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+set(CMAKE_POLICY_VERSION_MINIMUM "3.5")
 if(POLICY CMP0072)
   cmake_policy(SET CMP0072 NEW)
 endif()
@@ -302,6 +303,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Frameworks/md380_vocoder_dynarmic/CMakeLis
         add_subdirectory(Frameworks/md380_vocoder_dynarmic)
         target_compile_definitions(NexusVoice PRIVATE USE_MD380_VOCODER)
         target_link_libraries(NexusVoice PRIVATE md380_vocoder Boost::filesystem)
+        target_include_directories(NexusVoice PRIVATE Frameworks/md380_vocoder_dynarmic)
         message(STATUS "MD380 vocoder (AMBE+2): ENABLED")
     else()
         message(STATUS "MD380 vocoder: Boost not found, using mbelib fallback. Install with: brew install boost")
