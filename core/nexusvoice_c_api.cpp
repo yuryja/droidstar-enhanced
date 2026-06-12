@@ -316,7 +316,10 @@ NV_EXPORT int nv_get_hosts(nv_handle h, char* out_buf, int buf_size) {
     QStringList list = static_cast<nv_context*>(h)->instance->get_hosts();
     QJsonArray arr;
     for (const QString& s : list) arr.append(s);
-    return copy_json_to_buf(QJsonDocument(arr), out_buf, buf_size);
+    QJsonDocument doc(arr);
+    QByteArray ba = doc.toJson(QJsonDocument::Compact);
+    qDebug() << "nv_get_hosts: list size =" << list.size() << "json size =" << ba.size() << "buf_size =" << buf_size;
+    return copy_json_to_buf(doc, out_buf, buf_size);
 }
 
 NV_EXPORT int nv_get_vocoders(nv_handle h, char* out_buf, int buf_size) {

@@ -425,8 +425,10 @@ class NvController extends ChangeNotifier {
   // Getters wrapper
   List<String> getHosts() {
     if (_handle == null) return [];
-    final buf = malloc<Char>(262144);
-    final res = _bindings.nvGetHosts(_handle!, buf.cast<Utf8>(), 262144);
+    const bufSize = 1048576; // 1 MB
+    final buf = malloc<Char>(bufSize);
+    final res = _bindings.nvGetHosts(_handle!, buf.cast<Utf8>(), bufSize);
+    debugPrint('Dart getHosts: res = $res');
     if (res < 0) {
       malloc.free(buf);
       return [];
@@ -436,7 +438,8 @@ class NvController extends ChangeNotifier {
     try {
       final decoded = json.decode(jsonStr) as List<dynamic>;
       return decoded.map((e) => e.toString()).toList();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Dart getHosts decode error: $e');
       return [];
     }
   }
