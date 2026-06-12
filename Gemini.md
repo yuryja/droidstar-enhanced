@@ -35,7 +35,7 @@ The project is divided into components to allow cross-compilation across differe
 ### Compilation (CMakeLists.txt)
 - The CMake file uses the `if(ANDROID OR IOS)` condition to include mobile `.qml` files and package them as QRC resources (`qt_add_qml_module`). Otherwise, it loads the desktop version.
 - The `main.cpp` file initializes the QML engine and dynamically selects the correct loading path (`MainMobile.qml` or `MainDesktop.qml`).
-- On macOS, the `OUTPUT_NAME` is `DroidStarEnhaced`, producing `DroidStarEnhaced.app`.
+- On macOS, the `OUTPUT_NAME` is `NexusVoice`, producing `NexusVoice.app`.
 - **Target OS Compatibility:** macOS builds explicitly set `CMAKE_OSX_DEPLOYMENT_TARGET` to `"11.0"` in `CMakeLists.txt` to ensure compatibility with older macOS versions and prevent crashes on versions prior to macOS Tahoe (macOS 26).
 
 ---
@@ -57,7 +57,7 @@ This section documents the **complete and tested** process for generating a func
 | `xattr -cr` fails with Permission denied | QtDBus.framework was copied with root permissions | Run `chmod -R 755 && chown -R $USER` on the framework before xattr |
 | `codesign --deep` fails: "ambiguous format" | QtDBus.framework inside the bundle is not properly signed | Sign QtDBus individually first, then `--force --deep` the main bundle |
 | Users need `xattr -cr` or `sudo` | Gatekeeper quarantine on files copied from DMG | Clean xattrs from the bundle **before** creating the DMG |
-| Gatekeeper blocks app with "verify with developer" dialog | App name contains `+` special character | Renamed app to `DroidStarEnhaced` (no special characters) |
+| Gatekeeper blocks app with "verify with developer" dialog | App name contains `+` special character | Renamed app to `NexusVoice` (no special characters) |
 | App crashes on clean systems without Homebrew | Absolute paths to `/opt/homebrew` inside frameworks (e.g. QtDBus -> libdbus, QtPdf -> libpng) | Scan `/opt/homebrew` dependencies and bundle/re-link them recursively in `package_dmg.sh` |
 
 ### Recommended: Use the packaging script
@@ -81,19 +81,19 @@ Run from the root of the project. Requires the build to already be configured wi
 cmake --build build
 
 # 2. Deploy Qt dependencies
-macdeployqt build/DroidStarEnhaced.app -qmldir=ui
+macdeployqt build/NexusVoice.app -qmldir=ui
 
 # 3. Replace QtDBus symlink with the real framework
-rm -rf build/DroidStarEnhaced.app/Contents/Frameworks/QtDBus.framework
+rm -rf build/NexusVoice.app/Contents/Frameworks/QtDBus.framework
 cp -a /opt/homebrew/Cellar/qt/6.8.2_1/lib/QtDBus.framework \
-       build/DroidStarEnhaced.app/Contents/Frameworks/
+       build/NexusVoice.app/Contents/Frameworks/
 
 # 4. Fix QtDBus install name so it is relocatable
 install_name_tool -id "@rpath/QtDBus.framework/Versions/A/QtDBus" \
-  build/DroidStarEnhaced.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+  build/NexusVoice.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
 # 5. Fix rpaths in all plugins (loop to handle all depths)
-find build/DroidStarEnhaced.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
+find build/NexusVoice.app/Contents/PlugIns -name "*.dylib" | while read -r lib; do
     while otool -l "$lib" 2>/dev/null | grep -q "path @loader_path/\.\./.*lib"; do
         bad=$(otool -l "$lib" 2>/dev/null | grep "path @loader_path/\.\./.*lib" | awk '{print $2}')
         for rp in $bad; do install_name_tool -delete_rpath "$rp" "$lib" 2>/dev/null || true; done
@@ -105,37 +105,37 @@ done
 
 # 6. Fix main binary rpath
 install_name_tool -delete_rpath "/opt/homebrew/lib" \
-  build/DroidStarEnhaced.app/Contents/MacOS/DroidStarEnhaced 2>/dev/null || true
+  build/NexusVoice.app/Contents/MacOS/NexusVoice 2>/dev/null || true
 
 # 7. Fix QtDBus permissions
-chmod -R 755 build/DroidStarEnhaced.app/Contents/Frameworks/QtDBus.framework
-chown -R $USER build/DroidStarEnhaced.app/Contents/Frameworks/QtDBus.framework
+chmod -R 755 build/NexusVoice.app/Contents/Frameworks/QtDBus.framework
+chown -R $USER build/NexusVoice.app/Contents/Frameworks/QtDBus.framework
 
 # 8. Copy README into bundle
-cp README_macOS.txt build/DroidStarEnhaced.app/Contents/Resources/
+cp README_macOS.txt build/NexusVoice.app/Contents/Resources/
 
 # 9. Sign QtDBus individually FIRST (avoids "ambiguous format" error)
 codesign --sign - --force \
-  build/DroidStarEnhaced.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
+  build/NexusVoice.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus
 
 # 10. Sign the entire bundle
-codesign --sign - --force --deep build/DroidStarEnhaced.app
+codesign --sign - --force --deep build/NexusVoice.app
 
 # 11. Clear Gatekeeper quarantine xattrs BEFORE creating the DMG
-xattr -cr build/DroidStarEnhaced.app
+xattr -cr build/NexusVoice.app
 
 # 12. Create the final DMG
-rm -f build/DroidStarEnhaced.dmg
-hdiutil create -volname "DroidStarEnhaced" \
-               -srcfolder build/DroidStarEnhaced.app \
+rm -f build/NexusVoice.dmg
+hdiutil create -volname "NexusVoice" \
+               -srcfolder build/NexusVoice.app \
                -ov -format UDZO \
-               build/DroidStarEnhaced.dmg
+               build/NexusVoice.dmg
 ```
 
 ### Installation for the End User
 
-1. Open `DroidStarEnhaced.dmg`
-2. Drag `DroidStarEnhaced.app` to `/Applications`
+1. Open `NexusVoice.dmg`
+2. Drag `NexusVoice.app` to `/Applications`
 3. Upon first launch, if macOS shows *"unverified developer"*:
    - Go to **System Settings → Privacy & Security → Open Anyway**
    - This step is necessary only the first time (without an Apple Developer ID)
@@ -146,10 +146,10 @@ Requires an **Apple Developer ID** ($99/year) and the **notarization** process:
 ```bash
 # With Developer ID registered:
 codesign --sign "Developer ID Application: Yury Jajitzky (TEAMID)" \
-         --options runtime --deep --force build/DroidStarEnhaced.app
-xcrun notarytool submit build/DroidStarEnhaced.dmg --apple-id your@email.com \
+         --options runtime --deep --force build/NexusVoice.app
+xcrun notarytool submit build/NexusVoice.dmg --apple-id your@email.com \
          --password APP_SPECIFIC_PASSWORD --team-id TEAMID --wait
-xcrun stapler staple build/DroidStarEnhaced.dmg
+xcrun stapler staple build/NexusVoice.dmg
 ```
 
 ### Installed Qt Version
@@ -157,7 +157,7 @@ xcrun stapler staple build/DroidStarEnhaced.dmg
 - If Qt is updated, update the path in step 3.
 
 ### Bundle ID
-- `com.yuryjajitzky.DroidStarEnhaced` — defined in `Info.plist`
+- `com.yuryjajitzky.NexusVoice` — defined in `Info.plist`
 
 ---
 *(Last update: v1.2.0 — Project renamed to NexusVoice. Added MD380 vocoder (AMBE+2 real firmware via Dynarmic JIT) as optional dependency. CMake detects Boost silently and enables vocoder when present. Updated README, CHANGELOG, and all bundle identifiers to NexusVoice. Migration to Flutter + pure C++ core is planned in nexusvoice-core and nexusvoice-app repos)*
