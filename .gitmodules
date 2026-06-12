@@ -1,3 +1,4 @@
 [submodule "Frameworks/md380_vocoder_dynarmic"]
 	path = Frameworks/md380_vocoder_dynarmic
 	url = https://github.com/nostar/md380_vocoder_dynarmic
+	ignore = dirty
