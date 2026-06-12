@@ -425,8 +425,8 @@ class NvController extends ChangeNotifier {
   // Getters wrapper
   List<String> getHosts() {
     if (_handle == null) return [];
-    final buf = malloc<Char>(8192);
-    final res = _bindings.nvGetHosts(_handle!, buf.cast<Utf8>(), 8192);
+    final buf = malloc<Char>(262144);
+    final res = _bindings.nvGetHosts(_handle!, buf.cast<Utf8>(), 262144);
     if (res < 0) {
       malloc.free(buf);
       return [];
