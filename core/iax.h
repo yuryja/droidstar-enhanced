@@ -28,9 +28,9 @@ public:
 	~IAX();
 	void set_iax_params(QString username, QString password, QString callingname, QString node, QString host, int port);
 	//uint8_t get_status(){ return m_status; }
-	QString get_host() { return m_host; }
-	int get_port() { return m_port; }
-	int get_cnt() { return m_cnt; }
+	QString get_host() const { return m_host; }
+	int get_port() const { return m_port; }
+	int get_cnt() const { return m_cnt; }
 private slots:
 	void deleteLater();
 	void process_udp();
@@ -73,7 +73,7 @@ private:
 	qint64 m_timestamp;
 	uint8_t m_regstat;
 	QByteArray m_md5seed;
-	QTimer *m_regtimer;
+	QTimer *m_regtimer = nullptr;
 	uint8_t m_iseq;
 	uint8_t m_oseq;
 	QQueue<int16_t> m_audioq;
@@ -94,7 +94,7 @@ private:
 	cst_voice *voice_slt;
 	cst_voice *voice_kal;
 	cst_voice *voice_awb;
-	cst_wave *tts_audio;
+	cst_wave *tts_audio = nullptr;
 #endif
 };
 

@@ -20,7 +20,7 @@ class NvStatusBar extends StatelessWidget {
             ledColor = const Color(0xFF00FF87);
             ledGlow = [
               BoxShadow(
-                color: const Color(0xFF00FF87).withOpacity(0.5),
+                color: const Color(0xFF00FF87).withValues(alpha: 0.5),
                 blurRadius: 8,
                 spreadRadius: 2,
               )
@@ -30,7 +30,7 @@ class NvStatusBar extends StatelessWidget {
             ledColor = const Color(0xFFFFD600);
             ledGlow = [
               BoxShadow(
-                color: const Color(0xFFFFD600).withOpacity(0.5),
+                color: const Color(0xFFFFD600).withValues(alpha: 0.5),
                 blurRadius: 8,
                 spreadRadius: 2,
               )
@@ -41,7 +41,7 @@ class NvStatusBar extends StatelessWidget {
             ledColor = const Color(0xFFFF0055);
             ledGlow = [
               BoxShadow(
-                color: const Color(0xFFFF0055).withOpacity(0.5),
+                color: const Color(0xFFFF0055).withValues(alpha: 0.5),
                 blurRadius: 8,
                 spreadRadius: 2,
               )
@@ -55,10 +55,10 @@ class NvStatusBar extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
             ),
           ),
           child: Row(
@@ -82,7 +82,7 @@ class NvStatusBar extends StatelessWidget {
                     Text(
                       'SYSTEM STATE',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
+                        color: Colors.white.withValues(alpha: 0.4),
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.5,
@@ -125,10 +125,10 @@ class NvStatusBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF00FF87).withOpacity(0.08) : Colors.white.withOpacity(0.03),
+        color: isActive ? const Color(0xFF00FF87).withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isActive ? const Color(0xFF00FF87).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+          color: isActive ? const Color(0xFF00FF87).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
         ),
       ),
       child: Row(
@@ -137,19 +137,19 @@ class NvStatusBar extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: isActive ? const Color(0xFF00FF87) : Colors.white.withOpacity(0.3),
+              color: isActive ? const Color(0xFF00FF87) : Colors.white.withValues(alpha: 0.3),
               fontSize: 9,
               fontWeight: FontWeight.bold,
             ),
           ),
           if (cleanValue.isNotEmpty) ...[
             const SizedBox(width: 4),
-            Container(width: 1, height: 8, color: Colors.white.withOpacity(0.1)),
+            Container(width: 1, height: 8, color: Colors.white.withValues(alpha: 0.1)),
             const SizedBox(width: 4),
             Text(
               cleanValue,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 9,
                 fontWeight: FontWeight.w500,
               ),

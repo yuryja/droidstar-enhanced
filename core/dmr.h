@@ -46,7 +46,7 @@ private slots:
 	void send_frame();
 	void mmdvm_direct_connect();
 private:
-	uint32_t m_essid;
+	uint32_t m_essid = 0;
 	QString m_password;
 	QString m_lat;
 	QString m_lon;
@@ -56,23 +56,27 @@ private:
 	QString m_url;
 	QString m_swid;
 	QString m_pkid;
-	uint32_t m_txsrcid;
-	uint32_t m_txdstid;
-	uint32_t m_txstreamid;
-	uint8_t m_txslot;
-	uint8_t m_txcc;
-	uint8_t packet_size;
+	uint32_t m_txsrcid = 0;
+	uint32_t m_txdstid = 0;
+	uint32_t m_txstreamid = 0;
+	uint8_t m_txslot = 2;
+	uint8_t m_txcc = 1;
+	uint8_t packet_size = 0;
 	uint8_t m_ambe[27];
-	uint32_t m_defsrcid;
+	uint32_t m_defsrcid = 0;
 	uint8_t m_dmrFrame[55];
-	uint8_t m_dataType;
-	uint32_t m_dmrcnt;
-	FLCO m_flco;
-	FLCO m_txflco;
+	uint8_t m_dataType = 0;
+	uint32_t m_dmrcnt = 0;
+	FLCO m_flco = FLCO_GROUP;
+	FLCO m_txflco = FLCO_GROUP;
 	CBPTC19696 m_bptc;
 	bool m_raw[128U];
 	bool m_data[72U];
 	QString m_options;
+	uint32_t m_txcnt = 0;
+	int m_tx_log_cnt = 0;
+	uint8_t m_rx_cnt = 0;
+	int m_rx_tick_count = 0;
 
 	void byteToBitsBE(uint8_t byte, bool* bits);
 	void bitsToByteBE(const bool* bits, uint8_t& byte);

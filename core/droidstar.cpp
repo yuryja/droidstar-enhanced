@@ -304,6 +304,7 @@ void DroidStar::process_connect()
 		connect_status = Mode::DISCONNECTED;
 		if (m_modethread) {
 			m_modethread->quit();
+			m_modethread->wait(3000);
 			m_modethread = nullptr;
 		}
 		m_data1.clear();
@@ -429,7 +430,7 @@ void DroidStar::process_connect()
 		Mode* current_mode = m_mode;
 		connect(m_modethread, &QThread::finished, this, [this, current_mode]() {
 			if (current_mode) {
-				delete current_mode;
+				current_mode->QObject::deleteLater();
 			}
 			if (m_mode == current_mode) {
 				m_mode = nullptr;

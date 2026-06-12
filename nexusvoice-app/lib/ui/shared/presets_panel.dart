@@ -84,7 +84,7 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
           Text(
             'MEMORY PRESETS',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 2.0,
@@ -104,7 +104,7 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: isEmpty ? Colors.white.withOpacity(0.03) : Colors.blue.withOpacity(0.2),
+                      color: isEmpty ? Colors.white.withValues(alpha: 0.03) : Colors.blue.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Padding(
@@ -116,14 +116,14 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: isEmpty ? Colors.black.withOpacity(0.3) : Colors.blue.withOpacity(0.15),
+                            color: isEmpty ? Colors.black.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               '${index + 1}',
                               style: TextStyle(
-                                color: isEmpty ? Colors.white.withOpacity(0.4) : Colors.blue.shade300,
+                                color: isEmpty ? Colors.white.withValues(alpha: 0.4) : Colors.blue.shade300,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -140,7 +140,7 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
                               Text(
                                 isEmpty ? 'EMPTY SLOT' : (preset['mode'] ?? '').toString().toUpperCase(),
                                 style: TextStyle(
-                                  color: isEmpty ? Colors.white.withOpacity(0.3) : Colors.white,
+                                  color: isEmpty ? Colors.white.withValues(alpha: 0.3) : Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                   letterSpacing: 0.5,
@@ -151,7 +151,7 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
                                 Text(
                                   preset['host'] ?? 'No Host',
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.6),
+                                    color: Colors.white.withValues(alpha: 0.6),
                                     fontSize: 12,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -161,7 +161,7 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
                                   Text(
                                     'TGID: ${preset['tgid']}',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
+                                      color: Colors.white.withValues(alpha: 0.4),
                                       fontSize: 10,
                                     ),
                                   ),
@@ -182,7 +182,7 @@ class _NvPresetsPanelState extends State<NvPresetsPanel> {
                         IconButton(
                           icon: Icon(
                             isEmpty ? Icons.add_circle_outline : Icons.save,
-                            color: isEmpty ? Colors.white.withOpacity(0.3) : const Color(0xFF00FF87),
+                            color: isEmpty ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF00FF87),
                           ),
                           tooltip: 'Save Current Settings here',
                           onPressed: () => _saveCurrentToPreset(index),

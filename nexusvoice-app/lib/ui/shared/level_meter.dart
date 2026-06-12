@@ -67,7 +67,7 @@ class _NvLevelMeterState extends State<NvLevelMeter> {
             Text(
               'RX LEVEL',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
+                color: Colors.white.withValues(alpha: 0.4),
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.0,
@@ -90,10 +90,10 @@ class _NvLevelMeterState extends State<NvLevelMeter> {
           height: 16,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
             ),
           ),
           child: LayoutBuilder(
@@ -120,12 +120,12 @@ class _NvLevelMeterState extends State<NvLevelMeter> {
                       right: index == segmentsCount - 1 ? 0 : 2,
                     ),
                     decoration: BoxDecoration(
-                      color: isActive ? segmentColor : segmentColor.withOpacity(0.08),
+                      color: isActive ? segmentColor : segmentColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(1),
                       boxShadow: isActive
                           ? [
                               BoxShadow(
-                                color: segmentColor.withOpacity(0.3),
+                                color: segmentColor.withValues(alpha: 0.3),
                                 blurRadius: 2,
                                 spreadRadius: 0.5,
                               )

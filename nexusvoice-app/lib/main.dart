@@ -27,8 +27,7 @@ class MyApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF00FF87),
           secondary: Color(0xFF00C9FF),
-          surface: Color(0xFF0F1322),
-          background: Color(0xFF0B0E17),
+          surface: Color(0xFF0B0E17),
         ),
         cardTheme: CardThemeData(
           color: const Color(0xFF141A31),

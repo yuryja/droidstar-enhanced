@@ -20,6 +20,9 @@
 
 #include <QObject>
 #include <QSerialPort>
+#include <QString>
+#include <QByteArray>
+#include <QMap>
 #ifdef Q_OS_ANDROID
 #include "androidserialport.h"
 #endif
@@ -37,7 +40,7 @@ public:
 	void set_modem_params(uint32_t, uint32_t, uint32_t, uint32_t, float, float, uint32_t, float, float, float, float, float, float, float, float);
 	static QMap<QString, QString>  discover_devices();
 	void connect_to_serial(QString);
-	QString get_mmdvm_version(){ return m_version; }
+	QString get_mmdvm_version() const { return m_version; }
 	void write(QByteArray);
 	void set_cc(uint32_t);
 public slots:
@@ -52,17 +55,17 @@ private slots:
 	void set_config();
 private:
 #ifndef Q_OS_ANDROID
-	QSerialPort *m_serial;
+	QSerialPort *m_serial = nullptr;
 #else
-	AndroidSerialPort *m_serial;
+	AndroidSerialPort *m_serial = nullptr;
 #endif
 	QString m_version;
-	uint8_t m_protocol;
-	uint8_t m_configured;
-	uint32_t m_baudrate;
-	QTimer *m_modemtimer;
-	QTimer *m_statustimer;
-	uint8_t packet_size;
+	uint8_t m_protocol = 0;
+	uint8_t m_configured = 0;
+	uint32_t m_baudrate = 0;
+	QTimer *m_modemtimer = nullptr;
+	QTimer *m_statustimer = nullptr;
+	uint8_t packet_size = 0;
 	QQueue<char> m_serialdata;
 	uint32_t m_rxfreq;
 	uint32_t m_txfreq;

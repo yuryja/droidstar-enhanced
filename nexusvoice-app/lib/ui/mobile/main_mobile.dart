@@ -41,7 +41,7 @@ class _MainMobileState extends State<MainMobile> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             height: 1,
           ),
         ),
@@ -54,7 +54,7 @@ class _MainMobileState extends State<MainMobile> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               width: 1,
             ),
           ),
@@ -68,7 +68,7 @@ class _MainMobileState extends State<MainMobile> {
           },
           backgroundColor: const Color(0xFF0F1322),
           selectedItemColor: const Color(0xFF00FF87),
-          unselectedItemColor: Colors.white.withOpacity(0.4),
+          unselectedItemColor: Colors.white.withValues(alpha: 0.4),
           type: BottomNavigationBarType.fixed,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontSize: 11),

@@ -20,6 +20,7 @@
 
 #include <string>
 #include "mode.h"
+#include "M17Defines.h"
 #ifdef USE_EXTERNAL_CODEC2
 #include <codec2/codec2.h>
 #else
@@ -69,6 +70,13 @@ private slots:
 private:
 	int m_txrate;
 	uint8_t m_txcan;
+	uint8_t m_lsf[M17_LSF_LENGTH_BYTES] = {0};
+	uint8_t m_lsfcnt = 0;
+	uint8_t m_lsfchunks[M17_LSF_LENGTH_BYTES] = {0};
+	bool m_validlsf = false;
+	uint16_t m_txstreamid = 0;
+	uint16_t m_tx_cnt = 0;
+	uint8_t m_rx_cnt = 0;
 };
 
 #endif // M17_H

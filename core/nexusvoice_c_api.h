@@ -100,9 +100,16 @@ NV_EXPORT int nv_get_dmrtgid(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_vocoder(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_playback(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_capture(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_latitude(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_longitude(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_location(nv_handle h, char* out_buf, int buf_size);
+NV_EXPORT int nv_get_description(nv_handle h, char* out_buf, int buf_size);
 NV_EXPORT int nv_get_ptt_key(nv_handle h);
 
 NV_EXPORT int nv_get_output_level(nv_handle h);
+
+// Event loop
+NV_EXPORT void nv_pump_events(nv_handle h);
 
 // Registering Callbacks
 NV_EXPORT void nv_set_status_cb(nv_handle h, nv_status_cb cb, void* userdata);

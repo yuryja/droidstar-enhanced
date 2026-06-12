@@ -30,6 +30,7 @@
 #include <QMediaDevices>
 #endif
 #include <QAudioOutput>
+#include <QStringList>
 #include <QQueue>
 
 #define AUDIO_OUT 1
@@ -54,10 +55,10 @@ public:
 	void set_output_volume(qreal v){ m_out->setVolume(v); }
 	void set_input_volume(qreal v){ if(m_in != nullptr) m_in->setVolume(v); }
 	void set_agc(bool agc) { m_agc = agc; }
-	bool frame_available() { return (m_audioinq.size() >= 320) ? true : false; }
+	bool frame_available() const { return m_audioinq.size() >= 320; }
 	uint16_t read(int16_t *, int);
 	uint16_t read(int16_t *);
-	uint16_t level() { return m_maxlevel; }
+	uint16_t level() const { return m_maxlevel; }
 signals:
 
 private:
@@ -71,10 +72,10 @@ private:
 	QAudioSource *m_in;
 #endif
 	QIODevice *m_outdev;
-	QIODevice *m_indev;
+	QIODevice *m_indev = nullptr;
 	QQueue<int16_t> m_audioinq;
-	uint16_t m_maxlevel;
-	bool m_agc;
+	uint16_t m_maxlevel = 0;
+	bool m_agc = true;
 	float m_srm; // sample rate multiplier for macOS HACK
 
 	float m_audio_out_temp_buf[320];   //!< output of decoder

@@ -90,6 +90,10 @@ void DMR::process_udp()
 	buf.resize(m_udp->pendingDatagramSize());
 	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
 
+    std::printf("DMR RECV UDP: size=%d header=%.4s status=%d stream_state=%d\n", 
+                (int)buf.size(), buf.size() >= 4 ? buf.data() : "", (int)m_modeinfo.status, (int)m_modeinfo.stream_state);
+    std::fflush(stdout);
+
     if(m_debug){
         QDebug debug = qDebug();
         debug.noquote();
@@ -192,8 +196,8 @@ void DMR::process_udp()
 			break;
 		case DMR_CONF:
 			setup_connection();
+			out.clear();
 			if(m_options.size()){
-				out.clear();
 				out.append('R');
 				out.append('P');
 				out.append('T');
@@ -234,7 +238,7 @@ void DMR::process_udp()
 		}
 		else if((uint8_t)buf.data()[15] & 0x01){
 			if (m_audio) {
-				m_audio->start_playback();
+				if (m_audio) m_audio->start_playback();
 			}
 			if(!m_rxtimer->isActive()){
 				m_rxtimer->start(m_rxtimerint);
@@ -271,7 +275,7 @@ void DMR::process_udp()
 	{
 		if(!m_tx && ( (m_modeinfo.stream_state == STREAM_LOST) || (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_IDLE) )){
 			if (m_audio) {
-				m_audio->start_playback();
+				if (m_audio) m_audio->start_playback();
 			}
 			if(!m_rxtimer->isActive()){
 				m_rxtimer->start(m_rxtimerint);
@@ -468,7 +472,7 @@ void DMR::process_modem_data(QByteArray d)
 {
 	if (m_tx){
 		if (m_audio) {
-			m_audio->stop_playback();
+			if (m_audio) m_audio->stop_playback();
 		}
 		m_rxcodecq.clear();
 		return;
@@ -492,7 +496,7 @@ void DMR::process_modem_data(QByteArray d)
 		}
 
 		if (m_audio) {
-			m_audio->start_playback();
+			if (m_audio) m_audio->start_playback();
 		}
 		if(!m_rxtimer->isActive()){
 			m_rxtimer->start(m_rxtimerint);
@@ -557,7 +561,7 @@ void DMR::process_modem_data(QByteArray d)
 void DMR::transmit()
 {
 	uint8_t ambe[72];
-	int16_t pcm[160];
+	int16_t pcm[160]{};
 
 #ifdef USE_FLITE
 	if(m_ttsid > 0){
@@ -582,7 +586,7 @@ void DMR::transmit()
 
 	if(m_hwtx){
 #if !defined(Q_OS_IOS)
-		m_ambedev->encode(pcm);
+		if (m_ambedev) m_ambedev->encode(pcm);
 #endif
 	}
 	else{
@@ -612,14 +616,13 @@ void DMR::transmit()
 void DMR::send_frame()
 {
 	QByteArray txdata;
-	static uint32_t txcnt;
 
 	m_txsrcid = m_dmrid;
 	if(m_tx){
 		m_modeinfo.stream_state = TRANSMITTING;
 		m_modeinfo.slot = m_txslot;
 
-		if(!txcnt){
+		if(!m_txcnt){
 			m_dmrcnt = 0;
             encode_header(DT_VOICE_LC_HEADER);
 			m_txstreamid = static_cast<uint32_t>(::rand());
@@ -644,6 +647,11 @@ void DMR::send_frame()
 		txdata.append((char *)m_dmrFrame, 55);
 		if (!m_mdirect) {
 			m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+            if (++m_tx_log_cnt % 50 == 0) {
+                std::printf("DMR SEND UDP: size=55 dest_tgid=%d frame_cnt=%d m_dmrcnt=%d\n",
+                            (int)m_txdstid, (int)m_txcnt, (int)m_dmrcnt);
+                std::fflush(stdout);
+            }
 		}
 		if(m_modem){
 			m_rxwatchdog = 0;
@@ -657,7 +665,7 @@ void DMR::send_frame()
 			};
 		}
 
-		++txcnt;
+		++m_txcnt;
 		++m_dmrcnt;
 /*
 		if(!m_dmrcnt){
@@ -683,6 +691,8 @@ void DMR::send_frame()
 		txdata.append((char *)m_dmrFrame, 55);
 		if (!m_mdirect) {
 			m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+            std::printf("DMR SEND UDP EOT: size=55 dest_tgid=%d\n", (int)m_txdstid);
+            std::fflush(stdout);
 		}
 		if(m_modem){
 			m_rxwatchdog = 0;
@@ -697,16 +707,16 @@ void DMR::send_frame()
 		}
 
 		m_txtimer->stop();
-		txcnt = 0;
+		m_txcnt = 0;
 
 		if(m_ttsid == 0 && m_audio){
-			m_audio->stop_capture();
+			if (m_audio) m_audio->stop_capture();
 		}
 
 		m_modeinfo.stream_state = STREAM_IDLE;
 	}
 	if (m_audio) {
-		emit update_output_level(m_audio->level() * 8);
+		if (m_audio) emit update_output_level(m_audio->level() * 8);
 	}
 	emit update(m_modeinfo);
 
@@ -1060,7 +1070,7 @@ void DMR::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[9];
 
-	if(m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->get_ambe(ambe)){
 		for(int i = 0; i < 9; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -1072,14 +1082,19 @@ void DMR::process_rx_data()
 {
 	int16_t pcm[160];
 	uint8_t ambe[9];
-	static uint8_t cnt = 0;
+
+    if (++m_rx_tick_count % 50 == 0) {
+        std::printf("DMR RX TICK: count=%d codecq_size=%d tx=%d sw_vocoder_loaded=%d stream_state=%d watchdog=%d\n",
+                    m_rx_tick_count, (int)m_rxcodecq.size(), (int)m_tx, (int)m_modeinfo.sw_vocoder_loaded, (int)m_modeinfo.stream_state, (int)m_rxwatchdog);
+        std::fflush(stdout);
+    }
 
 	if(m_rxwatchdog++ > 100){
 		//receive RF from modem
 		if( m_modeinfo.stream_state == TRANSMITTING_MODEM) {
 			m_rxtimer->stop();
 			if (m_audio) {
-				m_audio->stop_playback();
+				if (m_audio) m_audio->stop_playback();
 			}
 			m_rxwatchdog = 0;
 			m_rxcodecq.clear();
@@ -1096,7 +1111,7 @@ void DMR::process_rx_data()
 		}
 	}
 
-	if((m_rxmodemq.size() > 2) && (++cnt >= 3)){
+	if((m_rxmodemq.size() > 2) && (++m_rx_cnt >= 3)){
 		QByteArray out;
 		int s = m_rxmodemq[1];
 		if((m_rxmodemq[0] == MMDVM_FRAME_START) && (m_rxmodemq.size() >= s)){
@@ -1104,10 +1119,10 @@ void DMR::process_rx_data()
 				out.append(m_rxmodemq.dequeue());
 			}
 #if !defined(Q_OS_IOS)
-			m_modem->write(out);
+			if (m_modem) m_modem->write(out);
 #endif
 		}
-		cnt = 0;
+		m_rx_cnt = 0;
 	}
 
 	if((!m_tx) && (m_rxcodecq.size() > 8) ){
@@ -1116,11 +1131,11 @@ void DMR::process_rx_data()
 		}
 		if(m_hwrx){
 #if !defined(Q_OS_IOS)
-			m_ambedev->decode(ambe);
+			if (m_ambedev) m_ambedev->decode(ambe);
 
 			if(m_audio && m_ambedev->get_audio(pcm)){
-				m_audio->write(pcm, 160);
-				emit update_output_level(m_audio->level());
+				if (m_audio) m_audio->write(pcm, 160);
+				if (m_audio) emit update_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -1136,8 +1151,8 @@ void DMR::process_rx_data()
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
 			if (m_audio) {
-				m_audio->write(pcm, 160);
-				emit update_output_level(m_audio->level());
+				if (m_audio) m_audio->write(pcm, 160);
+				if (m_audio) emit update_output_level(m_audio->level());
 			}
 		}
 	}
@@ -1145,7 +1160,7 @@ void DMR::process_rx_data()
 	else if ( ((m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST)) && (m_rxmodemq.size() < 37) ){
 		m_rxtimer->stop();
 		if (m_audio) {
-			m_audio->stop_playback();
+			if (m_audio) m_audio->stop_playback();
 		}
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
@@ -1158,7 +1173,7 @@ void DMR::process_rx_data()
 	else if (m_dmrcnt && (m_modeinfo.stream_state == STREAM_IDLE) && (m_rxcodecq.size() < 9) && (m_rxmodemq.size() < 37)){
 		m_rxtimer->stop();
 		if (m_audio) {
-			m_audio->stop_playback();
+			if (m_audio) m_audio->stop_playback();
 		}
 		m_rxwatchdog = 0;
 		m_rxcodecq.clear();

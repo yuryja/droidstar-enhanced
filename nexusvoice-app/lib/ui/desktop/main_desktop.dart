@@ -34,7 +34,7 @@ class _MainDesktopState extends State<MainDesktop> {
               color: const Color(0xFF0F1322),
               border: Border(
                 right: BorderSide(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   width: 1,
                 ),
               ),
@@ -61,7 +61,7 @@ class _MainDesktopState extends State<MainDesktop> {
                       Text(
                         'NEXT-GEN DMR CLIENT',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.0,
@@ -88,7 +88,7 @@ class _MainDesktopState extends State<MainDesktop> {
                   child: Text(
                     'v2.0.0-alpha',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       fontSize: 10,
                       fontFamily: 'Courier',
                     ),
@@ -131,24 +131,24 @@ class _MainDesktopState extends State<MainDesktop> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF00FF87).withOpacity(0.06) : Colors.transparent,
+            color: isSelected ? const Color(0xFF00FF87).withValues(alpha: 0.06) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? const Color(0xFF00FF87).withOpacity(0.15) : Colors.transparent,
+              color: isSelected ? const Color(0xFF00FF87).withValues(alpha: 0.15) : Colors.transparent,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 icon,
-                color: isSelected ? const Color(0xFF00FF87) : Colors.white.withOpacity(0.4),
+                color: isSelected ? const Color(0xFF00FF87) : Colors.white.withValues(alpha: 0.4),
                 size: 20,
               ),
               const SizedBox(width: 16),
               Text(
                 title,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
                 ),

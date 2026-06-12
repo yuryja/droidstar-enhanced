@@ -20,6 +20,9 @@
 
 #include <QObject>
 #include <QSerialPort>
+#include <QString>
+#include <QByteArray>
+#include <QMap>
 #ifdef Q_OS_ANDROID
 #include "androidserialport.h"
 #endif
@@ -33,9 +36,9 @@ public:
 	~SerialAMBE();
 	static QMap<QString, QString>  discover_devices();
 	void connect_to_serial(QString);
-	QString get_ambe_description(){ return m_description; }
-	QString get_ambe_prodid(){ return m_ambeprodid; }
-	QString get_ambe_verstring(){ return m_ambeverstring; }
+	QString get_ambe_description() const { return m_description; }
+	QString get_ambe_prodid() const { return m_ambeprodid; }
+	QString get_ambe_verstring() const { return m_ambeverstring; }
 	bool get_audio(int16_t *);
 	bool get_ambe(uint8_t *ambe);
 	void decode(uint8_t *);

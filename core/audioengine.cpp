@@ -266,12 +266,11 @@ uint16_t AudioEngine::read(int16_t *pcm, int s)
 		}
 		return 1;
 	}
-	else if(m_in == nullptr){
+	else{
+		// Fallback to silence if capture device is not providing enough samples 
+		// (e.g., macOS microphone permissions block or hardware lag).
 		memset(pcm, 0, sizeof(int16_t) * s);
 		return 1;
-	}
-	else{
-		return 0;
 	}
 }
 

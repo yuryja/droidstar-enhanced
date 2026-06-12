@@ -169,9 +169,11 @@ void Mode::ambe_connect_status(bool s)
 {
 	if(s){
 #if !defined(Q_OS_IOS)
-		m_modeinfo.ambedesc = m_ambedev->get_ambe_description();
-		m_modeinfo.ambeprodid = m_ambedev->get_ambe_prodid();
-		m_modeinfo.ambeverstr = m_ambedev->get_ambe_verstring();
+		if (m_ambedev) {
+			m_modeinfo.ambedesc = m_ambedev->get_ambe_description();
+			m_modeinfo.ambeprodid = m_ambedev->get_ambe_prodid();
+			m_modeinfo.ambeverstr = m_ambedev->get_ambe_verstring();
+		}
 #endif
 	}
 	else{
@@ -186,7 +188,7 @@ void Mode::mmdvm_connect_status(bool s)
 	if(s){
 		//m_modeinfo.mmdvmdesc = m_modem->get_mmdvm_description();
 #if !defined(Q_OS_IOS)
-		m_modeinfo.mmdvm = m_modem->get_mmdvm_version();
+		if (m_modem) m_modeinfo.mmdvm = m_modem->get_mmdvm_version();
 #endif
 	}
 	else{
@@ -225,7 +227,7 @@ void Mode::begin_connect()
         connect(m_ambedev, SIGNAL(connected(bool)), this, SLOT(ambe_connect_status(bool)));
         connect(m_ambedev, SIGNAL(data_ready()), this, SLOT(get_ambe()));
         connect(m_ambedev, SIGNAL(ambedev_ready()), this, SLOT(host_lookup()));
-        m_ambedev->connect_to_serial(m_vocoder);
+        if (m_ambedev) m_ambedev->connect_to_serial(m_vocoder);
 #endif
     }
     else{
@@ -282,7 +284,7 @@ void Mode::start_tx()
 	}
 #if !defined(Q_OS_IOS)
 	if(m_hwtx){
-		m_ambedev->clear_queue();
+		if (m_ambedev) m_ambedev->clear_queue();
 	}
 #endif
 	m_txcodecq.clear();
@@ -332,17 +334,19 @@ bool Mode::load_vocoder_plugin()
 void Mode::deleteLater()
 {
 	if(m_modeinfo.status == CONNECTED_RW){
-		//m_udp->disconnect();
-		//m_ping_timer->stop();
 		send_disconnect();
-        delete m_audio;
-        //if(m_mbevocoder != nullptr) delete m_mbevocoder;
+		if (m_audio) {
+			delete m_audio;
+			m_audio = nullptr;
+		}
 #if !defined(Q_OS_IOS)
-		if(m_hwtx){
+		if(m_ambedev){
 			delete m_ambedev;
+			m_ambedev = nullptr;
 		}
 		if(m_modem){
 			delete m_modem;
+			m_modem = nullptr;
 		}
 #endif
 	}

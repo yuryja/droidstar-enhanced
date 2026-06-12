@@ -264,7 +264,7 @@ void M17::process_udp()
 		if( (m_modeinfo.streamid != 0) && (streamid != m_modeinfo.streamid) ){
 			qDebug() << "New streamid received before timeout";
 			m_modeinfo.streamid = 0;
-			m_audio->stop_playback();
+			if (m_audio) m_audio->stop_playback();
 		}
 		if( !m_tx && (m_modeinfo.streamid == 0) ){
 			uint8_t cs[10];
@@ -275,7 +275,7 @@ void M17::process_udp()
 			decode_callsign(cs);
 			m_modeinfo.dst = QString((char *)cs);
 			m_modeinfo.streamid = streamid;
-			m_audio->start_playback();
+			if (m_audio) m_audio->start_playback();
 
 			if((buf.data()[19] & 0x06U) == 0x04U){
 				m_modeinfo.type = 1;//"3200 Voice";
@@ -460,16 +460,14 @@ void M17::send_disconnect()
 void M17::send_modem_data(QByteArray d)
 {
 	CM17Convolution conv;
-	static uint8_t lsf[M17_LSF_LENGTH_BYTES];
-	static uint8_t lsfcnt = 0;
 	uint8_t txframe[M17_FRAME_LENGTH_BYTES];
 	uint8_t tmp[M17_FRAME_LENGTH_BYTES];
 
 	if(m_modeinfo.stream_state == STREAM_NEW){
-		::memcpy(lsf, &d.data()[6], M17_LSF_LENGTH_BYTES);
-		encodeCRC16(lsf, M17_LSF_LENGTH_BYTES);
+		::memcpy(m_lsf, &d.data()[6], M17_LSF_LENGTH_BYTES);
+		encodeCRC16(m_lsf, M17_LSF_LENGTH_BYTES);
 		::memcpy(txframe, M17_LINK_SETUP_SYNC_BYTES, 2);
-		conv.encodeLinkSetup(lsf, txframe + M17_SYNC_LENGTH_BYTES);
+		conv.encodeLinkSetup(m_lsf, txframe + M17_SYNC_LENGTH_BYTES);
 		interleave(txframe, tmp);
 		decorrelate(tmp, txframe);
 
@@ -478,23 +476,21 @@ void M17::send_modem_data(QByteArray d)
 		m_rxmodemq.append(MMDVM_M17_LINK_SETUP);
 		m_rxmodemq.append('\x00');
 
-		//for(int j = 0; j < 3; j++){
 			for(uint32_t i = 0; i < M17_FRAME_LENGTH_BYTES; ++i){
 				m_rxmodemq.append(txframe[i]);
 			}
-		//}
 	}
 
-	if(lsfcnt == 0){
-		::memcpy(lsf, &d.data()[6], M17_LSF_LENGTH_BYTES);
+	if(m_lsfcnt == 0){
+		::memcpy(m_lsf, &d.data()[6], M17_LSF_LENGTH_BYTES);
 	}
 
 	::memcpy(txframe, M17_STREAM_SYNC_BYTES, 2);
 
 	uint8_t lich[M17_LICH_FRAGMENT_LENGTH_BYTES];
-	encodeCRC16(lsf, M17_LSF_LENGTH_BYTES);
-	::memcpy(lich, lsf + (lsfcnt * M17_LSF_FRAGMENT_LENGTH_BYTES), M17_LSF_FRAGMENT_LENGTH_BYTES);
-	lich[5U] = (lsfcnt & 0x07U) << 5;
+	encodeCRC16(m_lsf, M17_LSF_LENGTH_BYTES);
+	::memcpy(lich, m_lsf + (m_lsfcnt * M17_LSF_FRAGMENT_LENGTH_BYTES), M17_LSF_FRAGMENT_LENGTH_BYTES);
+	lich[5U] = (m_lsfcnt & 0x07U) << 5;
 
 	uint32_t frag1, frag2, frag3, frag4;
 	splitFragmentLICH(lich, frag1, frag2, frag3, frag4);
@@ -516,18 +512,14 @@ void M17::send_modem_data(QByteArray d)
 	for(uint32_t i = 0; i < M17_FRAME_LENGTH_BYTES; ++i){
 		m_rxmodemq.append(txframe[i]);
 	}
-	lsfcnt++;
-	if (lsfcnt >= 6U)
-		lsfcnt = 0U;
+	m_lsfcnt++;
+	if (m_lsfcnt >= 6U)
+		m_lsfcnt = 0U;
 }
 
 void M17::process_modem_data(QByteArray d)
 {
 	QByteArray txframe;
-	static uint16_t txstreamid = 0;
-	static uint8_t lsf[M17_LSF_LENGTH_BYTES] = {0};
-	static uint8_t lsfchunks[M17_LSF_LENGTH_BYTES] = {0};
-	static bool validlsf = false;
 	CM17Convolution conv;
 	uint8_t tmp[M17_FRAME_LENGTH_BYTES];
 
@@ -556,31 +548,31 @@ void M17::process_modem_data(QByteArray d)
 	}
 
 	if((d.data()[2] == MMDVM_M17_LOST) || (d.data()[2] == MMDVM_M17_EOT)){
-		txstreamid = 0;
+		m_txstreamid = 0;
         if(m_mdirect){
 			m_modeinfo.streamid = 0;
 			m_modeinfo.dst.clear();
 			m_modeinfo.src.clear();
 			m_modeinfo.stream_state = STREAM_END;
-			::memset(lsf, 0, M17_LSF_LENGTH_BYTES);
-			::memset(lsfchunks, 0, M17_LSF_LENGTH_BYTES);
-			validlsf = false;
+			::memset(m_lsf, 0, M17_LSF_LENGTH_BYTES);
+			::memset(m_lsfchunks, 0, M17_LSF_LENGTH_BYTES);
+			m_validlsf = false;
 		}
 		qDebug() << "End of M17 stream";
 	}
 	else if(d.data()[2] == MMDVM_M17_LINK_SETUP){
-		::memset(lsf, 0x00U, M17_LSF_LENGTH_BYTES);
-		uint32_t  ber = conv.decodeLinkSetup(p + M17_SYNC_LENGTH_BYTES, lsf);
-		validlsf = checkCRC16(lsf, M17_LSF_LENGTH_BYTES);
-		txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
-		qDebug() << "M17 LSF received valid == " << validlsf << "ber: " << ber;
+		::memset(m_lsf, 0x00U, M17_LSF_LENGTH_BYTES);
+		uint32_t  ber = conv.decodeLinkSetup(p + M17_SYNC_LENGTH_BYTES, m_lsf);
+		m_validlsf = checkCRC16(m_lsf, M17_LSF_LENGTH_BYTES);
+		m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
+		qDebug() << "M17 LSF received valid == " << m_validlsf << "ber: " << ber;
 
-        if(validlsf && m_mdirect){
+        if(m_validlsf && m_mdirect){
 			uint8_t cs[10];
-			::memcpy(cs, lsf, 6);
+			::memcpy(cs, m_lsf, 6);
 			decode_callsign(cs);
 			m_modeinfo.dst = QString((char *)cs);
-			::memcpy(cs, lsf+6, 6);
+			::memcpy(cs, m_lsf+6, 6);
 			decode_callsign(cs);
 			m_modeinfo.src = QString((char *)cs);
 		}
@@ -591,7 +583,7 @@ void M17::process_modem_data(QByteArray d)
 		uint16_t fn = (frame[0U] << 8) + (frame[1U] << 0);
 
 		uint8_t netframe[M17_LSF_LENGTH_BYTES + M17_FN_LENGTH_BYTES + M17_PAYLOAD_LENGTH_BYTES + M17_CRC_LENGTH_BYTES];
-		::memcpy(netframe, lsf, M17_LSF_LENGTH_BYTES);
+		::memcpy(netframe, m_lsf, M17_LSF_LENGTH_BYTES);
 		::memcpy(netframe + M17_LSF_LENGTH_BYTES - M17_CRC_LENGTH_BYTES, frame, M17_FN_LENGTH_BYTES + M17_PAYLOAD_LENGTH_BYTES);
 		netframe[M17_LSF_LENGTH_BYTES - M17_CRC_LENGTH_BYTES + 0U] &= 0x7FU;
 
@@ -606,17 +598,17 @@ void M17::process_modem_data(QByteArray d)
 			combineFragmentLICH(lich1, lich2, lich3, lich4, lich);
 
 			uint32_t n = (lich4 >> 5) & 0x07U;
-			::memcpy(lsfchunks + (n * M17_LSF_FRAGMENT_LENGTH_BYTES), lich, M17_LSF_FRAGMENT_LENGTH_BYTES);
+			::memcpy(m_lsfchunks + (n * M17_LSF_FRAGMENT_LENGTH_BYTES), lich, M17_LSF_FRAGMENT_LENGTH_BYTES);
 
-			bool valid = checkCRC16(lsfchunks, M17_LSF_LENGTH_BYTES);
+			bool valid = checkCRC16(m_lsfchunks, M17_LSF_LENGTH_BYTES);
 			qDebug() << "lich valid == " << valid << " lich n == " << n;
 			if (valid) {
-				::memcpy(lsf, lsfchunks, M17_LSF_LENGTH_BYTES);
-				::memset(lsfchunks, 0, M17_LSF_LENGTH_BYTES);
-				validlsf = valid;
+				::memcpy(m_lsf, m_lsfchunks, M17_LSF_LENGTH_BYTES);
+				::memset(m_lsfchunks, 0, M17_LSF_LENGTH_BYTES);
+				m_validlsf = valid;
 			}
 
-			if(!validlsf){
+			if(!m_validlsf){
 				qDebug() << "No LSF yet...";
 				return;
 			}
@@ -624,24 +616,24 @@ void M17::process_modem_data(QByteArray d)
 
         if(m_mdirect){
 			if( !m_tx && (m_modeinfo.streamid == 0) ){
-				if(txstreamid == 0){
+				if(m_txstreamid == 0){
 					qDebug() << "No header, late entry...";
 					uint8_t cs[10];
-					::memcpy(cs, lsf, 6);
+					::memcpy(cs, m_lsf, 6);
 					decode_callsign(cs);
 					m_modeinfo.dst = QString((char *)cs);
-					::memcpy(cs, lsf+6, 6);
+					::memcpy(cs, m_lsf+6, 6);
 					decode_callsign(cs);
 					m_modeinfo.src = QString((char *)cs);
-					txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
+					m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
 				}
 
 				m_modeinfo.stream_state = STREAM_NEW;
-				m_modeinfo.streamid = txstreamid;
+				m_modeinfo.streamid = m_txstreamid;
 				m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 				qDebug() << "New RF stream from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16) << "FN == " << fn << " ber == " << ber;
 
-				m_audio->start_playback();
+				if (m_audio) m_audio->start_playback();
 
 				if(!m_rxtimer->isActive()){
 	#ifdef Q_OS_WIN
@@ -683,9 +675,9 @@ void M17::process_modem_data(QByteArray d)
 			emit update(m_modeinfo);
 		}
 		else{
-			if(txstreamid == 0){
+			if(m_txstreamid == 0){
 				qDebug() << "No header for netframe";
-				txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
+				m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
 			}
 
 			uint8_t dst[10];
@@ -699,8 +691,8 @@ void M17::process_modem_data(QByteArray d)
 			txframe.append('1');
 			txframe.append('7');
 			txframe.append(' ');
-			txframe.append(txstreamid >> 8);
-			txframe.append(txstreamid & 0xff);
+			txframe.append(m_txstreamid >> 8);
+			txframe.append(m_txstreamid & 0xff);
 			txframe.append((char *)dst, 6);
 			//txframe.append((char *)src, 6);
 			txframe.append((char *)&netframe[6], 6);
@@ -742,21 +734,18 @@ void M17::start_tx()
 void M17::transmit()
 {
 	QByteArray txframe;
-	static uint16_t txstreamid = 0;
-	static uint16_t tx_cnt = 0;
-	int16_t pcm[320];
-	uint8_t c2[16];
+	int16_t pcm[320]{};
+	uint8_t c2[16]{};
 #ifdef USE_FLITE
-	static uint16_t ttscnt = 0;
 	if(m_ttsid > 0){
 		for(int i = 0; i < 320; ++i){
-			if(ttscnt >= tts_audio->num_samples/2){
+			if(m_ttscnt >= tts_audio->num_samples/2){
 				//audiotx_cnt = 0;
 				pcm[i] = 0;
 			}
 			else{
-				pcm[i] = tts_audio->samples[ttscnt*2] / 8;
-				ttscnt++;
+				pcm[i] = tts_audio->samples[m_ttscnt*2] / 8;
+				m_ttscnt++;
 			}
 		}
 
@@ -768,7 +757,7 @@ void M17::transmit()
 	}
 #endif
 	if(m_ttsid == 0){
-		if(m_audio->read(pcm, 320)){
+		if(m_audio && m_audio->read(pcm, 320)){
 			encode_c2(pcm, c2);
 			if(get_mode()){
 				encode_c2(pcm+160, c2+8);
@@ -780,12 +769,12 @@ void M17::transmit()
 	}
 
 	txframe.clear();
-	emit update_output_level(m_audio->level() * 2);
+	if (m_audio) emit update_output_level(m_audio->level() * 2);
 	int r = get_mode() ? 0x05 : 0x07;
 
 	if(m_tx){
-		if(txstreamid == 0){
-		   txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
+		if(m_txstreamid == 0){
+		   m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
            if(!m_rxtimer->isActive() && m_mdirect){
 			   m_rxmodemq.clear();
 			   m_modeinfo.stream_state = STREAM_NEW;
@@ -822,15 +811,15 @@ void M17::transmit()
 		txframe.append('1');
 		txframe.append('7');
 		txframe.append(' ');
-		txframe.append(txstreamid >> 8);
-		txframe.append(txstreamid & 0xff);
+		txframe.append(m_txstreamid >> 8);
+		txframe.append(m_txstreamid & 0xff);
 		txframe.append((char *)dst, 6);
 		txframe.append((char *)src, 6);
 		txframe.append(m_txcan >> 1);
 		txframe.append(((m_txcan << 7) & 0x80U) | r);
-		txframe.append(14, 0x00); //Blank nonce
-		txframe.append((char)(tx_cnt >> 8));
-		txframe.append((char)tx_cnt & 0xff);
+		txframe.append(14, 0x00);
+		txframe.append((char)(m_tx_cnt >> 8));
+		txframe.append((char)m_tx_cnt & 0xff);
 		txframe.append((char *)c2, 16);
 
 		for(int i = 0; i < 28; ++i){
@@ -849,13 +838,13 @@ void M17::transmit()
 			m_udp->writeDatagram(txframe, m_address, m_modeinfo.port);
 		}
 
-		++tx_cnt;
+		++m_tx_cnt;
 		m_modeinfo.src = m_modeinfo.callsign;
 		m_modeinfo.dst = m_refname;
         m_modeinfo.module = m_module;
 		m_modeinfo.type = get_mode();
-		m_modeinfo.frame_number = tx_cnt;
-		m_modeinfo.streamid = txstreamid;
+		m_modeinfo.frame_number = m_tx_cnt;
+		m_modeinfo.streamid = m_txstreamid;
 		emit update(m_modeinfo);
 
         if(m_debug){
@@ -884,21 +873,21 @@ void M17::transmit()
 		src[8] = 'D';
 		src[9] = 0x00;
 		M17::encode_callsign(src);
-		tx_cnt |= 0x8000u;
+		m_tx_cnt |= 0x8000u;
 
 		txframe.append('M');
 		txframe.append('1');
 		txframe.append('7');
 		txframe.append(' ');
-		txframe.append(txstreamid >> 8);
-		txframe.append(txstreamid & 0xff);
+		txframe.append(m_txstreamid >> 8);
+		txframe.append(m_txstreamid & 0xff);
 		txframe.append((char *)dst, 6);
 		txframe.append((char *)src, 6);
         txframe.append(m_txcan >> 1);
         txframe.append(((m_txcan << 7) & 0x80U) | r);
-		txframe.append(14, 0x00); //Blank nonce
-		txframe.append((char)(tx_cnt >> 8));
-		txframe.append((char)tx_cnt & 0xff);
+		txframe.append(14, 0x00);
+		txframe.append((char)(m_tx_cnt >> 8));
+		txframe.append((char)m_tx_cnt & 0xff);
 		txframe.append((char *)quiet, 8);
 		txframe.append((char *)quiet, 8);
 		txframe.append(2, 0x00);
@@ -910,20 +899,20 @@ void M17::transmit()
 		else{
 			m_udp->writeDatagram(txframe, m_address, m_modeinfo.port);
 		}
-		txstreamid = 0;
-		tx_cnt = 0;
+		m_txstreamid = 0;
+		m_tx_cnt = 0;
 #ifdef USE_FLITE
-		ttscnt = 0;
+		m_ttscnt = 0;
 #endif
 		m_txtimer->stop();
 		if(m_ttsid == 0){
-			m_audio->stop_capture();
+			if (m_audio) m_audio->stop_capture();
 		}
 		m_modeinfo.src = m_modeinfo.callsign;
 		m_modeinfo.dst = m_refname;
 		m_modeinfo.type = get_mode();
-		m_modeinfo.frame_number = tx_cnt;
-		m_modeinfo.streamid = txstreamid;
+		m_modeinfo.frame_number = m_tx_cnt;
+		m_modeinfo.streamid = m_txstreamid;
 		emit update(m_modeinfo);
 
         if(m_debug){
@@ -999,7 +988,6 @@ void M17::process_rx_data()
 {
 	int16_t pcm[320];
 	uint8_t codec2[8];
-	static uint8_t cnt = 0;
 
 	if(m_rxwatchdog++ > 50){
 		qDebug() << "RX stream timeout ";
@@ -1010,7 +998,7 @@ void M17::process_rx_data()
 		m_modeinfo.streamid = 0;
 	}
 
-	if((m_rxmodemq.size() > 2) && (++cnt >= 2)){
+	if((m_rxmodemq.size() > 2) && (++m_rx_cnt >= 2)){
 		QByteArray out;
 		int s = m_rxmodemq[1];
 		if((m_rxmodemq[0] == MMDVM_FRAME_START) && (m_rxmodemq.size() >= s)){
@@ -1018,10 +1006,10 @@ void M17::process_rx_data()
 				out.append(m_rxmodemq.dequeue());
 			}
 #if !defined(Q_OS_IOS)
-			m_modem->write(out);
+			if (m_modem) m_modem->write(out);
 #endif
 		}
-		cnt = 0;
+		m_rx_cnt = 0;
 	}
 
 	if((!m_tx) && (m_rxcodecq.size() > 7) ){
@@ -1030,12 +1018,12 @@ void M17::process_rx_data()
 		}
 		decode_c2(pcm, codec2);
 		int s = get_mode() ? 160 : 320;
-		m_audio->write(pcm, s);
-		emit update_output_level(m_audio->level());
+		if (m_audio) m_audio->write(pcm, s);
+		if (m_audio) emit update_output_level(m_audio->level());
 	}
 	else if ( ((m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST)) && (m_rxmodemq.size() < 50) ){
 		m_rxtimer->stop();
-		m_audio->stop_playback();
+		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
 		m_rxcodecq.clear();

@@ -18,6 +18,7 @@
 #ifndef MODE_H
 #define MODE_H
 
+#include <string>
 #include <QObject>
 #include <QtNetwork>
 #ifdef USE_FLITE
@@ -68,8 +69,8 @@ public:
 	virtual void set_dmr_params(uint8_t, QString, QString, QString, QString, QString, QString, QString, QString, QString, QString) {}
 	virtual void set_iax_params(QString, QString, QString, QString, QString, int) {}
 	void set_dmr_cc(uint32_t cc) { m_dmrColorCode = cc; }
-	bool get_hwrx() { return m_hwrx; }
-	bool get_hwtx() { return m_hwtx; }
+	bool get_hwrx() const { return m_hwrx; }
+	bool get_hwtx() const { return m_hwtx; }
 	void set_hostname(std::string);
 	void set_callsign(std::string);
 	struct MODEINFO {
@@ -177,8 +178,8 @@ protected:
 	uint16_t m_nxdnid;
 	QString m_refname;
 	bool m_tx;
-	uint16_t m_txcnt;
-	uint16_t m_ttscnt;
+	uint16_t m_txcnt = 0;
+	uint16_t m_ttscnt = 0;
 	uint8_t m_ttsid;
 	QString m_ttstext;
 	QString m_txmycall;
@@ -190,7 +191,7 @@ protected:
 	cst_voice *voice_slt;
 	cst_voice *voice_kal;
 	cst_voice *voice_awb;
-	cst_wave *tts_audio;
+	cst_wave *tts_audio = nullptr;
 #endif
 	QTimer *m_ping_timer = nullptr;
 	QTimer *m_txtimer = nullptr;
@@ -200,7 +201,7 @@ protected:
 	QString m_audioout;
     bool m_mdirect;
 	uint32_t m_rxwatchdog;
-	uint8_t m_attenuation;
+	uint8_t m_attenuation = 0;
 	uint8_t m_rxtimerint;
 	uint8_t m_txtimerint;
 	QQueue<uint8_t> m_rxcodecq;

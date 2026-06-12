@@ -29,6 +29,16 @@ public:
 	uint8_t * get_frame(uint8_t *ambe);
 private:
 	uint8_t packet_size;
+	bool m_sd_sync = false;
+	int m_sd_txt_seq = 0;
+	int m_sd_gps_cnt = 0;
+	int m_sd_hdr_cnt = 0;
+	int m_sd_debug_cnt = 0;
+	char m_user_data[21]{};
+	QByteArray m_gps_data;
+	uint8_t m_debug_data[64]{};
+	uint16_t m_txstreamid = 0;
+	bool m_sendheader = true;
 private slots:
 	void toggle_tx(bool);
 	void start_tx();

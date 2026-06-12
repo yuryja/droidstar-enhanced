@@ -32,6 +32,7 @@ private:
 	uint8_t imbe[11U];
 	int m_dstid;
 	uint32_t m_txdstid;
+	uint8_t m_p25step = 0;
 private slots:
 	void process_udp();
 	void process_rx_data();

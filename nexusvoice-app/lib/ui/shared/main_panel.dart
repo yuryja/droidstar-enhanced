@@ -111,7 +111,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
                 color: const Color(0xFF141A31),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.white.withOpacity(0.05)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -228,7 +228,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
                       elevation: 4,
                       shadowColor: (isConnected 
                           ? const Color(0xFFFF0055) 
-                          : const Color(0xFF00FF87)).withOpacity(0.3),
+                          : const Color(0xFF00FF87)).withValues(alpha: 0.3),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -273,7 +273,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             fontSize: 10,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -283,10 +283,10 @@ class _NvMainPanelState extends State<NvMainPanel> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
             ),
           ),
           child: DropdownButtonHideUnderline(
@@ -327,7 +327,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             fontSize: 10,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -341,10 +341,10 @@ class _NvMainPanelState extends State<NvMainPanel> {
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
             child: Row(
@@ -354,7 +354,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
                   child: Text(
                     value.isEmpty ? 'Select Host...' : value,
                     style: TextStyle(
-                      color: enabled ? Colors.white : Colors.white.withOpacity(0.5),
+                      color: enabled ? Colors.white : Colors.white.withValues(alpha: 0.5),
                       fontSize: 14,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -384,7 +384,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             fontSize: 10,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -396,21 +396,21 @@ class _NvMainPanelState extends State<NvMainPanel> {
           enabled: enabled,
           keyboardType: keyboardType,
           style: TextStyle(
-            color: enabled ? Colors.white : Colors.white.withOpacity(0.5),
+            color: enabled ? Colors.white : Colors.white.withValues(alpha: 0.5),
             fontSize: 14,
           ),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             filled: true,
-            fillColor: Colors.black.withOpacity(0.25),
+            fillColor: Colors.black.withValues(alpha: 0.25),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.03)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.03)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -453,12 +453,12 @@ class _NvMainPanelState extends State<NvMainPanel> {
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF1B4965).withOpacity(0.4),
+          color: const Color(0xFF1B4965).withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0D233A).withOpacity(0.5),
+            color: const Color(0xFF0D233A).withValues(alpha: 0.5),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -473,7 +473,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
               Text(
                 'NEXUSVOICE TRANSCIEVER DISPLAY',
                 style: TextStyle(
-                  color: const Color(0xFF88C0D0).withOpacity(0.7),
+                  color: const Color(0xFF88C0D0).withValues(alpha: 0.7),
                   fontSize: 8,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2.0,
@@ -510,7 +510,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
                   Text(
                     labels[index].toUpperCase(),
                     style: TextStyle(
-                      color: const Color(0xFF88C0D0).withOpacity(0.5),
+                      color: const Color(0xFF88C0D0).withValues(alpha: 0.5),
                       fontSize: 8,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
@@ -584,7 +584,7 @@ class _HostSearchDialogState extends State<HostSearchDialog> {
       backgroundColor: const Color(0xFF101424),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.white.withOpacity(0.08)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Container(
         width: 400,
@@ -618,14 +618,14 @@ class _HostSearchDialogState extends State<HostSearchDialog> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search by name or ID...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                 prefixIcon: const Icon(Icons.search, color: Colors.white54),
                 filled: true,
-                fillColor: Colors.black.withOpacity(0.25),
+                fillColor: Colors.black.withValues(alpha: 0.25),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -639,7 +639,7 @@ class _HostSearchDialogState extends State<HostSearchDialog> {
                   ? Center(
                       child: Text(
                         'No reflectors found',
-                        style: TextStyle(color: Colors.white.withOpacity(0.4)),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
                       ),
                     )
                   : ListView.builder(
@@ -656,7 +656,7 @@ class _HostSearchDialogState extends State<HostSearchDialog> {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? const Color(0xFF88C0D0).withOpacity(0.1)
+                                  ? const Color(0xFF88C0D0).withValues(alpha: 0.1)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),

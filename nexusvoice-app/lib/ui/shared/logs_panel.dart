@@ -48,7 +48,7 @@ class _NvLogsPanelState extends State<NvLogsPanel> {
                   Text(
                     'SYSTEM LOGS / CONSOLE',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2.0,
@@ -77,7 +77,7 @@ class _NvLogsPanelState extends State<NvLogsPanel> {
                     color: const Color(0xFF070B19),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                     ),
                   ),
                   child: logs.isEmpty
@@ -85,7 +85,7 @@ class _NvLogsPanelState extends State<NvLogsPanel> {
                           child: Text(
                             'NO LOG ENTRIES YET',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               fontFamily: 'Courier',
                               fontSize: 12,
                             ),

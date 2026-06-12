@@ -103,7 +103,7 @@ void P25::process_udp()
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 			if(!m_tx && !m_rxtimer->isActive() ){
 				m_rxcodecq.clear();
-				m_audio->start_playback();
+				if (m_audio) m_audio->start_playback();
 				m_rxtimer->start(m_rxtimerint);
 			}
 			qDebug() << "New P25 stream";
@@ -240,10 +240,9 @@ void P25::send_disconnect()
 void P25::transmit()
 {
 	QByteArray txdata;
-	uint8_t imbe[11];
-	int16_t pcm[160];
+	uint8_t imbe[11]{};
+	int16_t pcm[160]{};
 	uint8_t buffer[22];
-	static uint8_t p25step = 0;
 #ifdef USE_FLITE
 	if(m_ttsid > 0){
 		for(int i = 0; i < 160; ++i){
@@ -260,7 +259,7 @@ void P25::transmit()
 	}
 #endif
 	if(m_ttsid == 0){
-		if(m_audio->read(pcm, 160)){
+		if(m_audio && m_audio->read(pcm, 160)){
             m_imbevocoder.encode_4400(pcm, imbe);
 		}
 		else{
@@ -269,25 +268,25 @@ void P25::transmit()
 	}
 
 	if(m_tx){
-		switch (p25step) {
+		switch (m_p25step) {
 		case 0x00U:
 			::memcpy(buffer, REC62, 22U);
 			::memcpy(buffer + 10U, imbe, 11U);
 			txdata.append((char *)buffer, 22U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x01U:
 			::memcpy(buffer, REC63, 14U);
 			::memcpy(buffer + 1U, imbe, 11U);
 			txdata.append((char *)buffer, 14U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x02U:
 			::memcpy(buffer, REC64, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			buffer[1U] = 0x00U;
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x03U:
 			::memcpy(buffer, REC65, 17U);
@@ -296,7 +295,7 @@ void P25::transmit()
 			buffer[2U] = (m_dstid >> 8) & 0xFFU;
 			buffer[3U] = (m_dstid >> 0) & 0xFFU;
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x04U:
 			::memcpy(buffer, REC66, 17U);
@@ -305,92 +304,92 @@ void P25::transmit()
 			buffer[2U] = (m_dmrid >> 8) & 0xFFU;
 			buffer[3U] = (m_dmrid >> 0) & 0xFFU;
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x05U:
 			::memcpy(buffer, REC67, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x06U:
 			::memcpy(buffer, REC68, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x07U:
 			::memcpy(buffer, REC69, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x08U:
 			::memcpy(buffer, REC6A, 16U);
 			::memcpy(buffer + 4U, imbe, 11U);
 			txdata.append((char *)buffer, 16U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x09U:
 			::memcpy(buffer, REC6B, 22U);
 			::memcpy(buffer + 10U, imbe, 11U);
 			txdata.append((char *)buffer, 22U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x0AU:
 			::memcpy(buffer, REC6C, 14U);
 			::memcpy(buffer + 1U, imbe, 11U);
 			txdata.append((char *)buffer, 14U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x0BU:
 			::memcpy(buffer, REC6D, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x0CU:
 			::memcpy(buffer, REC6E, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x0DU:
 			::memcpy(buffer, REC6F, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x0EU:
 			::memcpy(buffer, REC70, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			buffer[1U] = 0x80U;
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x0FU:
 			::memcpy(buffer, REC71, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x10U:
 			::memcpy(buffer, REC72, 17U);
 			::memcpy(buffer + 5U, imbe, 11U);
 			txdata.append((char *)buffer, 17U);
-			++p25step;
+			++m_p25step;
 			break;
 		case 0x11U:
 			::memcpy(buffer, REC73, 16U);
 			::memcpy(buffer + 4U, imbe, 11U);
 			txdata.append((char *)buffer, 16U);
-			p25step = 0;
+			m_p25step = 0;
 			break;
 		}
 		m_modeinfo.stream_state = TRANSMITTING;
 		m_modeinfo.srcid = m_dmrid;
 		m_modeinfo.dstid = m_dstid;
-		m_modeinfo.frame_number = p25step;
+		m_modeinfo.frame_number = m_p25step;
 		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
 	}
 	else{
@@ -399,16 +398,16 @@ void P25::transmit()
 		fprintf(stderr, "P25 TX stopped\n");
 		m_txtimer->stop();
 		if(m_ttsid == 0){
-			m_audio->stop_capture();
+			if (m_audio) m_audio->stop_capture();
 		}
-		p25step = 0;
+		m_p25step = 0;
 		m_modeinfo.stream_state = STREAM_IDLE;
 		m_modeinfo.srcid = 0;
 		m_modeinfo.dstid = 0;
 		m_modeinfo.frame_number = 0;
 		m_txcodecq.clear();
 	}
-	emit update_output_level(m_audio->level() * 6);
+	if (m_audio) emit update_output_level(m_audio->level() * 6);
 	emit update(m_modeinfo);
 
         if(m_debug){
@@ -442,12 +441,12 @@ void P25::process_rx_data()
 		}
 
         m_imbevocoder.decode_4400(pcm, imbe);
-		m_audio->write(pcm, 160);
-		emit update_output_level(m_audio->level());
+		if (m_audio) m_audio->write(pcm, 160);
+		if (m_audio) emit update_output_level(m_audio->level());
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
 		m_rxtimer->stop();
-		m_audio->stop_playback();
+		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
 		m_rxcodecq.clear();

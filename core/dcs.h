@@ -30,6 +30,10 @@ public:
 private:
 	QString m_txusrtxt;
 	uint8_t packet_size;
+	bool m_sd_sync = false;
+	int m_sd_seq = 0;
+	char m_user_data[21]{};
+	uint16_t m_txstreamid = 0;
 private slots:
 	void toggle_tx(bool);
 	void start_tx();

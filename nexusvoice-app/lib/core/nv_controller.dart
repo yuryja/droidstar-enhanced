@@ -55,7 +55,7 @@ class NvController extends ChangeNotifier {
     // Continuously pump the Qt event loop in the C++ library
     Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (_handle != null) {
-        _bindings.nvGetOutputLevel(_handle!);
+        _bindings.nvPumpEvents(_handle!);
       }
     });
   }
@@ -601,6 +601,42 @@ class NvController extends ChangeNotifier {
     if (_handle == null) return '';
     final buf = malloc<Char>(256);
     _bindings.nvGetAslPassword(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getLatitude() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetLatitude(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getLongitude() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetLongitude(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getLocation() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetLocation(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getDescription() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetDescription(_handle!, buf.cast<Utf8>(), 256);
     final res = buf.cast<Utf8>().toDartString();
     malloc.free(buf);
     return res;

@@ -88,21 +88,23 @@ private:
 	void writeVDMode2Data(uint8_t* data, const uint8_t* dt);
 	void interleave(uint8_t *ambe);
 
-	uint8_t m_fi;
-	uint8_t packet_size;
+	uint8_t m_fi = 0;
+	uint8_t packet_size = 0;
 	uint8_t gateway[12];
 	uint8_t m_ysfFrame[200];
 	uint8_t m_vch[13U];
 	uint8_t m_ambe[55];
-	//uint8_t m_imbe[55];
 	CYSFFICH m_fich;
 	uint8_t ambe_fr[4][24];
-	uint32_t ambe_a;
-	uint32_t ambe_b;
-	uint32_t ambe_c;
-	bool m_fcs;
+	uint32_t ambe_a = 0;
+	uint32_t ambe_b = 0;
+	uint32_t ambe_c = 0;
+	bool m_fcs = false;
 	std::string m_fcsname;
-	bool m_txfullrate;
+	bool m_txfullrate = false;
+	int m_tx_log_cnt = 0;
+	uint8_t m_rx_cnt = 0;
+	int m_rx_tick_count = 0;
 	QQueue<uint8_t> m_rximbecodecq;
 };
 

@@ -41,14 +41,7 @@ void REF::process_udp()
 	QByteArray out;
 	QHostAddress sender;
 	quint16 senderPort;
-	static bool sd_sync = 0;
-    static int sd_txt_seq = 0;
-    static int sd_gps_cnt = 0;
-    static int sd_hdr_cnt = 0;
-    static int sd_debug_cnt = 0;
-	static char user_data[21];
-    static QByteArray gps_data;
-    static uint8_t debug_data[64];
+
 
 	const uint8_t header[5] = {0x80,0x44,0x53,0x56,0x54};
 
@@ -151,7 +144,7 @@ void REF::process_udp()
 			m_modeinfo.gw2 = rptr2;
 
 			if(!m_tx && !m_rxtimer->isActive() && (m_modeinfo.streamid == 0)){
-				m_audio->start_playback();
+				if (m_audio) m_audio->start_playback();
 				m_rxtimer->start(m_rxtimerint);
 				m_rxcodecq.clear();
 				m_modeinfo.stream_state = STREAM_NEW;
@@ -174,13 +167,13 @@ void REF::process_udp()
 					for(int i = 0; i < 44; ++i){
 						m_rxmodemq.append(out[i]);
 					}
-					//m_modem->write(out);
+					//if (m_modem) m_modem->write(out);
 				}
 
 				qDebug() << "New stream from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16);
 				emit update(m_modeinfo);
-                sd_gps_cnt = 0;
-                gps_data.clear();
+                m_sd_gps_cnt = 0;
+                m_gps_data.clear();
 			}
 		}
 		else{
@@ -205,134 +198,134 @@ void REF::process_udp()
 			}
 		}
 		if((buf.data()[16] == 0) && (buf.data()[26] == 0x55) && (buf.data()[27] == 0x2d) && (buf.data()[28] == 0x16)){
-			sd_sync = 1;
-            sd_txt_seq = 1;
-            //sd_debug_cnt = 0;
+			m_sd_sync = 1;
+            m_sd_txt_seq = 1;
+            //m_sd_debug_cnt = 0;
             //for(int i = 0; i < 63; i++){
-            //    fprintf(stderr, "%02x ", debug_data[i]);
+            //    fprintf(stderr, "%02x ", m_debug_data[i]);
             //}
            // fprintf(stderr, "\n");
 		}
-        //debug_data[sd_debug_cnt++] = buf.data()[26] ^ 0x70;
-        //debug_data[sd_debug_cnt++] = buf.data()[27] ^ 0x4f;
-        //debug_data[sd_debug_cnt++] = buf.data()[28] ^ 0x93;
+        //m_debug_data[m_sd_debug_cnt++] = buf.data()[26] ^ 0x70;
+        //m_debug_data[m_sd_debug_cnt++] = buf.data()[27] ^ 0x4f;
+        //m_debug_data[m_sd_debug_cnt++] = buf.data()[28] ^ 0x93;
 
         char c = buf.data()[26] ^ 0x70;
 
-        if( sd_sync && !sd_gps_cnt && ((c & 0xf0) == 0x50)){
-            sd_hdr_cnt = (c & 0x0f);
+        if( m_sd_sync && !m_sd_gps_cnt && ((c & 0xf0) == 0x50)){
+            m_sd_hdr_cnt = (c & 0x0f);
         }
-        else if(sd_hdr_cnt){
+        else if(m_sd_hdr_cnt){
             c = 0;
-            sd_hdr_cnt = 0;
+            m_sd_hdr_cnt = 0;
         }
-        if( sd_sync && !sd_gps_cnt && ((c & 0xf0) == 0x30)){
-            sd_gps_cnt = (c & 0x0f);
+        if( m_sd_sync && !m_sd_gps_cnt && ((c & 0xf0) == 0x30)){
+            m_sd_gps_cnt = (c & 0x0f);
             c = buf.data()[27] ^ 0x4f;
             if( (c == 0x0a) || (c == 0x0d) ){
-                gps_data.append('\0');
-                sd_gps_cnt = 0;
-                QTextStream(stderr) << "GPS: " << QString(gps_data) << Qt::endl;
-                if(gps_data[0] == '$') emit update_log("GPS: " + QString(gps_data));
-                gps_data.clear();
+                m_gps_data.append('\0');
+                m_sd_gps_cnt = 0;
+                QTextStream(stderr) << "GPS: " << QString(m_gps_data) << Qt::endl;
+                if(m_gps_data[0] == '$') emit update_log("GPS: " + QString(m_gps_data));
+                m_gps_data.clear();
             }
             else{
-                sd_gps_cnt--;
-                gps_data.append(c);
+                m_sd_gps_cnt--;
+                m_gps_data.append(c);
                 c = buf.data()[28] ^ 0x93;
                 if( (c == 0x0a) || (c == 0x0d) ){
-                    gps_data.append('\0');
-                    sd_gps_cnt = 0;
-                    QTextStream(stderr) << "GPS: " << QString(gps_data) << Qt::endl;
-                    if(gps_data[0] == '$') emit update_log("GPS: " + QString(gps_data));
-                    gps_data.clear();
+                    m_gps_data.append('\0');
+                    m_sd_gps_cnt = 0;
+                    QTextStream(stderr) << "GPS: " << QString(m_gps_data) << Qt::endl;
+                    if(m_gps_data[0] == '$') emit update_log("GPS: " + QString(m_gps_data));
+                    m_gps_data.clear();
                 }
                 else{
-                    sd_gps_cnt--;
-                    gps_data.append(c);
+                    m_sd_gps_cnt--;
+                    m_gps_data.append(c);
                 }
             }
         }
-        else if(sd_gps_cnt && (buf.data()[16] != 0)){
+        else if(m_sd_gps_cnt && (buf.data()[16] != 0)){
             if( (c == 0x0a) || (c == 0x0d) ){
-                gps_data.append('\0');
-                sd_gps_cnt = 0;
-                QTextStream(stderr) << "GPS: " << QString(gps_data) << Qt::endl;
-                if(gps_data[0] == '$') emit update_log("GPS: " + QString(gps_data));
-                gps_data.clear();
+                m_gps_data.append('\0');
+                m_sd_gps_cnt = 0;
+                QTextStream(stderr) << "GPS: " << QString(m_gps_data) << Qt::endl;
+                if(m_gps_data[0] == '$') emit update_log("GPS: " + QString(m_gps_data));
+                m_gps_data.clear();
             }
             else{
-                gps_data.append(c);
+                m_gps_data.append(c);
                 c = buf.data()[27] ^ 0x4f;
                 if( (c == 0x0a) || (c == 0x0d) ){
-                    gps_data.append('\0');
-                    sd_gps_cnt = 0;
-                    QTextStream(stderr) << "GPS: " << QString(gps_data) << Qt::endl;
-                    if(gps_data[0] == '$') emit update_log("GPS: " + QString(gps_data));
-                    gps_data.clear();
+                    m_gps_data.append('\0');
+                    m_sd_gps_cnt = 0;
+                    QTextStream(stderr) << "GPS: " << QString(m_gps_data) << Qt::endl;
+                    if(m_gps_data[0] == '$') emit update_log("GPS: " + QString(m_gps_data));
+                    m_gps_data.clear();
                 }
                 else{
-                    gps_data.append(c);
+                    m_gps_data.append(c);
                     c = buf.data()[28] ^ 0x93;
                     if( (c == 0x0a) || (c == 0x0d) ){
-                        gps_data.append('\0');
-                        sd_gps_cnt = 0;
-                        QTextStream(stderr) << "GPS: " << QString(gps_data) << Qt::endl;
-                        if(gps_data[0] == '$') emit update_log("GPS: " + QString(gps_data));
-                        gps_data.clear();
+                        m_gps_data.append('\0');
+                        m_sd_gps_cnt = 0;
+                        QTextStream(stderr) << "GPS: " << QString(m_gps_data) << Qt::endl;
+                        if(m_gps_data[0] == '$') emit update_log("GPS: " + QString(m_gps_data));
+                        m_gps_data.clear();
                     }
                     else{
-                        gps_data.append(c);
+                        m_gps_data.append(c);
                     }
                 }
             }
-            sd_gps_cnt = 0;
+            m_sd_gps_cnt = 0;
         }
-        if(sd_sync && (sd_txt_seq == 1) && (buf.data()[16] == 1) && (buf.data()[26] == 0x30)){
-		   user_data[0] = buf.data()[27] ^ 0x4f;
-		   user_data[1] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 1) && (buf.data()[16] == 1) && (buf.data()[26] == 0x30)){
+		   m_user_data[0] = buf.data()[27] ^ 0x4f;
+		   m_user_data[1] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
 		}
-        if(sd_sync && (sd_txt_seq == 2) && (buf.data()[16] == 2)){
-		   user_data[2] = buf.data()[26] ^ 0x70;
-		   user_data[3] = buf.data()[27] ^ 0x4f;
-		   user_data[4] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 2) && (buf.data()[16] == 2)){
+		   m_user_data[2] = buf.data()[26] ^ 0x70;
+		   m_user_data[3] = buf.data()[27] ^ 0x4f;
+		   m_user_data[4] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
         }
-        if(sd_sync && (sd_txt_seq == 3) && ((buf.data()[16] == 3) || (buf.data()[16] == 5)) && (buf.data()[26] == 0x31)){
-		   user_data[5] = buf.data()[27] ^ 0x4f;
-		   user_data[6] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 3) && ((buf.data()[16] == 3) || (buf.data()[16] == 5)) && (buf.data()[26] == 0x31)){
+		   m_user_data[5] = buf.data()[27] ^ 0x4f;
+		   m_user_data[6] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
 		}
-        if(sd_sync && (sd_txt_seq == 4) && ((buf.data()[16] == 4) || (buf.data()[16] == 6))){
-		   user_data[7] = buf.data()[26] ^ 0x70;
-		   user_data[8] = buf.data()[27] ^ 0x4f;
-		   user_data[9] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 4) && ((buf.data()[16] == 4) || (buf.data()[16] == 6))){
+		   m_user_data[7] = buf.data()[26] ^ 0x70;
+		   m_user_data[8] = buf.data()[27] ^ 0x4f;
+		   m_user_data[9] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
 		}
-        if(sd_sync && (sd_txt_seq == 5) && ((buf.data()[16] == 5) || (buf.data()[16] == 9)) && (buf.data()[26] == 0x32)){
-		   user_data[10] = buf.data()[27] ^ 0x4f;
-		   user_data[11] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 5) && ((buf.data()[16] == 5) || (buf.data()[16] == 9)) && (buf.data()[26] == 0x32)){
+		   m_user_data[10] = buf.data()[27] ^ 0x4f;
+		   m_user_data[11] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
 		}
-        if(sd_sync && (sd_txt_seq == 6) && ((buf.data()[16] == 6) || (buf.data()[16] == 10))){
-		   user_data[12] = buf.data()[26] ^ 0x70;
-		   user_data[13] = buf.data()[27] ^ 0x4f;
-		   user_data[14] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 6) && ((buf.data()[16] == 6) || (buf.data()[16] == 10))){
+		   m_user_data[12] = buf.data()[26] ^ 0x70;
+		   m_user_data[13] = buf.data()[27] ^ 0x4f;
+		   m_user_data[14] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
 		}
-        if(sd_sync && (sd_txt_seq == 7) && ((buf.data()[16] == 7) || (buf.data()[16] == 13)) && (buf.data()[26] == 0x33)){
-		   user_data[15] = buf.data()[27] ^ 0x4f;
-		   user_data[16] = buf.data()[28] ^ 0x93;
-           ++sd_txt_seq;
+        if(m_sd_sync && (m_sd_txt_seq == 7) && ((buf.data()[16] == 7) || (buf.data()[16] == 13)) && (buf.data()[26] == 0x33)){
+		   m_user_data[15] = buf.data()[27] ^ 0x4f;
+		   m_user_data[16] = buf.data()[28] ^ 0x93;
+           ++m_sd_txt_seq;
 		}
-        if(sd_sync && (sd_txt_seq == 8) && ((buf.data()[16] == 8) || (buf.data()[16] == 14))){
-		   user_data[17] = buf.data()[26] ^ 0x70;
-		   user_data[18] = buf.data()[27] ^ 0x4f;
-		   user_data[19] = buf.data()[28] ^ 0x93;
-           user_data[20] = '\0';
-           sd_txt_seq = 0;
-		   m_modeinfo.usertxt = QString(user_data);
+        if(m_sd_sync && (m_sd_txt_seq == 8) && ((buf.data()[16] == 8) || (buf.data()[16] == 14))){
+		   m_user_data[17] = buf.data()[26] ^ 0x70;
+		   m_user_data[18] = buf.data()[27] ^ 0x4f;
+		   m_user_data[19] = buf.data()[28] ^ 0x93;
+           m_user_data[20] = '\0';
+           m_sd_txt_seq = 0;
+		   m_modeinfo.usertxt = QString(m_user_data);
 		}
 		for(int i = 0; i < 9; ++i){
 			m_rxcodecq.append(buf.data()[17+i]);
@@ -354,8 +347,8 @@ void REF::process_udp()
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 			emit update(m_modeinfo);
 			m_modeinfo.streamid = 0;
-            sd_sync = 0;
-            sd_gps_cnt = 0;
+            m_sd_sync = 0;
+            m_sd_gps_cnt = 0;
 		}
 	}
 	//emit update(m_modeinfo);
@@ -489,9 +482,7 @@ void REF::transmit()
 {
 	uint8_t ambe[9];
 	uint8_t ambe_frame[72];
-	int16_t pcm[160];
-	memset(ambe_frame, 0, 72);
-	memset(ambe, 0, 9);
+	int16_t pcm[160]{};
 #ifdef USE_FLITE
 	if(m_ttsid > 0){
 		for(int i = 0; i < 160; ++i){
@@ -508,7 +499,7 @@ void REF::transmit()
 #endif
 
 	if(m_ttsid == 0){
-		if(m_audio->read(pcm, 160)){
+		if(m_audio && m_audio->read(pcm, 160)){
 		}
 		else{
 			return;
@@ -517,7 +508,7 @@ void REF::transmit()
 
 	if(m_hwtx){
 #if !defined(Q_OS_IOS)
-		m_ambedev->encode(pcm);
+		if (m_ambedev) m_ambedev->encode(pcm);
 #endif
 		if(m_tx && (m_txcodecq.size() >= 9)){
 			for(int i = 0; i < 9; ++i){
@@ -540,14 +531,12 @@ void REF::transmit()
 void REF::send_frame(uint8_t *ambe)
 {
 	QByteArray txdata;
-	static uint16_t txstreamid = 0;
-	static bool sendheader = 1;
 
-	if(txstreamid == 0){
-		txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
+	if(m_txstreamid == 0){
+		m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
 	}
-	if(sendheader){
-		sendheader = 0;
+	if(m_sendheader){
+		m_sendheader = 0;
 		txdata.resize(58);
 		txdata[0] = 0x3a;
 		txdata[1] = 0x80;
@@ -563,8 +552,8 @@ void REF::send_frame(uint8_t *ambe)
 		txdata[11] = 0x00;
 		txdata[12] = 0x02;
 		txdata[13] = 0x01;
-		txdata[14] = (txstreamid >> 8) & 0xff;
-		txdata[15] = txstreamid & 0xff;
+		txdata[14] = (m_txstreamid >> 8) & 0xff;
+		txdata[15] = m_txstreamid & 0xff;
 		txdata[16] = 0x80;
 		txdata[17] = 0x00;
 		txdata[18] = 0x00;
@@ -580,7 +569,7 @@ void REF::send_frame(uint8_t *ambe)
 		m_modeinfo.dst = m_txurcall;
 		m_modeinfo.gw = m_txrptr1;
 		m_modeinfo.gw2 = m_txrptr2;
-		m_modeinfo.streamid = txstreamid;
+		m_modeinfo.streamid = m_txstreamid;
 		m_modeinfo.frame_number = m_txcnt;
 
 		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
@@ -611,8 +600,8 @@ void REF::send_frame(uint8_t *ambe)
 	txdata[11] = 0x00;
 	txdata[12] = 0x02;
 	txdata[13] = 0x01;
-	txdata[14] = (txstreamid >> 8) & 0xff;
-	txdata[15] = txstreamid & 0xff;
+	txdata[14] = (m_txstreamid >> 8) & 0xff;
+	txdata[15] = m_txstreamid & 0xff;
 	txdata[16] = m_txcnt;
 	memcpy(txdata.data() + 17, ambe, 9);
 
@@ -672,7 +661,7 @@ void REF::send_frame(uint8_t *ambe)
 	}
 
 	if(m_txcnt == 20){
-		sendheader = 1;
+		m_sendheader = 1;
 		m_txcnt = 0;
 	}
 	else{
@@ -693,20 +682,20 @@ void REF::send_frame(uint8_t *ambe)
 		txdata.append(0xc8);
 		txdata.append(0x7a);
 		m_txcnt = 0;
-		txstreamid = 0;
+		m_txstreamid = 0;
 		m_modeinfo.streamid = 0;
-		sendheader = 1;
+		m_sendheader = 1;
 		m_txtimer->stop();
 
 		if((m_ttsid == 0) && (m_modeinfo.stream_state == TRANSMITTING) ){
-			m_audio->stop_capture();
+			if (m_audio) m_audio->stop_capture();
 		}
 		m_ttscnt = 0;
 		m_modeinfo.stream_state = STREAM_IDLE;
 	}
 
 	m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
-	emit update_output_level(m_audio->level() * 2);
+	if (m_audio) emit update_output_level(m_audio->level() * 2);
 	emit update(m_modeinfo);
 
     if(m_debug){
@@ -725,7 +714,7 @@ void REF::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[9];
 
-	if(m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->get_ambe(ambe)){
 		for(int i = 0; i < 9; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -755,7 +744,7 @@ void REF::process_rx_data()
 				out.append(m_rxmodemq.dequeue());
 			}
 #if !defined(Q_OS_IOS)
-			m_modem->write(out);
+			if (m_modem) m_modem->write(out);
 #endif
 		}
 	}
@@ -766,11 +755,11 @@ void REF::process_rx_data()
 		}
 		if(m_hwrx){
 #if !defined(Q_OS_IOS)
-			m_ambedev->decode(ambe);
+			if (m_ambedev) m_ambedev->decode(ambe);
 
-			if(m_ambedev->get_audio(pcm)){
-				m_audio->write(pcm, 160);
-				emit update_output_level(m_audio->level());
+			if(m_ambedev && m_ambedev->get_audio(pcm)){
+				if (m_audio) m_audio->write(pcm, 160);
+				if (m_audio) emit update_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -781,13 +770,13 @@ void REF::process_rx_data()
 			else{
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
-			m_audio->write(pcm, 160);
-			emit update_output_level(m_audio->level());
+			if (m_audio) m_audio->write(pcm, 160);
+			if (m_audio) emit update_output_level(m_audio->level());
 		}
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
 		m_rxtimer->stop();
-		m_audio->stop_playback();
+		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
 		m_rxcodecq.clear();

@@ -157,107 +157,107 @@ public slots:
 	void process_mode_change(const QString &m);
 	void process_host_change(const QString &h);
 	void dtmf_send_clicked(QString);
-	bool get_modelchange(){ return m_modelchange; }
-	QString get_label1() { return m_label1; }
-	QString get_label2() { return m_label2; }
-	QString get_label3() { return m_label3; }
-	QString get_label4() { return m_label4; }
-	QString get_label5() { return m_label5; }
-	QString get_label6() { return m_label6; }
-	QString get_data1() { return m_data1; }
-	QString get_data2() { return m_data2; }
-	QString get_data3() { return m_data3; }
-	QString get_data4() { return m_data4; }
-	QString get_data5() { return m_data5; }
-	QString get_data6() { return m_data6; }
-	QString get_ambestatustxt() { return m_ambestatustxt; }
-	QString get_mmdvmstatustxt() { return m_mmdvmstatustxt; }
-	QString get_netstatustxt() { return m_netstatustxt; }
-	QString get_mode() { return m_protocol; }
-	QString get_host() { return m_host; }
-	QString get_module() { return QString(m_module); }
-	QString get_callsign() { return m_callsign; }
-	QString get_dmrid() { return m_dmrid ? QString::number(m_dmrid) : ""; }
-	QString get_essid() { return m_essid ? QString("%1").arg(m_essid - 1, 2, 10, QChar('0')) : "None"; }
-	QString get_bm_password() { return m_bm_password; }
-	QString get_tgif_password() { return m_tgif_password; }
-	QString get_asl_password() { return m_asl_password; }
-	QString get_latitude() { return m_latitude; }
-	QString get_longitude() { return m_longitude; }
-	QString get_location() { return m_location; }
-	QString get_description() { return m_description; }
-	QString get_freq() { return m_freq; }
-	QString get_url() { return m_url; }
-	QString get_swid() { return m_swid; }
-	QString get_pkgid() { return m_pkgid; }
-	QString get_dmr_options() { return m_dmropts; }
-	QString get_dmrtgid() { return m_dmr_destid ? QString::number(m_dmr_destid) : ""; }
-	QStringList get_hosts() { return m_hostsmodel; }
-	QString get_ref_host() { return m_saved_refhost; }
-	QString get_dcs_host() { return m_saved_dcshost; }
-	QString get_xrf_host() { return m_saved_xrfhost; }
-	QString get_ysf_host() { return m_saved_ysfhost; }
-	QString get_fcs_host() { return m_saved_fcshost; }
-	QString get_dmr_host() { return m_saved_dmrhost; }
-	QString get_p25_host() { return m_saved_p25host; }
-	QString get_nxdn_host() { return m_saved_nxdnhost; }
-	QString get_m17_host() { return m_saved_m17host; }
-	QString get_iax_host() { return m_saved_iaxhost; }
-	QString get_mycall() { return m_mycall; }
-	QString get_urcall() { return m_urcall; }
-	QString get_rptr1() { return m_rptr1; }
-	QString get_rptr2() { return m_rptr2; }
-	QString get_txtimeout() { return QString::number(m_txtimeout); }
-	QString get_error_text() { return m_errortxt; }
-	bool get_toggletx() { return m_toggletx; }
-	bool get_ipv6() { return m_ipv6; }
-	bool get_xrf2ref() { return m_xrf2ref; }
-	QString get_local_hosts(){ return m_localhosts; }
-	QStringList get_vocoders() { return m_vocoders; }
-	QStringList get_modems() { return m_modems; }
-	QStringList get_playbacks() { return m_playbacks; }
-	QStringList get_captures() { return m_captures; }
-	QString get_vocoder() { return m_vocoder; }
-	QString get_playback() { return m_playback; }
-	QString get_capture() { return m_capture; }
-	QString get_modemRxFreq() { return m_modemRxFreq; }
-	QString get_modemTxFreq() { return m_modemTxFreq; }
-	QString get_modemRxOffset() { return m_modemRxOffset; }
-	QString get_modemTxOffset() { return m_modemTxOffset; }
-	QString get_modemRxDCOffset() { return m_modemRxDCOffset; }
-	QString get_modemTxDCOffset() { return m_modemTxDCOffset; }
-	QString get_modemRxLevel() { return m_modemRxLevel; }
-	QString get_modemTxLevel() { return m_modemTxLevel; }
-	QString get_modemRFLevel() { return m_modemRFLevel; }
-	QString get_modemTxDelay() { return m_modemTxDelay; }
-	QString get_modemCWIdTxLevel() { return m_modemCWIdTxLevel; }
-	QString get_modemDstarTxLevel() { return m_modemDstarTxLevel; }
-	QString get_modemDMRTxLevel() { return m_modemDMRTxLevel; }
-	QString get_modemYSFTxLevel() { return m_modemYSFTxLevel; }
-	QString get_modemP25TxLevel() { return m_modemP25TxLevel; }
-	QString get_modemNXDNTxLevel() { return m_modemNXDNTxLevel; }
-	QString get_modemBaud() { return m_modemBaud; }
-	QString get_modemM17CAN() { return m_modemM17CAN; }
+	bool get_modelchange() const { return m_modelchange; }
+	QString get_label1() const { return m_label1; }
+	QString get_label2() const { return m_label2; }
+	QString get_label3() const { return m_label3; }
+	QString get_label4() const { return m_label4; }
+	QString get_label5() const { return m_label5; }
+	QString get_label6() const { return m_label6; }
+	QString get_data1() const { return m_data1; }
+	QString get_data2() const { return m_data2; }
+	QString get_data3() const { return m_data3; }
+	QString get_data4() const { return m_data4; }
+	QString get_data5() const { return m_data5; }
+	QString get_data6() const { return m_data6; }
+	QString get_ambestatustxt() const { return m_ambestatustxt; }
+	QString get_mmdvmstatustxt() const { return m_mmdvmstatustxt; }
+	QString get_netstatustxt() const { return m_netstatustxt; }
+	QString get_mode() const { return m_protocol; }
+	QString get_host() const { return m_host; }
+	QString get_module() const { return QString(m_module); }
+	QString get_callsign() const { return m_callsign; }
+	QString get_dmrid() const { return m_dmrid ? QString::number(m_dmrid) : ""; }
+	QString get_essid() const { return m_essid ? QString("%1").arg(m_essid - 1, 2, 10, QChar('0')) : "None"; }
+	QString get_bm_password() const { return m_bm_password; }
+	QString get_tgif_password() const { return m_tgif_password; }
+	QString get_asl_password() const { return m_asl_password; }
+	QString get_latitude() const { return m_latitude; }
+	QString get_longitude() const { return m_longitude; }
+	QString get_location() const { return m_location; }
+	QString get_description() const { return m_description; }
+	QString get_freq() const { return m_freq; }
+	QString get_url() const { return m_url; }
+	QString get_swid() const { return m_swid; }
+	QString get_pkgid() const { return m_pkgid; }
+	QString get_dmr_options() const { return m_dmropts; }
+	QString get_dmrtgid() const { return m_dmr_destid ? QString::number(m_dmr_destid) : ""; }
+	QStringList get_hosts() const { return m_hostsmodel; }
+	QString get_ref_host() const { return m_saved_refhost; }
+	QString get_dcs_host() const { return m_saved_dcshost; }
+	QString get_xrf_host() const { return m_saved_xrfhost; }
+	QString get_ysf_host() const { return m_saved_ysfhost; }
+	QString get_fcs_host() const { return m_saved_fcshost; }
+	QString get_dmr_host() const { return m_saved_dmrhost; }
+	QString get_p25_host() const { return m_saved_p25host; }
+	QString get_nxdn_host() const { return m_saved_nxdnhost; }
+	QString get_m17_host() const { return m_saved_m17host; }
+	QString get_iax_host() const { return m_saved_iaxhost; }
+	QString get_mycall() const { return m_mycall; }
+	QString get_urcall() const { return m_urcall; }
+	QString get_rptr1() const { return m_rptr1; }
+	QString get_rptr2() const { return m_rptr2; }
+	QString get_txtimeout() const { return QString::number(m_txtimeout); }
+	QString get_error_text() const { return m_errortxt; }
+	bool get_toggletx() const { return m_toggletx; }
+	bool get_ipv6() const { return m_ipv6; }
+	bool get_xrf2ref() const { return m_xrf2ref; }
+	QString get_local_hosts() const { return m_localhosts; }
+	QStringList get_vocoders() const { return m_vocoders; }
+	QStringList get_modems() const { return m_modems; }
+	QStringList get_playbacks() const { return m_playbacks; }
+	QStringList get_captures() const { return m_captures; }
+	QString get_vocoder() const { return m_vocoder; }
+	QString get_playback() const { return m_playback; }
+	QString get_capture() const { return m_capture; }
+	QString get_modemRxFreq() const { return m_modemRxFreq; }
+	QString get_modemTxFreq() const { return m_modemTxFreq; }
+	QString get_modemRxOffset() const { return m_modemRxOffset; }
+	QString get_modemTxOffset() const { return m_modemTxOffset; }
+	QString get_modemRxDCOffset() const { return m_modemRxDCOffset; }
+	QString get_modemTxDCOffset() const { return m_modemTxDCOffset; }
+	QString get_modemRxLevel() const { return m_modemRxLevel; }
+	QString get_modemTxLevel() const { return m_modemTxLevel; }
+	QString get_modemRFLevel() const { return m_modemRFLevel; }
+	QString get_modemTxDelay() const { return m_modemTxDelay; }
+	QString get_modemCWIdTxLevel() const { return m_modemCWIdTxLevel; }
+	QString get_modemDstarTxLevel() const { return m_modemDstarTxLevel; }
+	QString get_modemDMRTxLevel() const { return m_modemDMRTxLevel; }
+	QString get_modemYSFTxLevel() const { return m_modemYSFTxLevel; }
+	QString get_modemP25TxLevel() const { return m_modemP25TxLevel; }
+	QString get_modemNXDNTxLevel() const { return m_modemNXDNTxLevel; }
+	QString get_modemBaud() const { return m_modemBaud; }
+	QString get_modemM17CAN() const { return m_modemM17CAN; }
 #if defined(Q_OS_ANDROID)
-	QString get_platform() { return QSysInfo::productType(); }
-	QString get_monofont() { return "Droid Sans Mono"; }
+	QString get_platform() const { return QSysInfo::productType(); }
+	QString get_monofont() const { return "Droid Sans Mono"; }
 #elif defined(Q_OS_WIN)
-	QString get_platform() { return QSysInfo::kernelType(); }
+	QString get_platform() const { return QSysInfo::kernelType(); }
 	void reset_connect_status() {}
-	QString get_monofont() { return "Courier"; }
+	QString get_monofont() const { return "Courier"; }
 #else
-	QString get_platform() { return QSysInfo::kernelType(); }
+	QString get_platform() const { return QSysInfo::kernelType(); }
 	void reset_connect_status() {}
-	QString get_monofont() { return "monospace"; }
+	QString get_monofont() const { return "monospace"; }
 #endif
-	QString get_arch() { return QSysInfo::currentCpuArchitecture(); }
-	QString get_build_abi() { return QSysInfo::buildAbi(); }
-    QString get_software_build() { return VERSION_NUMBER; }
+	QString get_arch() const { return QSysInfo::currentCpuArchitecture(); }
+	QString get_build_abi() const { return QSysInfo::buildAbi(); }
+    QString get_software_build() const { return VERSION_NUMBER; }
 
 	void download_file(QString, bool u = false);
 	void file_downloaded(QString);
 	void url_downloaded(QString);
-	unsigned short get_output_level(){ return m_outlevel; }
+	unsigned short get_output_level() const { return m_outlevel; }
 	void set_output_level(unsigned short l){ m_outlevel = l; }
 	void tts_changed(QString);
 	void tts_text_changed(QString);
@@ -269,7 +269,7 @@ public slots:
 	void clearStationLog();
 	void save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid);
 	QVariantMap get_memory(int index);
-	int get_ptt_key() { return m_pttKey; }
+	int get_ptt_key() const { return m_pttKey; }
 	void set_ptt_key(int key) { m_pttKey = key; save_settings(); emit ptt_key_changed(key); }
 	QString get_key_name(int key);
 private:

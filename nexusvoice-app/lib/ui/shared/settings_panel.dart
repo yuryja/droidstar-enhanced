@@ -49,6 +49,11 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
     _tgifPwdCtrl.text = nv.getTgifPassword();
     _aslPwdCtrl.text = nv.getAslPassword();
     
+    _latCtrl.text = nv.getLatitude();
+    _lonCtrl.text = nv.getLongitude();
+    _locCtrl.text = nv.getLocation();
+    _descCtrl.text = nv.getDescription();
+    
     // For audio level, we query or use defaults
     _playbacks = nv.getPlaybacks();
     _captures = nv.getCaptures();
@@ -121,7 +126,7 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
           Text(
             'SYSTEM SETTINGS',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 2.0,
@@ -142,6 +147,28 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
                   _buildTextField(label: 'DMR ID', controller: _dmrIdCtrl, keyboardType: TextInputType.number),
                   const SizedBox(height: 12),
                   _buildTextField(label: 'ESSID', controller: _essidCtrl, keyboardType: TextInputType.number),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Geolocation
+          _buildSectionHeader('Geolocation'),
+          Card(
+            color: const Color(0xFF141A31),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  _buildTextField(label: 'LATITUDE', controller: _latCtrl, keyboardType: TextInputType.numberWithOptions(decimal: true)),
+                  const SizedBox(height: 12),
+                  _buildTextField(label: 'LONGITUDE', controller: _lonCtrl, keyboardType: TextInputType.numberWithOptions(decimal: true)),
+                  const SizedBox(height: 12),
+                  _buildTextField(label: 'LOCATION', controller: _locCtrl),
+                  const SizedBox(height: 12),
+                  _buildTextField(label: 'DESCRIPTION', controller: _descCtrl),
                 ],
               ),
             ),
@@ -184,7 +211,7 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
                   Text(
                     'INPUT VOLUME (MIC)',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withValues(alpha: 0.4),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -198,7 +225,7 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
                   Text(
                     'OUTPUT VOLUME (SPEAKER)',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withValues(alpha: 0.4),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -255,11 +282,11 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black.withOpacity(0.3),
+                        backgroundColor: Colors.black.withValues(alpha: 0.3),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                         ),
                       ),
                       icon: const Icon(Icons.download_for_offline, color: Color(0xFF00FF87), size: 16),
@@ -282,11 +309,11 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black.withOpacity(0.3),
+                        backgroundColor: Colors.black.withValues(alpha: 0.3),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                         ),
                       ),
                       icon: const Icon(Icons.people, color: Color(0xFF00FF87), size: 16),
@@ -355,12 +382,12 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
         filled: true,
-        fillColor: Colors.black.withOpacity(0.2),
+        fillColor: Colors.black.withValues(alpha: 0.2),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -384,7 +411,7 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             fontSize: 10,
             fontWeight: FontWeight.bold,
           ),
@@ -393,10 +420,10 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
             ),
           ),
           child: DropdownButtonHideUnderline(

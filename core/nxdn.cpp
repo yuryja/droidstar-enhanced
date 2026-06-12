@@ -107,7 +107,7 @@ void NXDN::process_udp()
 			}
 			else{
 				if(!m_rxtimer->isActive()){
-					m_audio->start_playback();
+					if (m_audio) m_audio->start_playback();
 					m_rxtimer->start(m_rxtimerint);
 				}
 				m_modeinfo.stream_state = STREAM_NEW;
@@ -117,7 +117,7 @@ void NXDN::process_udp()
 		}
 		else if(!m_tx && ( (m_modeinfo.stream_state == STREAM_LOST) || (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_IDLE) )){
 			if(!m_rxtimer->isActive()){
-				m_audio->start_playback();
+				if (m_audio) m_audio->start_playback();
 				m_rxtimer->start(m_rxtimerint);
 			}
 			m_modeinfo.stream_state = STREAM_NEW;
@@ -237,10 +237,8 @@ void NXDN::send_ping(bool disconnect)
 
 void NXDN::transmit()
 {
-	uint8_t ambe[7];
-	int16_t pcm[160];
-
-	memset(ambe, 0, 7);
+	uint8_t ambe[7]{};
+	int16_t pcm[160]{};
 
 #ifdef USE_FLITE
 	if(m_ttsid > 0){
@@ -256,7 +254,7 @@ void NXDN::transmit()
 	}
 #endif
 	if(m_ttsid == 0){
-		if(m_audio->read(pcm, 160)){
+		if(m_audio && m_audio->read(pcm, 160)){
 		}
 		else{
 			return;
@@ -265,7 +263,7 @@ void NXDN::transmit()
 
 	if(m_hwtx){
 #if !defined(Q_OS_IOS)
-		m_ambedev->encode(pcm);
+		if (m_ambedev) m_ambedev->encode(pcm);
 #endif
 	}
 	else{
@@ -326,7 +324,7 @@ void NXDN::send_frame()
 	m_modeinfo.srcid = m_nxdnid;
 	m_modeinfo.frame_number = m_txcnt;
 	m_modeinfo.dstid = m_modeinfo.gwid;
-	emit update_output_level(m_audio->level() * 8);
+	if (m_audio) emit update_output_level(m_audio->level() * 8);
 	emit update(m_modeinfo);
 }
 
@@ -621,7 +619,7 @@ void NXDN::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[7];
 
-	if(m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->get_ambe(ambe)){
 		for(int i = 0; i < 7; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -649,11 +647,11 @@ void NXDN::process_rx_data()
 		}
 		if(m_hwrx){
 #if !defined(Q_OS_IOS)
-			m_ambedev->decode(ambe);
+			if (m_ambedev) m_ambedev->decode(ambe);
 
-			if(m_ambedev->get_audio(pcm)){
-				m_audio->write(pcm, 160);
-				emit update_output_level(m_audio->level());
+			if(m_ambedev && m_ambedev->get_audio(pcm)){
+				if (m_audio) m_audio->write(pcm, 160);
+				if (m_audio) emit update_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -668,13 +666,13 @@ void NXDN::process_rx_data()
 			else{
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
-			m_audio->write(pcm, 160);
-			emit update_output_level(m_audio->level());
+			if (m_audio) m_audio->write(pcm, 160);
+			if (m_audio) emit update_output_level(m_audio->level());
 		}
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
 		m_rxtimer->stop();
-		m_audio->stop_playback();
+		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
 		m_rxcodecq.clear();

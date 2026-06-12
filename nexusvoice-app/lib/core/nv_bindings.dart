@@ -90,6 +90,10 @@ class NexusVoiceBindings {
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetVocoder;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetPlayback;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetCapture;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetLatitude;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetLongitude;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetLocation;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetDescription;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetAmbestatustxt;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetMmdvmstatustxt;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetNetstatustxt;
@@ -97,6 +101,7 @@ class NexusVoiceBindings {
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetDmrtgid;
   late final int Function(Pointer<Void>) nvGetPttKey;
   late final int Function(Pointer<Void>) nvGetOutputLevel;
+  late final void Function(Pointer<Void>) nvPumpEvents;
 
   // Callback Setters
   late final void Function(Pointer<Void>, Pointer<NativeFunction<StatusCbNative>>, Pointer<Void>) nvSetStatusCb;
@@ -203,6 +208,10 @@ class NexusVoiceBindings {
     nvGetVocoder = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_vocoder');
     nvGetPlayback = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_playback');
     nvGetCapture = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_capture');
+    nvGetLatitude = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_latitude');
+    nvGetLongitude = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_longitude');
+    nvGetLocation = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_location');
+    nvGetDescription = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_description');
     nvGetAmbestatustxt = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_ambestatustxt');
     nvGetMmdvmstatustxt = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_mmdvmstatustxt');
     nvGetNetstatustxt = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_netstatustxt');
@@ -210,6 +219,7 @@ class NexusVoiceBindings {
     nvGetDmrtgid = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_dmrtgid');
     nvGetPttKey = _lib.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('nv_get_ptt_key');
     nvGetOutputLevel = _lib.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('nv_get_output_level');
+    nvPumpEvents = _lib.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>('nv_pump_events');
 
     // Callback Setters
     nvSetStatusCb = _lib.lookupFunction<

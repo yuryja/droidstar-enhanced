@@ -126,6 +126,10 @@ void YSF::process_udp()
 	int p = 5000;
 	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
 
+    std::printf("YSF RECV UDP: size=%d header=%.4s status=%d stream_state=%d\n", 
+                (int)buf.size(), buf.size() >= 4 ? buf.data() : "", (int)m_modeinfo.status, (int)m_modeinfo.stream_state);
+    std::fflush(stdout);
+
     if(m_debug){
         QDebug debug = qDebug();
         debug.noquote();
@@ -228,7 +232,7 @@ void YSF::process_udp()
 				m_modeinfo.stream_state = STREAM_NEW;
 				m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 				if(!m_tx && !m_rxtimer->isActive() ){
-					m_audio->start_playback();
+					if (m_audio) m_audio->start_playback();
 					m_rxtimer->start(m_rxtimerint);
 				}
 				decode_header(p_data);
@@ -247,7 +251,7 @@ void YSF::process_udp()
 					m_modeinfo.stream_state = STREAM_NEW;
 					m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 					if(!m_tx && !m_rxtimer->isActive() ){
-						m_audio->start_playback();
+						if (m_audio) m_audio->start_playback();
 						m_rxtimer->start(m_rxtimerint);
 					}
 					qDebug() << "New YSF stream in progress from gw" << m_modeinfo.gw;
@@ -716,10 +720,9 @@ void YSF::transmit()
 {
 	uint8_t ambe_frame[88];
 	uint8_t ambe[7];
-	int16_t pcm[160];
+	int16_t pcm[160]{};
 	uint8_t s = 7;
 
-	memset(ambe, 0, 7);
 #ifdef USE_FLITE
 	if(m_ttsid > 0){
 		for(int i = 0; i < 160; ++i){
@@ -734,7 +737,7 @@ void YSF::transmit()
 	}
 #endif
 	if(m_ttsid == 0){
-		if(m_audio->read(pcm, 160)){
+		if(m_audio && m_audio->read(pcm, 160)){
 		}
 		else{
 			return;
@@ -742,7 +745,7 @@ void YSF::transmit()
 	}
 	if(m_hwtx && !m_txfullrate){
 #if !defined(Q_OS_IOS)
-		m_ambedev->encode(pcm);
+		if (m_ambedev) m_ambedev->encode(pcm);
 #endif
 	}
 	else{
@@ -799,6 +802,11 @@ void YSF::send_frame()
 		frame_size = ::memcmp(m_ysfFrame, "YSFD", 4) ? 130 : 155;
 		txdata.append((char *)m_ysfFrame, frame_size);
 		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+        if (m_tx_log_cnt++ % 50 == 0) {
+            std::printf("YSF SEND UDP: size=%d frame_cnt=%d m_txcnt=%d\n",
+                        frame_size, m_tx_log_cnt, (int)m_txcnt);
+            std::fflush(stdout);
+        }
 		++m_txcnt;
 
         if(m_debug){
@@ -815,7 +823,7 @@ void YSF::send_frame()
 		fprintf(stderr, "YSF TX stopped\n");
 		m_txtimer->stop();
 		if(m_ttsid == 0){
-			m_audio->stop_capture();
+			if (m_audio) m_audio->stop_capture();
 		}
 		encode_header(1);
 		m_txcnt = 0;
@@ -823,9 +831,11 @@ void YSF::send_frame()
 		frame_size = ::memcmp(m_ysfFrame, "YSFD", 4) ? 130 : 155;
 		txdata.append((char *)m_ysfFrame, frame_size);
 		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+        std::printf("YSF SEND UDP EOT: size=%d\n", frame_size);
+        std::fflush(stdout);
 		m_modeinfo.stream_state = STREAM_IDLE;
 	}
-	emit update_output_level(m_audio->level() * 8);
+	if (m_audio) emit update_output_level(m_audio->level() * 8);
 	emit update(m_modeinfo);
 }
 
@@ -1352,7 +1362,7 @@ void YSF::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[7];
 
-	if(m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->get_ambe(ambe)){
 		for(int i = 0; i < 7; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -1365,7 +1375,12 @@ void YSF::process_rx_data()
 	int16_t pcm[160];
 	uint8_t ambe[7];
 	uint8_t imbe[11];
-	static uint8_t cnt = 0;
+
+    if (++m_rx_tick_count % 50 == 0) {
+        std::printf("YSF RX TICK: count=%d codecq_size=%d tx=%d sw_vocoder_loaded=%d stream_state=%d watchdog=%d\n",
+                    m_rx_tick_count, (int)m_rxcodecq.size(), (int)m_tx, (int)m_modeinfo.sw_vocoder_loaded, (int)m_modeinfo.stream_state, (int)m_rxwatchdog);
+        std::fflush(stdout);
+    }
 
 	if(m_rxwatchdog++ > 20){
 		qDebug() << "YSF RX stream timeout ";
@@ -1374,7 +1389,7 @@ void YSF::process_rx_data()
 		emit update(m_modeinfo);
 	}
 
-	if((m_rxmodemq.size() > 2) && (++cnt >= 5)){
+	if((m_rxmodemq.size() > 2) && (++m_rx_cnt >= 5)){
 		QByteArray out;
 		int s = m_rxmodemq[1];
 		if((m_rxmodemq[0] == MMDVM_FRAME_START) && (m_rxmodemq.size() >= s)){
@@ -1382,10 +1397,10 @@ void YSF::process_rx_data()
 				out.append(m_rxmodemq.dequeue());
 			}
 #if !defined(Q_OS_IOS)
-			m_modem->write(out);
+			if (m_modem) m_modem->write(out);
 #endif
 		}
-		cnt = 0;
+		m_rx_cnt = 0;
 	}
 
 	if((!m_tx) && (m_rximbecodecq.size() > 10)){
@@ -1393,8 +1408,8 @@ void YSF::process_rx_data()
 			imbe[i] = m_rximbecodecq.dequeue();
 		}
         m_imbevocoder.decode_4400(pcm, imbe);
-		m_audio->write(pcm, 160);
-		emit update_output_level(m_audio->level());
+		if (m_audio) m_audio->write(pcm, 160);
+		if (m_audio) emit update_output_level(m_audio->level());
 	}
 
 	else if((!m_tx) && (m_rxcodecq.size() > 6) ){
@@ -1403,11 +1418,11 @@ void YSF::process_rx_data()
 		}
 		if(m_hwrx){
 #if !defined(Q_OS_IOS)
-			m_ambedev->decode(ambe);
+			if (m_ambedev) m_ambedev->decode(ambe);
 
-			if(m_ambedev->get_audio(pcm)){
-				m_audio->write(pcm, 160);
-				emit update_output_level(m_audio->level());
+			if(m_ambedev && m_ambedev->get_audio(pcm)){
+				if (m_audio) m_audio->write(pcm, 160);
+				if (m_audio) emit update_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -1422,19 +1437,19 @@ void YSF::process_rx_data()
 			else{
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
-			m_audio->write(pcm, 160);
-			emit update_output_level(m_audio->level());
+			if (m_audio) m_audio->write(pcm, 160);
+			if (m_audio) emit update_output_level(m_audio->level());
 		}
 	}
 
 	else if ( ((m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST)) && (m_rxmodemq.size() < 100) ){
 		m_rxtimer->stop();
-		m_audio->stop_playback();
+		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
 		m_rxcodecq.clear();
 		m_rximbecodecq.clear();
-		//m_ambedev->clear_queue();
+		//if (m_ambedev) if (m_ambedev) m_ambedev->clear_queue();
 		qDebug() << "YSF playback stopped";
 		m_modeinfo.stream_state = STREAM_IDLE;
 		return;
