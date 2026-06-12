@@ -77,6 +77,11 @@ DroidStar::~DroidStar()
 {
 }
 
+#include <QtQml>
+void register_droidstar_qml_types() {
+    qmlRegisterType<DroidStar>("org.dudetronics.droidstar", 1, 0, "DroidStar");
+}
+
 #ifdef Q_OS_ANDROID
 using namespace Qt::StringLiterals;
 

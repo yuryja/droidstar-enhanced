@@ -3,7 +3,8 @@
 #include <QQuickStyle>
 #include <QIcon>
 #include <QQmlContext>
-#include "core/droidstar.h"
+
+void register_droidstar_qml_types();
 
 int main(int argc, char *argv[])
 {
@@ -13,7 +14,7 @@ int main(int argc, char *argv[])
     qputenv("QT_QUICK_CONTROLS_MATERIAL_PRIMARY", "BlueGrey");
     QQuickStyle::setStyle("Material");
     app.setWindowIcon(QIcon(":/images/droidstar.png"));
-    qmlRegisterType<DroidStar>("org.dudetronics.droidstar", 1, 0, "DroidStar");
+    register_droidstar_qml_types();
     QQmlApplicationEngine engine;
 #ifdef USE_FLITE
     engine.rootContext()->setContextProperty("USE_FLITE", QVariant(true));

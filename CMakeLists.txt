@@ -28,7 +28,7 @@ set(MACOSX_BUNDLE_ICON_FILE droidstar.icns)
 set(app_icon_macos "${CMAKE_CURRENT_SOURCE_DIR}/images/droidstar.icns")
 set_source_files_properties(${app_icon_macos} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
-qt_add_executable(NexusVoice WIN32 MACOSX_BUNDLE
+set(CORE_SOURCES
     core/CRCenc.cpp
     core/CRCenc.h
     core/DMRDefines.h
@@ -132,7 +132,6 @@ qt_add_executable(NexusVoice WIN32 MACOSX_BUNDLE
     core/mbe/vocoder_tables.h
     core/m17.cpp
     core/m17.h
-    main.cpp
     core/mode.cpp
     core/mode.h
     core/nxdn.cpp
@@ -145,9 +144,27 @@ qt_add_executable(NexusVoice WIN32 MACOSX_BUNDLE
     core/xrf.h
     core/ysf.cpp
     core/ysf.h
-    ${app_icon_resource_windows}
-    ${app_icon_macos}
 )
+
+# Add static library target containing all core C++ sources
+add_library(nexusvoice_lib STATIC
+    ${CORE_SOURCES}
+)
+
+# Add main Qt executable target
+qt_add_executable(NexusVoice WIN32 MACOSX_BUNDLE
+    main.cpp
+    ${app_icon_resource_windows}
+)
+set_target_properties(NexusVoice PROPERTIES AUTOMOC_MACRO_NAMES "DUMMY_MACRO_THAT_DOES_NOT_EXIST")
+
+# Add public FFI shared library target
+add_library(nexusvoice_core SHARED
+    core/nexusvoice_c_api.cpp
+    core/nexusvoice_c_api.h
+)
+set_target_properties(nexusvoice_core PROPERTIES AUTOMOC OFF)
+
 
 if(ANDROID OR IOS)
     qt_add_qml_module(NexusVoice
@@ -188,12 +205,13 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-target_compile_definitions(NexusVoice PRIVATE
+# Configure compile options, links, and include directories on the static core library
+target_compile_definitions(nexusvoice_lib PUBLIC
     QT_DEPRECATED_WARNINGS
     VERSION_NUMBER="${VERSION_NUMBER}"
 )
 
-target_link_libraries(NexusVoice PRIVATE
+target_link_libraries(nexusvoice_lib PUBLIC
     Qt::Core
     Qt::Gui
     Qt::Multimedia
@@ -201,69 +219,81 @@ target_link_libraries(NexusVoice PRIVATE
     Qt::Quick
     Qt::QuickControls2
 )
-target_include_directories(NexusVoice PRIVATE core)
+target_include_directories(nexusvoice_lib PUBLIC core)
 
 if(UNIX AND NOT IOS)
-    target_link_libraries(NexusVoice PRIVATE
+    target_link_libraries(nexusvoice_lib PUBLIC
         Qt::SerialPort
     )
 endif()
 
 if(WIN32)
-    target_link_libraries(NexusVoice PRIVATE
+    target_link_libraries(nexusvoice_lib PUBLIC
         Qt::SerialPort
         ws2_32
     )
-    #add_compile_options(-static --enable-stdcall-fixup)
 endif()
 
 if(UNIX)
-    target_link_libraries(NexusVoice PRIVATE
+    target_link_libraries(nexusvoice_lib PUBLIC
         dl
     )
 endif()
 
 if(APPLE)
+    target_link_libraries(nexusvoice_lib PUBLIC
+        "-framework AVFoundation"
+    )
+endif()
+
+# Executable-specific configurations
+target_link_libraries(NexusVoice PRIVATE nexusvoice_lib)
+if(APPLE)
     set_target_properties(NexusVoice PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
         OUTPUT_NAME "NexusVoice"
     )
-    target_link_libraries(NexusVoice PRIVATE
-        "-framework AVFoundation"
-    )
     target_link_options(NexusVoice PRIVATE "-F${CMAKE_CURRENT_SOURCE_DIR}/Frameworks" "-F/System/Library/Frameworks")
+endif()
+
+# Shared library-specific configurations
+target_link_libraries(nexusvoice_core PRIVATE nexusvoice_lib)
+if(APPLE)
+    set_target_properties(nexusvoice_core PROPERTIES
+        OUTPUT_NAME "nexusvoice_core"
+    )
+    target_link_options(nexusvoice_core PRIVATE "-F${CMAKE_CURRENT_SOURCE_DIR}/Frameworks" "-F/System/Library/Frameworks")
 endif()
 
 if(ANDROID)
     include(~/Android/Sdk/android_openssl/android_openssl.cmake)
-    add_android_openssl_libraries(NexusVoice)
-    target_sources(NexusVoice PUBLIC
+    add_android_openssl_libraries(nexusvoice_lib)
+    target_sources(nexusvoice_lib PUBLIC
         androidserialport.cpp androidserialport.h
     )
 
     set_target_properties(NexusVoice PROPERTIES
        QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/android
        QT_ANDROID_VERSION_CODE 100
-       #QT_ANDROID_MIN_SDK_VERSION 31
     )
 endif()
 
 if(NOT IOS)
-    target_sources(NexusVoice PUBLIC
+    target_sources(nexusvoice_lib PUBLIC
         core/serialambe.cpp core/serialambe.h
         core/serialmodem.cpp core/serialmodem.h
     )
 endif()
 
 if(FALSE) #set TRUE to use external codec2
-    target_compile_definitions(NexusVoice PRIVATE
+    target_compile_definitions(nexusvoice_lib PUBLIC
         USE_EXTERNAL_CODEC2
     )
-    target_link_libraries(NexusVoice PRIVATE
+    target_link_libraries(nexusvoice_lib PUBLIC
         codec2
     )
 else()
-    target_sources(NexusVoice PUBLIC
+    target_sources(nexusvoice_lib PUBLIC
         core/codec2/codebooks.cpp
         core/codec2/codec2.cpp
         core/codec2/codec2_api.h
@@ -294,16 +324,13 @@ if(FALSE) # set TRUE for flite
     )
 endif()
 
-# MD380 vocoder (AMBE+2 via Dynarmic JIT - real radio firmware)
-# Submodule: Frameworks/md380_vocoder_dynarmic
-# Requires: boost, cmake 3.12+, python3, unzip
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Frameworks/md380_vocoder_dynarmic/CMakeLists.txt)
     find_package(Boost QUIET COMPONENTS filesystem)
     if(Boost_FOUND)
         add_subdirectory(Frameworks/md380_vocoder_dynarmic)
-        target_compile_definitions(NexusVoice PRIVATE USE_MD380_VOCODER)
-        target_link_libraries(NexusVoice PRIVATE md380_vocoder Boost::filesystem)
-        target_include_directories(NexusVoice PRIVATE Frameworks/md380_vocoder_dynarmic)
+        target_compile_definitions(nexusvoice_lib PUBLIC USE_MD380_VOCODER)
+        target_link_libraries(nexusvoice_lib PUBLIC md380_vocoder Boost::filesystem)
+        target_include_directories(nexusvoice_lib PUBLIC Frameworks/md380_vocoder_dynarmic)
         message(STATUS "MD380 vocoder (AMBE+2): ENABLED")
     else()
         message(STATUS "MD380 vocoder: Boost not found, using mbelib fallback. Install with: brew install boost")
@@ -312,7 +339,7 @@ else()
     message(STATUS "MD380 vocoder: submodule not found, using mbelib fallback")
 endif()
 
-install(TARGETS NexusVoice
+install(TARGETS NexusVoice nexusvoice_core
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
