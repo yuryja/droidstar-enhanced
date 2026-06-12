@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
@@ -50,6 +51,13 @@ class NvController extends ChangeNotifier {
     _bindings = NexusVoiceBindings();
     _handle = _bindings.nvCreate();
     _setupCallbacks();
+    
+    // Continuously pump the Qt event loop in the C++ library
+    Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (_handle != null) {
+        _bindings.nvGetOutputLevel(_handle!);
+      }
+    });
   }
 
   void _setupCallbacks() {
