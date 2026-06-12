@@ -12,12 +12,17 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 static QCoreApplication* qt_app = nullptr;
 
 struct nv_context {
-    DroidStar* instance;
-    QThread* creator_thread;
+    DroidStar* instance = nullptr;
+    std::thread event_thread;
+    std::atomic<bool> initialized{false};
+    std::mutex init_mutex;
+    std::condition_variable init_cv;
 
     nv_status_cb status_cb = nullptr;
     void* status_cb_userdata = nullptr;
@@ -30,66 +35,59 @@ struct nv_context {
     nv_devices_changed_cb devices_cb = nullptr;
     void* devices_cb_userdata = nullptr;
 
-    std::atomic<bool> _running{false};
-    std::thread _event_thread;
+    nv_context() {
+        event_thread = std::thread([this]() {
+            if (!QCoreApplication::instance()) {
+                static int argc = 1;
+                static char* argv[] = { (char*)"nexusvoice_core", nullptr };
+                qt_app = new QCoreApplication(argc, argv);
+            }
+            
+            instance = new DroidStar();
+            setup_connections();
+            
+            {
+                std::lock_guard<std::mutex> lock(init_mutex);
+                initialized = true;
+            }
+            init_cv.notify_one();
+            
+            QCoreApplication::exec();
+            
+            delete instance;
+            instance = nullptr;
+        });
 
-    nv_context()
-        : instance(new DroidStar())
-        , creator_thread(QThread::currentThread())
-    {
-        setup_connections();
-        _start_event_loop();
+        std::unique_lock<std::mutex> lock(init_mutex);
+        init_cv.wait(lock, [this]() { return initialized.load(); });
     }
 
     ~nv_context() {
-        _stop_event_loop();
-        if (QThread::currentThread() != creator_thread) {
-            QMetaObject::invokeMethod(QCoreApplication::instance(), [this]() {
-                delete instance;
-            }, Qt::BlockingQueuedConnection);
-        } else {
-            delete instance;
+        if (QCoreApplication::instance()) {
+            QCoreApplication::quit();
+        }
+        if (event_thread.joinable()) {
+            event_thread.join();
         }
     }
 
-    void _start_event_loop() {
-        _running = true;
-        _event_thread = std::thread([this]() {
-            while (_running) {
-                if (QCoreApplication::instance()) {
-                    QCoreApplication::processEvents(QEventLoop::AllEvents, 15);
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            }
-        });
+    bool is_qt_thread() const {
+        return instance && QThread::currentThread() == instance->thread();
     }
 
-    void _stop_event_loop() {
-        _running = false;
-        if (_event_thread.joinable()) {
-            _event_thread.join();
-        }
-    }
-
-    bool is_creator_thread() const {
-        return QThread::currentThread() == creator_thread;
-    }
-
-    // Fire-and-forget dispatch to creator thread
     void async(std::function<void()> fn) {
-        if (is_creator_thread()) {
+        if (is_qt_thread()) {
             fn();
-        } else {
-            QMetaObject::invokeMethod(QCoreApplication::instance(), std::move(fn), Qt::QueuedConnection);
+        } else if (instance) {
+            QMetaObject::invokeMethod(instance, std::move(fn), Qt::QueuedConnection);
         }
     }
 
-    // Blocking dispatch to creator thread (for getters that need return values)
     void sync(std::function<void()> fn) {
-        if (is_creator_thread()) {
+        if (is_qt_thread()) {
             fn();
-        } else {
-            QMetaObject::invokeMethod(QCoreApplication::instance(), std::move(fn), Qt::BlockingQueuedConnection);
+        } else if (instance) {
+            QMetaObject::invokeMethod(instance, std::move(fn), Qt::BlockingQueuedConnection);
         }
     }
 
@@ -226,11 +224,6 @@ static int str_getter(nv_context* ctx, QString (DroidStar::*getter)() const, cha
 extern "C" {
 
 NV_EXPORT nv_handle nv_create(void) {
-    if (!QCoreApplication::instance()) {
-        static int argc = 1;
-        static char* argv[] = { (char*)"nexusvoice_core", nullptr };
-        qt_app = new QCoreApplication(argc, argv);
-    }
     return new nv_context();
 }
 
