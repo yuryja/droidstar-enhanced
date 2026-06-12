@@ -1,14 +1,21 @@
-# DroidStarEnhaced - Project Rules & Memory
+# NexusVoice - Project Rules & Memory
 
 This file contains the architectural rules and project context to maintain a clean core abstracted from the user interface.
 
 **MANDATORY RULE:** Every time the AI agent or developer makes a significant architectural change, adds a new dependency, or restructures the project, they **MUST** update this file to reflect those changes.
+
+## Communication Rules
+- Talk to the user (Yury) in **Spanish**.
+- All code, commits, repo names, and technical documentation must be in **English**.
+- No emojis in commit messages or technical documentation.
+- After every commit, generate a summary in Markdown `.md` format ready to paste as a Pull Request description.
 
 ## Commit Guidelines
 - Commits **must** be written in **English**.
 - They must be written in a technical and professional tone, targeted at developers.
 - **NO** emojis in commit messages.
 - After every commit, the agent must generate a summary in Markdown `.md` format of the changes made, ready to be copied and pasted into a Pull Request (PR) description.
+- Every commit must be **atomic**: one logical change per commit.
 
 
 ## Project Architecture
@@ -32,7 +39,7 @@ The project is divided into components to allow cross-compilation across differe
 - **Target OS Compatibility:** macOS builds explicitly set `CMAKE_OSX_DEPLOYMENT_TARGET` to `"11.0"` in `CMakeLists.txt` to ensure compatibility with older macOS versions and prevent crashes on versions prior to macOS Tahoe (macOS 26).
 
 ---
-*(Last update: Released version 1.1.1, set CMAKE_OSX_DEPLOYMENT_TARGET to 11.0, resolved Homebrew dependencies in packaging, resolved C++ memory leaks and audio device locks, fixed COLOR button, screen QSY wait feedback, memory preset reconnect logic, and fixed HTTP host list downloads via HTTPS and ATS exceptions)*
+*(Last update: v1.2.0 — Project renamed to NexusVoice. Added md380_vocoder_dynarmic submodule for real AMBE+2 vocoder support. CMake auto-detects Boost and enables MD380 vocoder when available, falls back to mbelib. Migration planning complete: target architecture is nexusvoice-core (pure C++ library) + nexusvoice-app (Flutter, all 5 platforms). Active branch: refactor/flutter-migration)*
 
 ---
 
@@ -153,7 +160,7 @@ xcrun stapler staple build/DroidStarEnhaced.dmg
 - `com.yuryjajitzky.DroidStarEnhaced` — defined in `Info.plist`
 
 ---
-*(Last update: Released version 1.1.1, fixed COLOR button indicator line color, resolved C++ audio leaks and resource locks, added screen QSY wait overlay, and fixed cleartext HTTP ATS blocks by switching default host list downloads to HTTPS and adding ATS exceptions in Info.plist)*
+*(Last update: v1.2.0 — Project renamed to NexusVoice. Added MD380 vocoder (AMBE+2 real firmware via Dynarmic JIT) as optional dependency. CMake detects Boost silently and enables vocoder when present. Updated README, CHANGELOG, and all bundle identifiers to NexusVoice. Migration to Flutter + pure C++ core is planned in nexusvoice-core and nexusvoice-app repos)*
 
 ## Memory Presets Feature
 
