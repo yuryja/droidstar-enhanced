@@ -5,19 +5,19 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleDisplayName</key>
-	<string>DroidStarEnhaced</string>
+	<string>NexusVoice</string>
 	<key>CFBundleExecutable</key>
-	<string>DroidStarEnhaced</string>
+	<string>NexusVoice</string>
 	<key>CFBundleIconFile</key>
 	<string>droidstar.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.yuryjajitzky.DroidStarEnhaced</string>
+	<string>com.yuryjajitzky.NexusVoice</string>
 	<key>CFBundleName</key>
-	<string>DroidStarEnhaced</string>
+	<string>NexusVoice</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.1</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>

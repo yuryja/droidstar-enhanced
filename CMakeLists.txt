@@ -7,7 +7,7 @@ if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 endif()
 
-project(DroidStar VERSION 1.1.1 LANGUAGES C CXX)
+project(NexusVoice VERSION 1.2.0 LANGUAGES C CXX)
 
 # Export compile commands for IDE language servers (clangd, etc.)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -27,7 +27,7 @@ set(MACOSX_BUNDLE_ICON_FILE droidstar.icns)
 set(app_icon_macos "${CMAKE_CURRENT_SOURCE_DIR}/images/droidstar.icns")
 set_source_files_properties(${app_icon_macos} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
-qt_add_executable(DroidStar WIN32 MACOSX_BUNDLE
+qt_add_executable(NexusVoice WIN32 MACOSX_BUNDLE
     core/CRCenc.cpp
     core/CRCenc.h
     core/DMRDefines.h
@@ -149,9 +149,9 @@ qt_add_executable(DroidStar WIN32 MACOSX_BUNDLE
 )
 
 if(ANDROID OR IOS)
-    qt_add_qml_module(DroidStar
-        URI DroidStarApp
-        VERSION 1.1.1
+    qt_add_qml_module(NexusVoice
+        URI NexusVoiceApp
+        VERSION 1.2.0
         QML_FILES ui/mobile/Main.qml
         QML_FILES ui/mobile/MainTab.qml
         QML_FILES ui/mobile/SettingsTab.qml
@@ -164,9 +164,9 @@ if(ANDROID OR IOS)
             ui/shared/fonts/arcade_pizzadude/ARCADE.TTF
     )
 else()
-    qt_add_qml_module(DroidStar
-        URI DroidStarApp
-        VERSION 1.1.1
+    qt_add_qml_module(NexusVoice
+        URI NexusVoiceApp
+        VERSION 1.2.0
         QML_FILES ui/desktop/MainDesktop.qml
         QML_FILES ui/desktop/MainTabDesktop.qml
         QML_FILES ui/mobile/SettingsTab.qml
@@ -187,12 +187,12 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-target_compile_definitions(DroidStar PRIVATE
+target_compile_definitions(NexusVoice PRIVATE
     QT_DEPRECATED_WARNINGS
     VERSION_NUMBER="${VERSION_NUMBER}"
 )
 
-target_link_libraries(DroidStar PRIVATE
+target_link_libraries(NexusVoice PRIVATE
     Qt::Core
     Qt::Gui
     Qt::Multimedia
@@ -200,16 +200,16 @@ target_link_libraries(DroidStar PRIVATE
     Qt::Quick
     Qt::QuickControls2
 )
-target_include_directories(DroidStar PRIVATE core)
+target_include_directories(NexusVoice PRIVATE core)
 
 if(UNIX AND NOT IOS)
-    target_link_libraries(DroidStar PRIVATE
+    target_link_libraries(NexusVoice PRIVATE
         Qt::SerialPort
     )
 endif()
 
 if(WIN32)
-    target_link_libraries(DroidStar PRIVATE
+    target_link_libraries(NexusVoice PRIVATE
         Qt::SerialPort
         ws2_32
     )
@@ -217,52 +217,52 @@ if(WIN32)
 endif()
 
 if(UNIX)
-    target_link_libraries(DroidStar PRIVATE
+    target_link_libraries(NexusVoice PRIVATE
         dl
     )
 endif()
 
 if(APPLE)
-    set_target_properties(DroidStar PROPERTIES
+    set_target_properties(NexusVoice PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
-        OUTPUT_NAME "DroidStarEnhaced"
+        OUTPUT_NAME "NexusVoice"
     )
-    target_link_libraries(DroidStar PRIVATE
+    target_link_libraries(NexusVoice PRIVATE
         "-framework AVFoundation"
     )
-    target_link_options(DroidStar PRIVATE "-F${CMAKE_CURRENT_SOURCE_DIR}/Frameworks" "-F/System/Library/Frameworks")
+    target_link_options(NexusVoice PRIVATE "-F${CMAKE_CURRENT_SOURCE_DIR}/Frameworks" "-F/System/Library/Frameworks")
 endif()
 
 if(ANDROID)
     include(~/Android/Sdk/android_openssl/android_openssl.cmake)
-    add_android_openssl_libraries(DroidStar)
-    target_sources(DroidStar PUBLIC
+    add_android_openssl_libraries(NexusVoice)
+    target_sources(NexusVoice PUBLIC
         androidserialport.cpp androidserialport.h
     )
 
-    set_target_properties(DroidStar PROPERTIES
+    set_target_properties(NexusVoice PROPERTIES
        QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/android
-       QT_ANDROID_VERSION_CODE 90
+       QT_ANDROID_VERSION_CODE 100
        #QT_ANDROID_MIN_SDK_VERSION 31
     )
 endif()
 
 if(NOT IOS)
-    target_sources(DroidStar PUBLIC
+    target_sources(NexusVoice PUBLIC
         core/serialambe.cpp core/serialambe.h
         core/serialmodem.cpp core/serialmodem.h
     )
 endif()
 
 if(FALSE) #set TRUE to use external codec2
-    target_compile_definitions(DroidStar PRIVATE
+    target_compile_definitions(NexusVoice PRIVATE
         USE_EXTERNAL_CODEC2
     )
-    target_link_libraries(DroidStar PRIVATE
+    target_link_libraries(NexusVoice PRIVATE
         codec2
     )
 else()
-    target_sources(DroidStar PUBLIC
+    target_sources(NexusVoice PUBLIC
         core/codec2/codebooks.cpp
         core/codec2/codec2.cpp
         core/codec2/codec2_api.h
@@ -293,25 +293,27 @@ if(FALSE) # set TRUE for flite
     )
 endif()
 
-if(FALSE) # set TRUE for md380_vocoder
-    target_compile_definitions(DroidStar PRIVATE
-        USE_MD380_VOCODER
-    )
-    target_link_libraries(DroidStar PRIVATE
-        md380_vocoder
-        #/home/nostar/Android/Sdk/local/libmd380_vocoder.a
-        # -Xlinker --section-start=.firmware=0x0800C000 -Xlinker --section-start=.sram=0x20000000
-    )
+# MD380 vocoder (AMBE+2 via Dynarmic JIT - real radio firmware)
+# Submodule: Frameworks/md380_vocoder_dynarmic
+# Requires: boost, cmake 3.12+, python3, unzip
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Frameworks/md380_vocoder_dynarmic/CMakeLists.txt)
+    add_subdirectory(Frameworks/md380_vocoder_dynarmic)
+    find_package(Boost REQUIRED COMPONENTS filesystem)
+    target_compile_definitions(NexusVoice PRIVATE USE_MD380_VOCODER)
+    target_link_libraries(NexusVoice PRIVATE md380_vocoder Boost::filesystem)
+    message(STATUS "MD380 vocoder (AMBE+2): ENABLED")
+else()
+    message(STATUS "MD380 vocoder: submodule not found, using mbelib fallback")
 endif()
 
-install(TARGETS DroidStar
+install(TARGETS NexusVoice
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 qt_generate_deploy_app_script(
-    TARGET DroidStar
+    TARGET NexusVoice
     OUTPUT_SCRIPT deploy_script
     NO_UNSUPPORTED_PLATFORM_ERROR
 )

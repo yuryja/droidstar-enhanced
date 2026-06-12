@@ -47,7 +47,7 @@ DroidStar::DroidStar(QObject *parent) :
 	m_settings_processed = false;
 	m_modelchange = false;
 	connect_status = Mode::DISCONNECTED;
-	m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "yuryjajitzky", "droidstarenhaced", this);
+	m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "yuryjajitzky", "nexusvoice", this);
 	config_path = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_WIN)
 	config_path += "/yuryjajitzky";

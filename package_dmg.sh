@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP="build/DroidStarEnhaced.app"
+APP="build/NexusVoice.app"
 HOMEBREW_LIB="/opt/homebrew/lib"
 HOMEBREW_QT="/opt/homebrew/Cellar/qt/6.8.2_1/lib"
 FRAMEWORKS="$APP/Contents/Frameworks"
@@ -147,16 +147,16 @@ done
 
 # ─── 6. Fix main binary rpath ─────────────────────────────────────────────────
 echo "[6/9] Fixing main binary rpath..."
-install_name_tool -delete_rpath "/opt/homebrew/lib" "$APP/Contents/MacOS/DroidStarEnhaced" 2>/dev/null || true
-if ! otool -l "$APP/Contents/MacOS/DroidStarEnhaced" | grep -q "@executable_path/../Frameworks"; then
-    install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/DroidStarEnhaced" 2>/dev/null || true
+install_name_tool -delete_rpath "/opt/homebrew/lib" "$APP/Contents/MacOS/NexusVoice" 2>/dev/null || true
+if ! otool -l "$APP/Contents/MacOS/NexusVoice" | grep -q "@executable_path/../Frameworks"; then
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/NexusVoice" 2>/dev/null || true
 fi
 
 # ─── 7. PREFLIGHT CHECK: verify all @rpath deps resolve inside the bundle ─────
 echo "[7/9] Running preflight dependency check..."
 rm -f build/.missing
 find "$FRAMEWORKS" "$APP/Contents/PlugIns" "$APP/Contents/Resources" "$APP/Contents/MacOS" \
-    \( -name "*.dylib" -o -name "DroidStarEnhaced" -o -type f -path "*.framework/Versions/A/*" \) 2>/dev/null | while read bin; do
+    \( -name "*.dylib" -o -name "NexusVoice" -o -type f -path "*.framework/Versions/A/*" \) 2>/dev/null | while read bin; do
     if [[ "$bin" == */Headers/* ]]; then continue; fi
     otool -L "$bin" 2>/dev/null | awk '/@rpath/{print $1}' | sed 's|@rpath/||' | while read dep; do
         depbase=$(basename "$dep")
@@ -188,11 +188,11 @@ xattr -cr "$APP" 2>/dev/null || true
 
 # ─── 12. Create the final DMG ────────────────────────────────────────────────
 echo "[9/9] Creating final DMG..."
-rm -f "build/DroidStarEnhaced.dmg"
-hdiutil create -volname "DroidStarEnhaced" \
+rm -f "build/NexusVoice.dmg"
+hdiutil create -volname "NexusVoice" \
                -srcfolder "$APP" \
                -ov -format UDZO \
-               "build/DroidStarEnhaced.dmg"
+               "build/NexusVoice.dmg"
 
 echo ""
-echo "Done! DMG ready at build/DroidStarEnhaced.dmg"
+echo "Done! DMG ready at build/NexusVoice.dmg"
