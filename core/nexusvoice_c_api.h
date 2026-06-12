@@ -31,6 +31,9 @@ NV_EXPORT void nv_process_connect(nv_handle h);
 NV_EXPORT void nv_process_settings(nv_handle h);
 NV_EXPORT void nv_check_host_files(nv_handle h);
 NV_EXPORT void nv_update_host_files(nv_handle h);
+NV_EXPORT void nv_update_dmr_ids(nv_handle h);
+NV_EXPORT void nv_process_mode_change(nv_handle h, const char* mode);
+NV_EXPORT void nv_process_host_change(nv_handle h, const char* host);
 
 // Settings setters
 NV_EXPORT void nv_set_callsign(nv_handle h, const char* callsign);

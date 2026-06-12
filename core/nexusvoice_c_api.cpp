@@ -6,6 +6,9 @@
 #include <QByteArray>
 #include <QStringList>
 #include <QObject>
+#include <QCoreApplication>
+
+static QCoreApplication* qt_app = nullptr;
 
 // Context structure holding the DroidStar instance and callback bindings
 struct nv_context {
@@ -100,6 +103,11 @@ static int copy_json_to_buf(const QJsonDocument& doc, char* out_buf, int buf_siz
 extern "C" {
 
 NV_EXPORT nv_handle nv_create(void) {
+    if (!QCoreApplication::instance()) {
+        static int argc = 1;
+        static char* argv[] = { (char*)"nexusvoice_core", nullptr };
+        qt_app = new QCoreApplication(argc, argv);
+    }
     return new nv_context();
 }
 
@@ -135,6 +143,18 @@ NV_EXPORT void nv_check_host_files(nv_handle h) {
 
 NV_EXPORT void nv_update_host_files(nv_handle h) {
     if (h) static_cast<nv_context*>(h)->instance->update_host_files();
+}
+
+NV_EXPORT void nv_update_dmr_ids(nv_handle h) {
+    if (h) static_cast<nv_context*>(h)->instance->update_dmr_ids();
+}
+
+NV_EXPORT void nv_process_mode_change(nv_handle h, const char* mode) {
+    if (h) static_cast<nv_context*>(h)->instance->process_mode_change(QString::fromUtf8(mode));
+}
+
+NV_EXPORT void nv_process_host_change(nv_handle h, const char* host) {
+    if (h) static_cast<nv_context*>(h)->instance->process_host_change(QString::fromUtf8(host));
 }
 
 // Setters
@@ -393,6 +413,9 @@ NV_EXPORT int nv_get_ptt_key(nv_handle h) {
 }
 
 NV_EXPORT int nv_get_output_level(nv_handle h) {
+    if (QCoreApplication::instance()) {
+        QCoreApplication::processEvents();
+    }
     if (!h) return 0;
     return static_cast<nv_context*>(h)->instance->get_output_level();
 }

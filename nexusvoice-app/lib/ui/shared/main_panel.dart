@@ -30,14 +30,14 @@ class _NvMainPanelState extends State<NvMainPanel> {
   }
 
   void _loadHosts() {
-    // Set protocol in core so it populates the correct hosts list
-    NvController.instance.setProtocol(_selectedMode);
+    // Process mode change in core to load reflectors list from disk
+    NvController.instance.processModeChange(_selectedMode);
     final list = NvController.instance.getHosts();
     setState(() {
       _hosts = list;
       if (_hosts.isNotEmpty) {
         _selectedHost = _hosts.first;
-        NvController.instance.setModem(_selectedHost); // or setHost
+        NvController.instance.processHostChange(_selectedHost);
       } else {
         _selectedHost = '';
       }
@@ -50,9 +50,9 @@ class _NvMainPanelState extends State<NvMainPanel> {
       NvController.instance.disconnect();
     } else {
       // Set values to core before connecting
-      NvController.instance.setProtocol(_selectedMode);
+      NvController.instance.processModeChange(_selectedMode);
       if (_selectedHost.isNotEmpty) {
-        NvController.instance.setModem(_selectedHost);
+        NvController.instance.processHostChange(_selectedHost);
       }
       NvController.instance.setDmrTgid(_tgidController.text);
       
@@ -130,7 +130,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
                                   setState(() {
                                     _selectedHost = val;
                                   });
-                                  NvController.instance.setModem(val);
+                                  NvController.instance.processHostChange(val);
                                 }
                               },
                             ),

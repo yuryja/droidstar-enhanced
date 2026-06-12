@@ -27,6 +27,9 @@ class NexusVoiceBindings {
   late final void Function(Pointer<Void>) nvProcessSettings;
   late final void Function(Pointer<Void>) nvCheckHostFiles;
   late final void Function(Pointer<Void>) nvUpdateHostFiles;
+  late final void Function(Pointer<Void>) nvUpdateDmrIds;
+  late final void Function(Pointer<Void>, Pointer<Utf8>) nvProcessModeChange;
+  late final void Function(Pointer<Void>, Pointer<Utf8>) nvProcessHostChange;
 
   // Setters
   late final void Function(Pointer<Void>, Pointer<Utf8>) nvSetCallsign;
@@ -131,6 +134,9 @@ class NexusVoiceBindings {
     nvProcessSettings = _lib.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>('nv_process_settings');
     nvCheckHostFiles = _lib.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>('nv_check_host_files');
     nvUpdateHostFiles = _lib.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>('nv_update_host_files');
+    nvUpdateDmrIds = _lib.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>('nv_update_dmr_ids');
+    nvProcessModeChange = _lib.lookupFunction<Void Function(Pointer<Void>, Pointer<Utf8>), void Function(Pointer<Void>, Pointer<Utf8>)>('nv_process_mode_change');
+    nvProcessHostChange = _lib.lookupFunction<Void Function(Pointer<Void>, Pointer<Utf8>), void Function(Pointer<Void>, Pointer<Utf8>)>('nv_process_host_change');
 
     // Setters
     nvSetCallsign = _lib.lookupFunction<Void Function(Pointer<Void>, Pointer<Utf8>), void Function(Pointer<Void>, Pointer<Utf8>)>('nv_set_callsign');

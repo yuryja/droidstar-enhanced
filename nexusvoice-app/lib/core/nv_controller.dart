@@ -140,6 +140,25 @@ class NvController extends ChangeNotifier {
     _bindings.nvUpdateHostFiles(_handle!);
   }
 
+  void updateDmrIds() {
+    if (_handle == null) return;
+    _bindings.nvUpdateDmrIds(_handle!);
+  }
+
+  void processModeChange(String mode) {
+    if (_handle == null) return;
+    final ptr = mode.toNativeUtf8();
+    _bindings.nvProcessModeChange(_handle!, ptr);
+    malloc.free(ptr);
+  }
+
+  void processHostChange(String host) {
+    if (_handle == null) return;
+    final ptr = host.toNativeUtf8();
+    _bindings.nvProcessHostChange(_handle!, ptr);
+    malloc.free(ptr);
+  }
+
   // PTT Actions
   void startPtt() {
     if (_handle == null) return;

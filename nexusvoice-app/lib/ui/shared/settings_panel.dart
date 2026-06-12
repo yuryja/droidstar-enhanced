@@ -208,6 +208,74 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
             ),
           ),
           
+          const SizedBox(height: 16),
+          
+          // Database Updates
+          _buildSectionHeader('Database Updates'),
+          Card(
+            color: const Color(0xFF141A31),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        NvController.instance.updateHostFiles();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Downloading Host files in background...'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                        ),
+                      ),
+                      icon: const Icon(Icons.download_for_offline, color: Color(0xFF00FF87), size: 16),
+                      label: const Text(
+                        'UPDATE HOSTS',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        NvController.instance.updateDmrIds();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Downloading User ID database...'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                        ),
+                      ),
+                      icon: const Icon(Icons.people, color: Color(0xFF00FF87), size: 16),
+                      label: const Text(
+                        'UPDATE ID FILES',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
           const SizedBox(height: 24),
           
           // Action Buttons
