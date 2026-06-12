@@ -48,9 +48,9 @@ private slots:
     void config_ambe();
 private:
 #ifndef Q_OS_ANDROID
-	QSerialPort *m_serial;
+	QSerialPort *m_serial = nullptr;
 #else
-	AndroidSerialPort *m_serial;
+	AndroidSerialPort *m_serial = nullptr;
 #endif
 	QString m_description;
 	QString m_manufacturer;

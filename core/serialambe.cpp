@@ -60,7 +60,13 @@ SerialAMBE::SerialAMBE(QString protocol) :
 
 SerialAMBE::~SerialAMBE()
 {
-	m_serial->close();
+	if (m_serial) {
+		m_serial->close();
+#ifndef Q_OS_ANDROID
+		delete m_serial;
+		m_serial = nullptr;
+#endif
+	}
 }
 
 QMap<QString, QString> SerialAMBE::discover_devices()
