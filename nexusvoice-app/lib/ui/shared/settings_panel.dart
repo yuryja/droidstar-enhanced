@@ -45,8 +45,9 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
     _callsignCtrl.text = nv.getCallsign();
     _dmrIdCtrl.text = nv.getDmrId();
     _essidCtrl.text = nv.getEssid();
-    // In DroidStar, passwords can be set but might not be readable via direct getters in the class.
-    // However, we call getters if they are stored. If they return empty, that's fine.
+    _bmPwdCtrl.text = nv.getBmPassword();
+    _tgifPwdCtrl.text = nv.getTgifPassword();
+    _aslPwdCtrl.text = nv.getAslPassword();
     
     // For audio level, we query or use defaults
     _playbacks = nv.getPlaybacks();
@@ -66,9 +67,9 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
     nv.setDmrId(_dmrIdCtrl.text);
     nv.setEssid(_essidCtrl.text);
     
-    if (_bmPwdCtrl.text.isNotEmpty) nv.setBmPassword(_bmPwdCtrl.text);
-    if (_tgifPwdCtrl.text.isNotEmpty) nv.setTgifPassword(_tgifPwdCtrl.text);
-    if (_aslPwdCtrl.text.isNotEmpty) nv.setAslPassword(_aslPwdCtrl.text);
+    nv.setBmPassword(_bmPwdCtrl.text);
+    nv.setTgifPassword(_tgifPwdCtrl.text);
+    nv.setAslPassword(_aslPwdCtrl.text);
     
     nv.setLatitude(_latCtrl.text.isEmpty ? '0.0' : _latCtrl.text);
     nv.setLongitude(_lonCtrl.text.isEmpty ? '0.0' : _lonCtrl.text);

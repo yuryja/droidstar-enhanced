@@ -385,6 +385,21 @@ NV_EXPORT int nv_get_essid(nv_handle h, char* out_buf, int buf_size) {
     return copy_to_buf(static_cast<nv_context*>(h)->instance->get_essid(), out_buf, buf_size);
 }
 
+NV_EXPORT int nv_get_bm_password(nv_handle h, char* out_buf, int buf_size) {
+    if (!h) return -1;
+    return copy_to_buf(static_cast<nv_context*>(h)->instance->get_bm_password(), out_buf, buf_size);
+}
+
+NV_EXPORT int nv_get_tgif_password(nv_handle h, char* out_buf, int buf_size) {
+    if (!h) return -1;
+    return copy_to_buf(static_cast<nv_context*>(h)->instance->get_tgif_password(), out_buf, buf_size);
+}
+
+NV_EXPORT int nv_get_asl_password(nv_handle h, char* out_buf, int buf_size) {
+    if (!h) return -1;
+    return copy_to_buf(static_cast<nv_context*>(h)->instance->get_asl_password(), out_buf, buf_size);
+}
+
 NV_EXPORT int nv_get_ambestatustxt(nv_handle h, char* out_buf, int buf_size) {
     if (!h) return -1;
     return copy_to_buf(static_cast<nv_context*>(h)->instance->get_ambestatustxt(), out_buf, buf_size);

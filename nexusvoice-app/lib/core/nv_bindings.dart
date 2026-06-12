@@ -84,6 +84,9 @@ class NexusVoiceBindings {
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetCallsign;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetDmrid;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetEssid;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetBmPassword;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetTgifPassword;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetAslPassword;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetAmbestatustxt;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetMmdvmstatustxt;
   late final int Function(Pointer<Void>, Pointer<Utf8>, int) nvGetNetstatustxt;
@@ -191,6 +194,9 @@ class NexusVoiceBindings {
     nvGetCallsign = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_callsign');
     nvGetDmrid = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_dmrid');
     nvGetEssid = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_essid');
+    nvGetBmPassword = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_bm_password');
+    nvGetTgifPassword = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_tgif_password');
+    nvGetAslPassword = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_asl_password');
     nvGetAmbestatustxt = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_ambestatustxt');
     nvGetMmdvmstatustxt = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_mmdvmstatustxt');
     nvGetNetstatustxt = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32), int Function(Pointer<Void>, Pointer<Utf8>, int)>('nv_get_netstatustxt');

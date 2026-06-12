@@ -571,6 +571,33 @@ class NvController extends ChangeNotifier {
     return res;
   }
 
+  String getBmPassword() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetBmPassword(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getTgifPassword() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetTgifPassword(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
+  String getAslPassword() {
+    if (_handle == null) return '';
+    final buf = malloc<Char>(256);
+    _bindings.nvGetAslPassword(_handle!, buf.cast<Utf8>(), 256);
+    final res = buf.cast<Utf8>().toDartString();
+    malloc.free(buf);
+    return res;
+  }
+
   String getAmbeStatusTxt() {
     if (_handle == null) return '';
     final buf = malloc<Char>(512);

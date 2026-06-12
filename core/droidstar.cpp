@@ -697,6 +697,7 @@ void DroidStar::save_settings()
 	m_settings->setValue("ModemRxInvert", m_modemRxInvert ? "true" : "false");
 	m_settings->setValue("ModemPTTInvert", m_modemPTTInvert ? "true" : "false");
 	m_settings->setValue("PTT_KEY", m_pttKey);
+	m_settings->sync();
 }
 
 void DroidStar::process_settings()
