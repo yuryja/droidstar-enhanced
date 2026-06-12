@@ -22,12 +22,11 @@
 
 class REF : public Mode
 {
-	Q_OBJECT
 public:
 	REF();
 	~REF();
 	uint8_t * get_frame(uint8_t *ambe);
-private:
+protected:
 	uint8_t packet_size;
 	bool m_sd_sync = false;
 	int m_sd_txt_seq = 0;
@@ -39,19 +38,18 @@ private:
 	uint8_t m_debug_data[64]{};
 	uint16_t m_txstreamid = 0;
 	bool m_sendheader = true;
-private slots:
 	void toggle_tx(bool);
 	void start_tx();
-	void process_udp();
 	void process_modem_data(QByteArray);
 	void process_rx_data();
 	void get_ambe();
 	void send_ping();
 	void send_disconnect();
 	void transmit();
-	void format_callsign(QString &s);
-	void hostname_lookup(QHostInfo i);
-	void module_changed(int m) { m_module = 0x41 + m; m_modeinfo.streamid = 0; }
+	void format_callsign(std::string &s);
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
+	void module_changed(char m) { m_module = m; m_modeinfo.streamid = 0; }
 	void send_frame(uint8_t *);
 };
 

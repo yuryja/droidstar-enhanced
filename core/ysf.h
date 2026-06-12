@@ -55,20 +55,19 @@ const uint8_t YSF_MR_BUSY     = 0x02U;
 
 class YSF : public Mode
 {
-	Q_OBJECT
 public:
 	YSF();
 	~YSF();
 	void set_fcs_mode(bool y, std::string f = "        "){ m_fcs = y; m_fcsname = f; }
-private slots:
-	void process_udp();
+protected:
 	void process_rx_data();
 	void get_ambe();
 	void send_ping();
 	void send_disconnect();
 	void transmit();
-	void hostname_lookup(QHostInfo i);
 	void send_frame();
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
 	void rate_changed(int r) { m_txfullrate = r;}
 	void process_modem_data(QByteArray);
 private:

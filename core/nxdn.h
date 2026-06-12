@@ -23,22 +23,21 @@
 
 class NXDN : public Mode
 {
-	Q_OBJECT
 public:
 	NXDN();
 	~NXDN();
 	uint8_t * get_frame();
 	uint8_t * get_eot(){m_eot = true; return get_frame();}
 	void set_hwtx(bool hw){m_hwtx = hw;}
-private slots:
-	void process_udp();
+protected:
 	void process_rx_data();
 	void get_ambe();
 	void send_ping(bool disconnect = false);
 	void send_disconnect() {send_ping(true);}
 	void transmit();
-	void hostname_lookup(QHostInfo i);
 	void send_frame();
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
 private:
 	bool m_eot;
 	uint8_t m_nxdnframe[55];

@@ -16,7 +16,7 @@ class NvStatusBar extends StatelessWidget {
         List<BoxShadow> ledGlow;
         
         switch (status) {
-          case 2: // Connected
+          case 2: // Connected (droidstar on_status_changed)
             ledColor = const Color(0xFF00FF87);
             ledGlow = [
               BoxShadow(
@@ -36,7 +36,6 @@ class NvStatusBar extends StatelessWidget {
               )
             ];
             break;
-          case 4: // Auth failed
           case 5: // Error
             ledColor = const Color(0xFFFF0055);
             ledGlow = [
@@ -47,7 +46,7 @@ class NvStatusBar extends StatelessWidget {
               )
             ];
             break;
-          default: // Disconnected
+          default: // 0 = Disconnected
             ledColor = Colors.grey.shade600;
             ledGlow = [];
         }

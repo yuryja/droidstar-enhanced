@@ -30,14 +30,9 @@ DCS::~DCS()
 {
 }
 
-void DCS::process_udp()
+void DCS::on_network_read(const uint8_t* data, int len)
 {
-	QByteArray buf;
-	QHostAddress sender;
-	quint16 senderPort;
-
-    buf.resize(200);
-    int size = m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
+    QByteArray buf(reinterpret_cast<const char*>(data), len);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -49,7 +44,7 @@ void DCS::process_udp()
         debug << s;
     }
 
-	if(size == 22){ //2 way keep alive ping
+	if(len == 22){ //2 way keep alive ping
 		m_modeinfo.count++;
 		m_modeinfo.netmsg.clear();
 		if( (m_modeinfo.stream_state == STREAM_LOST) || (m_modeinfo.stream_state == STREAM_END) ){
@@ -57,27 +52,23 @@ void DCS::process_udp()
 		}
 	}
 
-	if( (m_modeinfo.status == CONNECTING) && (size == 14) && (!memcmp(buf.data()+10, "ACK", 3)) ){
+	if( (m_modeinfo.status == CONNECTING) && (len == 14) && (!memcmp(buf.data()+10, "ACK", 3)) ){
 		qDebug() << "Connected to DCS";
 		m_modeinfo.status = CONNECTED_RW;
 		m_modeinfo.sw_vocoder_loaded = load_vocoder_plugin();
-		m_rxtimer = new QTimer();
-		connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
-		m_txtimer = new QTimer();
-		connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-		m_ping_timer = new QTimer();
-		connect(m_ping_timer, SIGNAL(timeout()), this, SLOT(send_ping()));
-		m_ping_timer->start(2000);
+		start_rx_timer(20);
+		start_tx_timer(19);
+		start_ping_timer(1000);
 		m_audio = new AudioEngine(m_audioin, m_audioout);
 		m_audio->init();
 	}
 
 	if(m_modeinfo.status != CONNECTED_RW) return;
-	if(size == 35){
+	if(len == 35){
 		m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-		m_modeinfo.netmsg = QString(buf.data());
+		m_modeinfo.netmsg = buf.data();
 	}
-	if((size == 100) && (!memcmp(buf.data(), "0001", 4)) ){
+	if((len == 100) && (!memcmp(buf.data(), "0001", 4)) ){
 		m_rxwatchdog = 0;
 		uint16_t streamid = (buf.data()[43] << 8) | (buf.data()[44] & 0xff);
 
@@ -86,22 +77,19 @@ void DCS::process_udp()
 			m_modeinfo.stream_state = STREAM_NEW;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 
-			if(!m_rxtimer->isActive()){
-				if (m_audio) m_audio->start_playback();
-				m_rxtimer->start(m_rxtimerint);
-				m_rxcodecq.clear();
-			}
+			if (m_audio) m_audio->start_playback();
+			m_rxcodecq.clear();
 
 			char temp[9];
 			memcpy(temp, buf.data() + 7, 8); temp[8] = '\0';
-			m_modeinfo.gw2 = QString(temp);
+			m_modeinfo.gw2 = temp;
 			memcpy(temp, buf.data() + 15, 8); temp[8] = '\0';
-			m_modeinfo.gw = QString(temp);
+			m_modeinfo.gw = temp;
 			memcpy(temp, buf.data() + 23, 8); temp[8] = '\0';
-			m_modeinfo.dst = QString(temp);
+			m_modeinfo.dst = temp;
 			memcpy(temp, buf.data() + 31, 8); temp[8] = '\0';
-			m_modeinfo.src = QString(temp);
-			QString h = m_refname + " " + m_module;
+			m_modeinfo.src = temp;
+			std::string h = m_refname + " " + m_module;
 
 			if(m_modem){
 				uint8_t out[44];
@@ -111,10 +99,10 @@ void DCS::process_udp()
 				out[3] = 0x40;
 				out[4] = 0;
 				out[5] = 0;
-				memcpy(out + 6, m_modeinfo.gw2.toLocal8Bit().data(), 8);
-				memcpy(out + 14, m_modeinfo.gw.toLocal8Bit().data(), 8);
-				memcpy(out + 22, m_modeinfo.dst.toLocal8Bit().data(), 8);
-				memcpy(out + 30, m_modeinfo.src.toLocal8Bit().data(), 8);
+				memcpy(out + 6, m_modeinfo.gw2.c_str(), 8);
+				memcpy(out + 14, m_modeinfo.gw.c_str(), 8);
+				memcpy(out + 22, m_modeinfo.dst.c_str(), 8);
+				memcpy(out + 30, m_modeinfo.src.c_str(), 8);
 				memcpy(out + 38, buf.data() + 52, 4);
 				CCRC::addCCITT161((uint8_t *)out + 3, 41);
 				for(int i = 0; i < 44; ++i){
@@ -122,7 +110,7 @@ void DCS::process_udp()
 				}
 				//if (m_modem) m_modem->write(out);
 			}
-			qDebug() << "New stream from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16);
+			qDebug() << "New stream from " << QString::fromStdString(m_modeinfo.src) << " to " << QString::fromStdString(m_modeinfo.dst) << " id == " << QString::number(m_modeinfo.streamid, 16);
 		}
 		else{
 			m_modeinfo.stream_state = STREAMING;
@@ -179,14 +167,14 @@ void DCS::process_udp()
 			m_user_data[20] = '\0';
 			m_sd_sync = 0;
 			m_sd_seq = 0;
-			m_modeinfo.usertxt = QString(m_user_data);
+			m_modeinfo.usertxt = m_user_data;
 		}
 		if(buf.data()[45] & 0x40){
 			qDebug() << "DCS RX stream ended ";
 			m_rxwatchdog = 0;
 			m_modeinfo.stream_state = STREAM_END;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-			emit update(m_modeinfo);
+			notify_update(m_modeinfo);
 			m_modeinfo.streamid = 0;
 			if(m_modem){
 				m_rxmodemq.append(MMDVM_FRAME_START);
@@ -208,48 +196,43 @@ void DCS::process_udp()
 			m_rxcodecq.append(buf.data()[46+i]);
 		}
 	}
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
-void DCS::hostname_lookup(QHostInfo i)
+void DCS::on_network_connected()
 {
-	if (!i.addresses().isEmpty()) {
-		QByteArray out;
-		out.resize(519);
-		memcpy(out.data(), m_modeinfo.callsign.toStdString().c_str(), m_modeinfo.callsign.size());
-		memset(out.data() + m_modeinfo.callsign.size(), ' ', 8 - m_modeinfo.callsign.size());
-		out[8] = m_module;
-		out[9] = m_module;
-		out[10] = 11;
+    QByteArray out;
+    out.resize(519);
+    memcpy(out.data(), m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
+    memset(out.data() + m_modeinfo.callsign.size(), ' ', 8 - m_modeinfo.callsign.size());
+    out[8] = m_module;
+    out[9] = m_module;
+    out[10] = 11;
 
-		m_address = i.addresses().first();
-		m_udp = new QUdpSocket(this);
-		connect(m_udp, SIGNAL(readyRead()), this, SLOT(process_udp()));
-		m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+    m_udp->write((const uint8_t*)out.constData(), out.size());
 
-        if(m_debug){
-            QDebug debug = qDebug();
-            debug.noquote();
-            QString s = "CONN:";
-            for(int i = 0; i < out.size(); ++i){
-                s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
-            }
-            debug << s;
+    if(m_debug){
+        QDebug debug = qDebug();
+        debug.noquote();
+        QString s = "CONN:";
+        for(int i = 0; i < out.size(); ++i){
+            s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
         }
-	}
+        debug << s;
+    }
 }
 
 void DCS::send_ping()
 {
 	QByteArray out;
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(7 - m_modeinfo.callsign.size(), ' ');
 	out.append(m_module);
 	out.append('\x00');
-	out.append(m_refname.toUtf8());
+	out.append(m_refname.c_str());
 	out.append('\x00');
 	out.append(m_module);
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -265,12 +248,12 @@ void DCS::send_ping()
 void DCS::send_disconnect()
 {
 	QByteArray out;
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(8 - m_modeinfo.callsign.size(), ' ');
 	out.append(m_module);
 	out.append(' ');
 	out.append('\x00');
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -283,21 +266,37 @@ void DCS::send_disconnect()
     }
 }
 
-void DCS::format_callsign(QString &s)
+void DCS::format_callsign(std::string &s)
 {
-	QStringList l = s.simplified().split(' ');
-
-	if(l.size() > 1){
-		s = l.at(0).simplified();
-		while(s.size() < 7){
-			s.append(' ');
+	std::string simplified;
+	bool last_was_space = false;
+	for (char c : s) {
+		if (c == ' ') {
+			if (!last_was_space && !simplified.empty()) {
+				simplified += ' ';
+				last_was_space = true;
+			}
+		} else {
+			simplified += c;
+			last_was_space = false;
 		}
-		s += l.at(1).simplified();
 	}
-	else{
-		while(s.size() < 8){
-			s.append(' ');
+	while (!simplified.empty() && simplified.back() == ' ') {
+		simplified.pop_back();
+	}
+
+	size_t p = simplified.find(' ');
+	if (p != std::string::npos) {
+		std::string first = simplified.substr(0, p);
+		while (first.size() < 7) {
+			first += ' ';
 		}
+		s = first + simplified.substr(p + 1);
+	} else {
+		while (simplified.size() < 8) {
+			simplified += ' ';
+		}
+		s = simplified;
 	}
 }
 
@@ -313,9 +312,9 @@ void DCS::process_modem_data(QByteArray d)
 		format_callsign(m_txrptr2);
 		cs[8] = 0;
 		memcpy(cs, p_frame + 22, 8);
-		m_txurcall = QString(cs);
+		m_txurcall = cs;
 		memcpy(cs, p_frame + 30, 8);
-		m_txmycall = QString(cs);
+		m_txmycall = cs;
 		m_modeinfo.stream_state = TRANSMITTING_MODEM;
 		m_tx = true;
 	}
@@ -401,10 +400,10 @@ void DCS::send_frame(uint8_t *ambe)
 	}
 
 	txdata.replace(0, 4, "0001");
-	txdata.replace(7, 8, m_txrptr2.toLocal8Bit().data());
-	txdata.replace(15, 8, m_txrptr1.toLocal8Bit().data());
-	txdata.replace(23, 8, m_txurcall.toLocal8Bit().data());
-	txdata.replace(31, 8, m_txmycall.toLocal8Bit().data());
+	txdata.replace(7, 8, m_txrptr2.c_str());
+	txdata.replace(15, 8, m_txrptr1.c_str());
+	txdata.replace(23, 8, m_txurcall.c_str());
+	txdata.replace(31, 8, m_txmycall.c_str());
 	txdata.replace(39, 4, "AMBE");
 	txdata[43] = (m_txstreamid >> 8) & 0xff;
 	txdata[44] = m_txstreamid & 0xff;
@@ -419,43 +418,43 @@ void DCS::send_frame(uint8_t *ambe)
 		break;
 	case 1:
 		txdata[55] = 0x40 ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[0] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[1] ^ 0x93;
+		txdata[56] = m_txusrtxt[0] ^ 0x4f;
+		txdata[57] = m_txusrtxt[1] ^ 0x93;
 		break;
 	case 2:
-		txdata[55] = m_txusrtxt.toLocal8Bit().data()[2] ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[3] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[4] ^ 0x93;
+		txdata[55] = m_txusrtxt[2] ^ 0x70;
+		txdata[56] = m_txusrtxt[3] ^ 0x4f;
+		txdata[57] = m_txusrtxt[4] ^ 0x93;
 		break;
 	case 3:
 		txdata[55] = 0x41 ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[5] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[6] ^ 0x93;
+		txdata[56] = m_txusrtxt[5] ^ 0x4f;
+		txdata[57] = m_txusrtxt[6] ^ 0x93;
 		break;
 	case 4:
-		txdata[55] = m_txusrtxt.toLocal8Bit().data()[7] ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[8] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[9] ^ 0x93;
+		txdata[55] = m_txusrtxt[7] ^ 0x70;
+		txdata[56] = m_txusrtxt[8] ^ 0x4f;
+		txdata[57] = m_txusrtxt[9] ^ 0x93;
 		break;
 	case 5:
 		txdata[55] = 0x42 ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[10] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[11] ^ 0x93;
+		txdata[56] = m_txusrtxt[10] ^ 0x4f;
+		txdata[57] = m_txusrtxt[11] ^ 0x93;
 		break;
 	case 6:
-		txdata[55] = m_txusrtxt.toLocal8Bit().data()[12] ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[13] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[14] ^ 0x93;
+		txdata[55] = m_txusrtxt[12] ^ 0x70;
+		txdata[56] = m_txusrtxt[13] ^ 0x4f;
+		txdata[57] = m_txusrtxt[14] ^ 0x93;
 		break;
 	case 7:
 		txdata[55] = 0x43 ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[15] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[16] ^ 0x93;
+		txdata[56] = m_txusrtxt[15] ^ 0x4f;
+		txdata[57] = m_txusrtxt[16] ^ 0x93;
 		break;
 	case 8:
-		txdata[55] = m_txusrtxt.toLocal8Bit().data()[17] ^ 0x70;
-		txdata[56] = m_txusrtxt.toLocal8Bit().data()[18] ^ 0x4f;
-		txdata[57] = m_txusrtxt.toLocal8Bit().data()[19] ^ 0x93;
+		txdata[55] = m_txusrtxt[17] ^ 0x70;
+		txdata[56] = m_txusrtxt[18] ^ 0x4f;
+		txdata[57] = m_txusrtxt[19] ^ 0x93;
 		break;
 	default:
 		txdata[55] = 0x16;
@@ -486,7 +485,7 @@ void DCS::send_frame(uint8_t *ambe)
 		m_txcnt = 0;
 		m_txstreamid = 0;
 		m_modeinfo.streamid = 0;
-		m_txtimer->stop();
+		stop_timers();
 
 		if((m_ttsid == 0) && (m_modeinfo.stream_state == TRANSMITTING) ){
 			if (m_audio) m_audio->stop_capture();
@@ -494,9 +493,9 @@ void DCS::send_frame(uint8_t *ambe)
 		m_ttscnt = 0;
 	}
 
-	m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
-	if (m_audio) emit update_output_level(m_audio->level() * 2);
-	update(m_modeinfo);
+	m_udp->write((const uint8_t*)txdata.constData(), txdata.size());
+	if (m_audio) notify_output_level(m_audio->level() * 2);
+	notify_update(m_modeinfo);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -514,7 +513,7 @@ void DCS::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[9];
 
-	if(m_ambedev && m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->getAmbe(ambe)){
 		for(int i = 0; i < 9; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -524,6 +523,7 @@ void DCS::get_ambe()
 
 void DCS::process_rx_data()
 {
+    poll_network();
 	int16_t pcm[160];
 	uint8_t ambe[9];
 
@@ -532,7 +532,7 @@ void DCS::process_rx_data()
 		m_rxwatchdog = 0;
 		m_modeinfo.stream_state = STREAM_LOST;
 		m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 		m_modeinfo.streamid = 0;
 	}
 
@@ -557,9 +557,9 @@ void DCS::process_rx_data()
 #if !defined(Q_OS_IOS)
 			if (m_ambedev) m_ambedev->decode(ambe);
 
-			if(m_ambedev && m_ambedev->get_audio(pcm)){
+			if(m_ambedev && m_ambedev->getAudio(pcm)){
 				if (m_audio) m_audio->write(pcm, 160);
-				if (m_audio) emit update_output_level(m_audio->level());
+				if (m_audio) notify_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -571,11 +571,11 @@ void DCS::process_rx_data()
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
 			if (m_audio) m_audio->write(pcm, 160);
-			if (m_audio) emit update_output_level(m_audio->level());
+			if (m_audio) notify_output_level(m_audio->level());
 		}
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
-		m_rxtimer->stop();
+		stop_timers();
 		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;

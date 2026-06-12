@@ -5,7 +5,7 @@ if(POLICY CMP0072)
 endif()
 
 if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0" CACHE STRING "Minimum macOS version")
 endif()
 
 project(NexusVoice VERSION 1.2.0 LANGUAGES C CXX)
@@ -16,9 +16,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(IOS)
-    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Multimedia Network Quick QuickControls2)
+    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Network Quick QuickControls2)
 else()
-    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Multimedia Network Quick QuickControls2 SerialPort)
+    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Network Quick QuickControls2 SerialPort)
 endif()
 
 qt_standard_project_setup(REQUIRES 6.5)
@@ -58,10 +58,6 @@ set(CORE_SOURCES
     core/dcs.h
     core/dmr.cpp
     core/dmr.h
-    core/droidstar.cpp
-    core/droidstar.h
-    core/httpmanager.cpp
-    core/httpmanager.h
     core/iax.cpp
     core/iax.h
     core/iaxdefines.h
@@ -140,15 +136,19 @@ set(CORE_SOURCES
     core/p25.h
     core/ref.cpp
     core/ref.h
+    core/udp_socket.cpp
+    core/udp_socket.h
     core/xrf.cpp
     core/xrf.h
     core/ysf.cpp
     core/ysf.h
 )
 
-# Add static library target containing all core C++ sources
+# Single static library for all core code
 add_library(nexusvoice_lib STATIC
     ${CORE_SOURCES}
+    core/droidstar.cpp
+    core/droidstar.h
 )
 
 # Add main Qt executable target
@@ -156,7 +156,6 @@ qt_add_executable(NexusVoice WIN32 MACOSX_BUNDLE
     main.cpp
     ${app_icon_resource_windows}
 )
-set_target_properties(NexusVoice PROPERTIES AUTOMOC_MACRO_NAMES "DUMMY_MACRO_THAT_DOES_NOT_EXIST")
 
 # Add public FFI shared library target
 add_library(nexusvoice_core SHARED
@@ -164,8 +163,6 @@ add_library(nexusvoice_core SHARED
     core/nexusvoice_c_api.h
 )
 set_target_properties(nexusvoice_core PROPERTIES AUTOMOC OFF)
-
-
 if(ANDROID OR IOS)
     qt_add_qml_module(NexusVoice
         URI NexusVoiceApp
@@ -205,21 +202,24 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# Configure compile options, links, and include directories on the static core library
+# Configure compile options, links, and include directories
 target_compile_definitions(nexusvoice_lib PUBLIC
     QT_DEPRECATED_WARNINGS
     VERSION_NUMBER="${VERSION_NUMBER}"
+    CPPHTTPLIB_OPENSSL_SUPPORT
 )
 
 target_link_libraries(nexusvoice_lib PUBLIC
     Qt::Core
     Qt::Gui
-    Qt::Multimedia
     Qt::Network
     Qt::Quick
     Qt::QuickControls2
 )
 target_include_directories(nexusvoice_lib PUBLIC core)
+
+find_package(OpenSSL REQUIRED)
+target_link_libraries(nexusvoice_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 if(UNIX AND NOT IOS)
     target_link_libraries(nexusvoice_lib PUBLIC
@@ -243,6 +243,7 @@ endif()
 if(APPLE)
     target_link_libraries(nexusvoice_lib PUBLIC
         "-framework AVFoundation"
+        "-framework Security"
     )
 endif()
 
@@ -282,6 +283,7 @@ if(NOT IOS)
     target_sources(nexusvoice_lib PUBLIC
         core/serialambe.cpp core/serialambe.h
         core/serialmodem.cpp core/serialmodem.h
+        core/posix_serial.cpp core/posix_serial.h
     )
 endif()
 

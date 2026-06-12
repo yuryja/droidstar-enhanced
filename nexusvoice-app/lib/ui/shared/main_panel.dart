@@ -40,6 +40,7 @@ class _NvMainPanelState extends State<NvMainPanel> {
   }
 
   void _onControllerChanged() {
+    // Retry loading hosts if they were empty at initState time
     if (_hosts.isEmpty) {
       final list = NvController.instance.getHosts();
       if (list.isNotEmpty) {
@@ -68,7 +69,8 @@ class _NvMainPanelState extends State<NvMainPanel> {
 
   void _handleConnectToggle() {
     final status = NvController.instance.connectionStatus;
-    if (status == 2 || status == 1) {
+    // Disconnect if any non-idle state
+    if (status != 0) {
       NvController.instance.disconnect();
     } else {
       NvController.instance.processModeChange(_selectedMode);
@@ -92,6 +94,8 @@ class _NvMainPanelState extends State<NvMainPanel> {
       listenable: NvController.instance,
       builder: (context, _) {
         final status = NvController.instance.connectionStatus;
+        // Status codes from droidstar.cpp on_status_changed:
+        // 0 = Disconnected, 1 = Connecting, 2 = Connected, 5 = Error
         final isConnected = status == 2;
         final isConnecting = status == 1;
 
@@ -483,8 +487,8 @@ class _NvMainPanelState extends State<NvMainPanel> {
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: NvController.instance.connectionStatus == 2 
-                      ? const Color(0xFF00FF87) 
+                  color: NvController.instance.connectionStatus == 2
+                      ? const Color(0xFF00FF87)
                       : Colors.transparent,
                   shape: BoxShape.circle,
                 ),

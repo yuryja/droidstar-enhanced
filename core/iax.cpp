@@ -145,7 +145,7 @@ void IAX::send_calltoken_request()
     out.append(IAX_IE_CALLTOKEN);
     out.append('\x00');
 
-    m_udp->writeDatagram(out, m_address, m_port);
+    m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -199,7 +199,7 @@ void IAX::send_call()
 		out.append(m_callingname.toUtf8(), m_callingname.size());
 	} else {
 		out.append(m_modeinfo.callsign.size());
-		out.append(m_modeinfo.callsign.toUtf8(), m_modeinfo.callsign.size());
+		out.append(QByteArray::fromStdString(m_modeinfo.callsign), m_modeinfo.callsign.size());
 	}
 	out.append(IAX_IE_USERNAME);
 	out.append(m_username.size());
@@ -214,7 +214,7 @@ void IAX::send_call()
     out.append(m_calltoken.size());
     out.append(m_calltoken);
 	m_timestamp = QDateTime::currentMSecsSinceEpoch();
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -246,7 +246,7 @@ void IAX::send_call_auth()
 	out.append(IAX_IE_MD5_RESULT);
 	out.append(result.toHex().size());
 	out.append(result.toHex());
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -275,7 +275,7 @@ void IAX::send_dtmf(QByteArray dtmf)
 		out.append(m_iseq);
 		out.append(AST_FRAME_DTMF);
 		out.append(dtmf.data()[i]);
-		m_udp->writeDatagram(out, m_address, m_port);
+		m_udp->write((const uint8_t*)out.constData(), out.size());
 
         if(m_debug){
             QDebug debug = qDebug();
@@ -303,7 +303,7 @@ void IAX::send_radio_key(bool key)
 	out.append(m_iseq);
 	out.append(AST_FRAME_CONTROL);
 	out.append(key ? AST_CONTROL_KEY : AST_CONTROL_UNKEY);
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -318,6 +318,12 @@ void IAX::send_radio_key(bool key)
 
 void IAX::send_ping()
 {
+	auto now = std::chrono::steady_clock::now();
+	auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_reg_time).count();
+	if (m_regreq && elapsed >= m_reg_interval_ms) {
+		m_last_reg_time = now;
+		send_calltoken_request();
+	}
 /*
 	QByteArray out;
 	uint16_t scall = htons(m_scallno | 0x8000);
@@ -331,7 +337,7 @@ void IAX::send_ping()
 	out.append(m_iseq);
 	out.append(AST_FRAME_IAX);
 	out.append(IAX_COMMAND_PING);
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -345,7 +351,7 @@ void IAX::send_ping()
 */
     if(++m_watchdog > 6){
         m_modeinfo.status = TIMEOUT;
-        emit update(m_modeinfo);
+        notify_update(m_modeinfo);
     }
 }
 
@@ -388,7 +394,7 @@ void IAX::send_pong(uint32_t ts)
 	out.append(IAX_IE_RR_OOO);
 	out.append(sizeof(ooo));
 	out.append((char *)&ooo, sizeof(ooo));
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -421,7 +427,7 @@ void IAX::send_ack(uint16_t scall, uint16_t dcall, uint8_t oseq, uint8_t iseq, u
 	out.append(iseq);
 	out.append(AST_FRAME_IAX);
 	out.append(IAX_COMMAND_ACK);
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -449,7 +455,7 @@ void IAX::send_lag_response(uint32_t ts)
 	out.append(m_iseq);
 	out.append(AST_FRAME_IAX);
 	out.append(IAX_COMMAND_LAGRP);
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -481,7 +487,7 @@ void IAX::send_voice_frame(int16_t *f)
 		out.append(ulaw_encode(f[i]));
 	}
 
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -543,7 +549,7 @@ void IAX::send_registration(uint16_t dcall)
         out.append(m_calltoken.size());
         out.append(m_calltoken);
     }
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -573,7 +579,7 @@ void IAX::send_disconnect()
 	out.append(IAX_IE_CAUSE);
 	out.append(bye.size());
 	out.append(bye.toUtf8(), bye.size());
-	m_udp->writeDatagram(out, m_address, m_port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -586,41 +592,34 @@ void IAX::send_disconnect()
     }
 }
 
-void IAX::hostname_lookup(QHostInfo i)
+void IAX::on_network_connected()
 {
-	if (!i.addresses().isEmpty()) {
-		m_address = i.addresses().first();
-		m_udp = new QUdpSocket(this);
-		m_regtimer = new QTimer();
-		connect(m_udp, SIGNAL(readyRead()), this, SLOT(process_udp()));
-		if (m_wt) {
-            m_regreq = false;
-		} else {
-            m_regreq = true;
-            connect(m_regtimer, SIGNAL(timeout()), this, SLOT(send_calltoken_request()));
-            //send_registration(0);
-			m_regtimer->start(60000);
-		}
-        send_calltoken_request();
-		m_timestamp = QDateTime::currentMSecsSinceEpoch();
+	m_last_reg_time = std::chrono::steady_clock::now();
+	if (m_wt) {
+		m_regreq = false;
+	} else {
+		m_regreq = true;
 	}
+	send_calltoken_request();
+	m_timestamp = QDateTime::currentMSecsSinceEpoch();
 }
 
 void IAX::send_connect()
 {
 	m_modeinfo.status = CONNECTING;
 	qDebug() << "lookup IP = " << m_host << ":" << m_port;
-	QHostInfo::lookupHost(m_host, this, SLOT(hostname_lookup(QHostInfo)));
+	if (m_udp) { delete m_udp; m_udp = nullptr; }
+	m_udp = new UdpSocket();
+	if (!m_udp->create(m_ipv6) || !m_udp->setNonBlocking(true) || !m_udp->connectTo(m_host.toStdString(), m_port)) {
+		m_modeinfo.status = DISCONNECTED;
+		return;
+	}
+	on_network_connected();
 }
 
-void IAX::process_udp()
+void IAX::on_network_read(const uint8_t* data, int len)
 {
-	QByteArray buf;
-	QHostAddress sender;
-	quint16 senderPort;
-
-	buf.resize(m_udp->pendingDatagramSize());
-	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
+	QByteArray buf(reinterpret_cast<const char*>(data), len);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -803,9 +802,7 @@ void IAX::process_udp()
 			m_audioq.append(ulaw_decode(buf.data()[12+i]));
 		}
 		send_voice_frame(zeropcm);
-		if(!m_txtimer->isActive()){
-			m_txtimer->start(19);
-		}
+		start_tx_timer(19);
 	}
 	else if( (buf.data()[0] & 0x80) &&
 		(buf.data()[10] == AST_FRAME_TEXT) )
@@ -846,31 +843,26 @@ void IAX::process_udp()
 			}
 		}
 	}
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
 void IAX::connected() {
-    m_regreq = true;
+	m_regreq = true;
 	m_modeinfo.status = CONNECTED_RW;
-	m_txtimer = new QTimer();
-	connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-	m_rxtimer = new QTimer();
-	connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
-	m_rxtimer->start(19);
-    m_ping_timer = new QTimer();
-    connect(m_ping_timer, SIGNAL(timeout()), this, SLOT(send_ping()));
-    m_ping_timer->start(10000);
+	start_rx_timer(20);
+	start_tx_timer(19);
+	start_ping_timer(8000);
 	m_audio = new AudioEngine(m_audioin, m_audioout);
 	m_audio->init();
 	m_audio->start_playback();
 	m_audio->set_input_buffer_size(640);
 	m_audio->start_capture();
-	//m_txtimer->start(19);
 	m_modeinfo.sw_vocoder_loaded = true;
 }
 
 void IAX::process_rx_data()
 {
+	poll_network();
 	int16_t pcm[160];
 
 	if(m_audioq.size() > 160){
@@ -878,7 +870,7 @@ void IAX::process_rx_data()
 			pcm[i] = (qreal)m_audioq.dequeue(); // * m_rxgain;
 		}
 		m_audio->write(pcm, 160);
-		emit update_output_level(m_audio->level());
+		notify_output_level(m_audio->level());
 	}
 	else return;
 }
@@ -903,13 +895,13 @@ void IAX::start_tx()
 	m_tx = true;
 #ifdef USE_FLITE
 	if(m_ttsid == 1){
-		tts_audio = flite_text_to_wave(m_ttstext.toStdString().c_str(), voice_kal);
+		tts_audio = flite_text_to_wave(m_ttstext.c_str(), voice_kal);
 	}
 	else if(m_ttsid == 2){
-		tts_audio = flite_text_to_wave(m_ttstext.toStdString().c_str(), voice_awb);
+		tts_audio = flite_text_to_wave(m_ttstext.c_str(), voice_awb);
 	}
 	else if(m_ttsid == 3){
-		tts_audio = flite_text_to_wave(m_ttstext.toStdString().c_str(), voice_slt);
+		tts_audio = flite_text_to_wave(m_ttstext.c_str(), voice_slt);
 	}
 #endif
 }
@@ -956,7 +948,7 @@ void IAX::transmit()
 		out.append(ulaw_encode(pcm[i]));
 	}
 	if (!m_wt || m_tx) {
-		m_udp->writeDatagram(out, m_address, m_port);
+		m_udp->write((const uint8_t*)out.constData(), out.size());
 	}
 #ifdef DEBUG
 	fprintf(stderr, "SEND: ");
@@ -971,13 +963,10 @@ void IAX::transmit()
 void IAX::deleteLater()
 {
 	if(m_modeinfo.status == CONNECTED_RW){
-		m_udp->disconnect();
-		m_txtimer->stop();
-		m_rxtimer->stop();
-		m_regtimer->stop();
+		stop_timers();
 		send_disconnect();
 		//delete m_audio;
 	}
 	//m_cnt = 0;
-	QObject::deleteLater();
+	delete this;
 }

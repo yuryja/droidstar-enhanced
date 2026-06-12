@@ -1,107 +1,71 @@
-/*
-	Copyright (C) 2019-2021 Doug McLain
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
 #ifndef AUDIOENGINE_H
 #define AUDIOENGINE_H
 
-#include <QObject>
-#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
-#include <QAudio>
-#include <QAudioFormat>
-#include <QAudioInput>
-#else
-#include <QAudioDevice>
-#include <QAudioSink>
-#include <QAudioSource>
-#include <QMediaDevices>
-#endif
-#include <QAudioOutput>
-#include <QStringList>
-#include <QQueue>
+#include <string>
+#include <vector>
+#include <deque>
+#include <mutex>
+#include <cstdint>
+#include <atomic>
+#include <cstring>
+
+struct ma_device;
+struct ma_device_config;
 
 #define AUDIO_OUT 1
 #define AUDIO_IN  0
 
-class AudioEngine : public QObject
+class AudioEngine
 {
-	Q_OBJECT
 public:
-	//explicit AudioEngine(QObject *parent = nullptr);
-	AudioEngine(QString in, QString out);
-	~AudioEngine();
-	static QStringList discover_audio_devices(uint8_t d);
-	void init();
-	void start_capture();
-	void stop_capture();
-	void start_playback();
-	void stop_playback();
-	void write(int16_t *, size_t);
-	void set_output_buffer_size(uint32_t b) { m_out->setBufferSize(b); }
-	void set_input_buffer_size(uint32_t b) { if(m_in != nullptr) m_in->setBufferSize(b); }
-	void set_output_volume(qreal v){ m_out->setVolume(v); }
-	void set_input_volume(qreal v){ if(m_in != nullptr) m_in->setVolume(v); }
-	void set_agc(bool agc) { m_agc = agc; }
-	bool frame_available() const { return m_audioinq.size() >= 320; }
-	uint16_t read(int16_t *, int);
-	uint16_t read(int16_t *);
-	uint16_t level() const { return m_maxlevel; }
-signals:
+    AudioEngine(const std::string& in, const std::string& out);
+    ~AudioEngine();
+    static std::vector<std::string> discover_audio_devices(uint8_t d);
+    void init();
+    void start_capture();
+    void stop_capture();
+    void start_playback();
+    void stop_playback();
+    void write(const int16_t*, size_t);
+    uint16_t read(int16_t*, int);
+    uint16_t read(int16_t*);
+    void set_output_buffer_size(uint32_t b) { m_outputBufferSize = b; }
+    void set_input_buffer_size(uint32_t b) { m_inputBufferSize = b; }
+    void set_output_volume(double v) { m_outputVolume = v; }
+    void set_input_volume(double v) { m_inputVolume = v; }
+    void set_agc(bool agc) { m_agc = agc; }
+    bool frame_available() const { std::lock_guard<std::mutex> lock(m_captureMutex); return m_captureq.size() >= 320; }
+    uint16_t level() const { return m_maxlevel; }
 
 private:
-	QString m_outputdevice;
-	QString m_inputdevice;
-#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
-	QAudioOutput *m_out;
-	QAudioInput *m_in;
-#else
-	QAudioSink *m_out;
-	QAudioSource *m_in;
-#endif
-	QIODevice *m_outdev;
-	QIODevice *m_indev = nullptr;
-	QQueue<int16_t> m_audioinq;
-	uint16_t m_maxlevel = 0;
-	bool m_agc = true;
-	float m_srm; // sample rate multiplier for macOS HACK
+    static void playback_callback_data(ma_device* pDevice, void* pOutput, const void* pInput, uint32_t frameCount);
+    static void capture_callback_data(ma_device* pDevice, void* pOutput, const void* pInput, uint32_t frameCount);
 
-	float m_audio_out_temp_buf[320];   //!< output of decoder
-	float *m_audio_out_temp_buf_p;
+    std::string m_outputdevice;
+    std::string m_inputdevice;
 
-	//float m_audio_out_float_buf[1120]; //!< output of upsampler - 1 frame of 160 samples upampled up to 7 times
-	//float *m_audio_out_float_buf_p;
+    ma_device* m_playbackDevice = nullptr;
+    ma_device* m_captureDevice = nullptr;
 
-	float m_aout_max_buf[200];
-	float *m_aout_max_buf_p;
-	int m_aout_max_buf_idx;
+    mutable std::mutex m_playbackMutex;
+    std::deque<int16_t> m_playbackq;
 
-	//short m_audio_out_buf[2*48000];    //!< final result - 1s of L+R S16LE samples
-	//short *m_audio_out_buf_p;
-	//int   m_audio_out_nb_samples;
-	//int   m_audio_out_buf_size;
-	//int   m_audio_out_idx;
-	//int   m_audio_out_idx2;
+    mutable std::mutex m_captureMutex;
+    std::deque<int16_t> m_captureq;
 
-	float m_aout_gain;
-	float m_volume;
+    std::atomic<uint16_t> m_maxlevel{0};
+    uint32_t m_outputBufferSize = 1280;
+    uint32_t m_inputBufferSize = 640;
+    std::atomic<double> m_outputVolume{1.0};
+    std::atomic<double> m_inputVolume{1.0};
+    bool m_agc = true;
 
-private slots:
-	void input_data_received();
-	void process_audio(int16_t *pcm, size_t s);
-	void handleStateChanged(QAudio::State newState);
+    float m_aout_gain = 100.0f;
+    float m_aout_max_buf[200]{};
+    int m_aout_max_buf_idx = 0;
+    float m_audio_out_temp_buf[320]{};
+
+    void process_audio(int16_t* pcm, size_t s);
 };
 
-#endif // AUDIOENGINE_H
+#endif

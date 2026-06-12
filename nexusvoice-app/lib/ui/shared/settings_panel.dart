@@ -36,7 +36,46 @@ class _NvSettingsPanelState extends State<NvSettingsPanel> {
   @override
   void initState() {
     super.initState();
+    NvController.instance.addListener(_onNvChanged);
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    NvController.instance.removeListener(_onNvChanged);
+    _callsignCtrl.dispose();
+    _dmrIdCtrl.dispose();
+    _essidCtrl.dispose();
+    _bmPwdCtrl.dispose();
+    _tgifPwdCtrl.dispose();
+    _aslPwdCtrl.dispose();
+    _latCtrl.dispose();
+    _lonCtrl.dispose();
+    _locCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onNvChanged() {
+    // Only refresh device lists if they haven't loaded yet (avoids FFI
+    // calls on every 50ms pump tick which causes heavy CPU/memory pressure)
+    if (_playbacks.isEmpty || _captures.isEmpty || _vocoders.isEmpty) {
+      final nv = NvController.instance;
+      final newPlaybacks = nv.getPlaybacks();
+      final newCaptures = nv.getCaptures();
+      final newVocoders = nv.getVocoders();
+      if (newPlaybacks.isNotEmpty || newCaptures.isNotEmpty || newVocoders.isNotEmpty) {
+        setState(() {
+          if (newPlaybacks.isNotEmpty) _playbacks = newPlaybacks;
+          if (newCaptures.isNotEmpty) _captures = newCaptures;
+          if (newVocoders.isNotEmpty) _vocoders = newVocoders;
+          // Select first available if nothing was saved
+          _selectedPlayback ??= _playbacks.isNotEmpty ? _playbacks.first : null;
+          _selectedCapture ??= _captures.isNotEmpty ? _captures.first : null;
+          _selectedVocoder ??= _vocoders.isNotEmpty ? _vocoders.first : null;
+        });
+      }
+    }
   }
 
   void _loadSettings() {

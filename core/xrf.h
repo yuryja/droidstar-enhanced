@@ -22,32 +22,30 @@
 
 class XRF : public Mode
 {
-	Q_OBJECT
 public:
 	XRF();
 	~XRF();
 	uint8_t * get_frame(uint8_t *ambe);
-private:
-	QString m_txusrtxt;
+protected:
+	std::string m_txusrtxt;
 	uint8_t packet_size;
 	bool m_sd_sync = false;
 	int m_sd_seq = 0;
 	char m_user_data[21]{};
 	uint16_t m_txstreamid = 0;
 	bool m_sendheader = true;
-private slots:
 	void toggle_tx(bool);
 	void start_tx();
-	void format_callsign(QString &);
-	void process_udp();
+	void format_callsign(std::string &);
 	void process_rx_data();
 	void process_modem_data(QByteArray d);
 	void get_ambe();
 	void send_ping();
 	void send_disconnect();
 	void transmit();
-	void hostname_lookup(QHostInfo i);
-	void usrtxt_changed(QString t) { m_txusrtxt = t; }
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
+	void usrtxt_changed(std::string t) { m_txusrtxt = t; }
 	void send_frame(uint8_t *);
 };
 

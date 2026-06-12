@@ -30,15 +30,9 @@ XRF::~XRF()
 {
 }
 
-void XRF::process_udp()
+void XRF::on_network_read(const uint8_t* data, int len)
 {
-	QByteArray buf;
-	QHostAddress sender;
-	quint16 senderPort;
-
-
-	buf.resize(m_udp->pendingDatagramSize());
-	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
+    QByteArray buf(reinterpret_cast<const char*>(data), len);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -60,13 +54,9 @@ void XRF::process_udp()
 	if( (m_modeinfo.status == CONNECTING) && (buf.size() == 14) && (!memcmp(buf.data()+10, "ACK", 3)) ){
 		m_modeinfo.status = CONNECTED_RW;
 		m_modeinfo.sw_vocoder_loaded = load_vocoder_plugin();
-		m_rxtimer = new QTimer();
-		connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
-		m_txtimer = new QTimer();
-		connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-		m_ping_timer = new QTimer();
-		connect(m_ping_timer, SIGNAL(timeout()), this, SLOT(send_ping()));
-		m_ping_timer->start(3000);
+		start_rx_timer(20);
+		start_tx_timer(19);
+		start_ping_timer(1000);
 		m_audio = new AudioEngine(m_audioin, m_audioout);
 		m_audio->init();
 	}
@@ -81,22 +71,19 @@ void XRF::process_udp()
 		if(!m_tx && (m_modeinfo.streamid == 0)){
 			char temp[9];
 			memcpy(temp, buf.data() + 18, 8); temp[8] = '\0';
-			m_modeinfo.gw2 = QString(temp);
+			m_modeinfo.gw2 = temp;
 			memcpy(temp, buf.data() + 26, 8); temp[8] = '\0';
-			m_modeinfo.gw = QString(temp);
+			m_modeinfo.gw = temp;
 			memcpy(temp, buf.data() + 34, 8); temp[8] = '\0';
-			m_modeinfo.dst = QString(temp);
+			m_modeinfo.dst = temp;
 			memcpy(temp, buf.data() + 42, 8); temp[8] = '\0';
-			m_modeinfo.src = QString(temp);
-			QString h = m_refname + " " + m_module;
+			m_modeinfo.src = temp;
+			QString h = QString::fromStdString(m_refname) + " " + m_module;
 			m_modeinfo.streamid = streamid;
 			m_modeinfo.stream_state = STREAM_NEW;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 
-			if(!m_rxtimer->isActive()){
-				if (m_audio) m_audio->start_playback();
-				m_rxtimer->start(m_rxtimerint);
-			}
+			if (m_audio) m_audio->start_playback();
 
 			if(m_modem){
 				uint8_t out[44];
@@ -106,10 +93,10 @@ void XRF::process_udp()
 				out[3] = 0x40;
 				out[4] = 0;
 				out[5] = 0;
-				memcpy(out + 6, m_modeinfo.gw2.toLocal8Bit().data(), 8);
-				memcpy(out + 14, m_modeinfo.gw.toLocal8Bit().data(), 8);
-				memcpy(out + 22, m_modeinfo.dst.toLocal8Bit().data(), 8);
-				memcpy(out + 30, m_modeinfo.src.toLocal8Bit().data(), 8);
+				memcpy(out + 6, m_modeinfo.gw2.c_str(), 8);
+				memcpy(out + 14, m_modeinfo.gw.c_str(), 8);
+				memcpy(out + 22, m_modeinfo.dst.c_str(), 8);
+				memcpy(out + 30, m_modeinfo.src.c_str(), 8);
 				memcpy(out + 38, buf.data() + 50, 4);
 				CCRC::addCCITT161((uint8_t *)out + 3, 41);
 				for(int i = 0; i < 44; ++i){
@@ -118,8 +105,8 @@ void XRF::process_udp()
 				//if (m_modem) m_modem->write(out);
 			}
 
-			qDebug() << "New stream from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16);
-			emit update(m_modeinfo);
+			qDebug() << "New stream from " << QString::fromStdString(m_modeinfo.src) << " to " << QString::fromStdString(m_modeinfo.dst) << " id == " << QString::number(m_modeinfo.streamid, 16);
+			notify_update(m_modeinfo);
 		}
 		m_rxwatchdog = 0;
 	}
@@ -130,16 +117,10 @@ void XRF::process_udp()
 		if( (streamid != m_modeinfo.streamid) ){
 			qDebug() << "New data packet received before timeout";
 			m_modeinfo.streamid = streamid;
-			if(!m_rxtimer->isActive()){
-				if (m_audio) m_audio->start_playback();
-				m_rxtimer->start(m_rxtimerint);
-			}
+			if (m_audio) m_audio->start_playback();
 		}
 		if(!m_tx && ( (m_modeinfo.stream_state == STREAM_LOST) || (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_IDLE) )){
-			if(!m_rxtimer->isActive()){
-				if (m_audio) m_audio->start_playback();
-				m_rxtimer->start(m_rxtimerint);
-			}
+			if (m_audio) m_audio->start_playback();
 			m_modeinfo.stream_state = STREAM_NEW;
 		}
 		else{
@@ -153,7 +134,7 @@ void XRF::process_udp()
 			m_rxwatchdog = 0;
 			m_modeinfo.stream_state = STREAM_END;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-			emit update(m_modeinfo);
+			notify_update(m_modeinfo);
 			m_modeinfo.streamid = 0;
 			if(m_modem){
 				m_rxmodemq.append(0xe0);
@@ -219,48 +200,42 @@ void XRF::process_udp()
 			m_user_data[20] = '\0';
 			m_sd_sync = 0;
 			m_sd_seq = 0;
-			m_modeinfo.usertxt = QString(m_user_data);
+			m_modeinfo.usertxt = m_user_data;
 		}
 		for(int i = 0; i < 9; ++i){
 			m_rxcodecq.append(buf.data()[15+i]);
 		}
 	}
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
-void XRF::hostname_lookup(QHostInfo i)
-{
-	if (!i.addresses().isEmpty()) {
-		QByteArray out;
-		out.append(m_modeinfo.callsign.toUtf8());
-		out.append(8 - m_modeinfo.callsign.size(), ' ');
-		out.append(m_module);
-		out.append(m_module);
-		out.append(11);
-		m_address = i.addresses().first();
-		m_udp = new QUdpSocket(this);
-		connect(m_udp, SIGNAL(readyRead()), this, SLOT(process_udp()));
-		m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+void XRF::on_network_connected() {
+    QByteArray out;
+    out.append(QByteArray::fromStdString(m_modeinfo.callsign));
+    out.append(8 - m_modeinfo.callsign.size(), ' ');
+    out.append(m_module);
+    out.append(m_module);
+    out.append(11);
+    m_udp->write((const uint8_t*)out.constData(), out.size());
 
-        if(m_debug){
-            QDebug debug = qDebug();
-            debug.noquote();
-            QString s = "CONN:";
-            for(int i = 0; i < out.size(); ++i){
-                s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
-            }
-            debug << s;
+    if(m_debug){
+        QDebug debug = qDebug();
+        debug.noquote();
+        QString s = "CONN:";
+        for(int i = 0; i < out.size(); ++i){
+            s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
         }
-	}
+        debug << s;
+    }
 }
 
 void XRF::send_ping()
 {
 	QByteArray out;
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(8 - m_modeinfo.callsign.size(), ' ');
 	out.append('\x00');
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -276,12 +251,12 @@ void XRF::send_ping()
 void XRF::send_disconnect()
 {
 	QByteArray out;
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(8 - m_modeinfo.callsign.size(), ' ');
 	out.append(m_module);
 	out.append(' ');
 	out.append('\x00');
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -294,20 +269,36 @@ void XRF::send_disconnect()
     }
 }
 
-void XRF::format_callsign(QString &s)
+void XRF::format_callsign(std::string &s)
 {
-	QStringList l = s.simplified().split(' ');
-
-	if(l.size() > 1){
-		s = l.at(0).simplified();
-		while(s.size() < 7){
-			s.append(' ');
-		}
-		s += l.at(1).simplified();
+	size_t start = s.find_first_not_of(' ');
+	if (start == std::string::npos) {
+		s = std::string(8, ' ');
+		return;
 	}
-	else{
-		while(s.size() < 8){
-			s.append(' ');
+	size_t end = s.find_last_not_of(' ');
+	std::string trimmed = s.substr(start, end - start + 1);
+
+	size_t space_pos = trimmed.find(' ');
+	if (space_pos != std::string::npos) {
+		std::string part1 = trimmed.substr(0, space_pos);
+		size_t part2_start = trimmed.find_first_not_of(' ', space_pos);
+		if (part2_start != std::string::npos) {
+			std::string part2 = trimmed.substr(part2_start);
+			if (part1.size() < 7) {
+				part1.append(7 - part1.size(), ' ');
+			}
+			s = part1 + part2;
+		} else {
+			s = part1;
+			if (s.size() < 8) {
+				s.append(8 - s.size(), ' ');
+			}
+		}
+	} else {
+		s = trimmed;
+		if (s.size() < 8) {
+			s.append(8 - s.size(), ' ');
 		}
 	}
 }
@@ -323,9 +314,9 @@ void XRF::process_modem_data(QByteArray d)
 		format_callsign(m_txrptr2);
 		cs[8] = 0;
 		memcpy(cs, p_frame + 22, 8);
-		m_txurcall = QString(cs);
+		m_txurcall = std::string(cs);
 		memcpy(cs, p_frame + 30, 8);
-		m_txmycall = QString(cs);
+		m_txmycall = std::string(cs);
 		m_modeinfo.stream_state = TRANSMITTING_MODEM;
 		m_tx = true;
 	}
@@ -429,10 +420,10 @@ void XRF::send_frame(uint8_t *ambe)
 		txdata[15] = 0x00;
 		txdata[16] = 0x00;
 		txdata[17] = 0x00;
-        txdata.replace(18, 8, m_txrptr2.toLocal8Bit().data());
-        txdata.replace(26, 8, m_txrptr1.toLocal8Bit().data());
-        txdata.replace(34, 8, m_txurcall.toLocal8Bit().data());
-        txdata.replace(42, 8, m_txmycall.toLocal8Bit().data());
+        txdata.replace(18, 8, m_txrptr2.c_str());
+        txdata.replace(26, 8, m_txrptr1.c_str());
+        txdata.replace(34, 8, m_txurcall.c_str());
+        txdata.replace(42, 8, m_txmycall.c_str());
         txdata.replace(50, 4, "AMBE");
         CCRC::addCCITT161((uint8_t *)txdata.data() + 15, 41);
 
@@ -472,43 +463,43 @@ void XRF::send_frame(uint8_t *ambe)
 			break;
 		case 1:
 			txdata[24] = 0x40 ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[0] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[1] ^ 0x93;
+			txdata[25] = m_txusrtxt[0] ^ 0x4f;
+			txdata[26] = m_txusrtxt[1] ^ 0x93;
 			break;
 		case 2:
-			txdata[24] = m_txusrtxt.toLocal8Bit().data()[2] ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[3] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[4] ^ 0x93;
+			txdata[24] = m_txusrtxt[2] ^ 0x70;
+			txdata[25] = m_txusrtxt[3] ^ 0x4f;
+			txdata[26] = m_txusrtxt[4] ^ 0x93;
 			break;
 		case 3:
 			txdata[24] = 0x41 ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[5] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[6] ^ 0x93;
+			txdata[25] = m_txusrtxt[5] ^ 0x4f;
+			txdata[26] = m_txusrtxt[6] ^ 0x93;
 			break;
 		case 4:
-			txdata[24] = m_txusrtxt.toLocal8Bit().data()[7] ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[8] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[9] ^ 0x93;
+			txdata[24] = m_txusrtxt[7] ^ 0x70;
+			txdata[25] = m_txusrtxt[8] ^ 0x4f;
+			txdata[26] = m_txusrtxt[9] ^ 0x93;
 			break;
 		case 5:
 			txdata[24] = 0x42 ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[10] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[11] ^ 0x93;
+			txdata[25] = m_txusrtxt[10] ^ 0x4f;
+			txdata[26] = m_txusrtxt[11] ^ 0x93;
 			break;
 		case 6:
-			txdata[24] = m_txusrtxt.toLocal8Bit().data()[12] ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[13] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[14] ^ 0x93;
+			txdata[24] = m_txusrtxt[12] ^ 0x70;
+			txdata[25] = m_txusrtxt[13] ^ 0x4f;
+			txdata[26] = m_txusrtxt[14] ^ 0x93;
 			break;
 		case 7:
 			txdata[24] = 0x43 ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[15] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[16] ^ 0x93;
+			txdata[25] = m_txusrtxt[15] ^ 0x4f;
+			txdata[26] = m_txusrtxt[16] ^ 0x93;
 			break;
 		case 8:
-			txdata[24] = m_txusrtxt.toLocal8Bit().data()[17] ^ 0x70;
-			txdata[25] = m_txusrtxt.toLocal8Bit().data()[18] ^ 0x4f;
-			txdata[26] = m_txusrtxt.toLocal8Bit().data()[19] ^ 0x93;
+			txdata[24] = m_txusrtxt[17] ^ 0x70;
+			txdata[25] = m_txusrtxt[18] ^ 0x4f;
+			txdata[26] = m_txusrtxt[19] ^ 0x93;
 			break;
 		default:
 			txdata[24] = 0x16;
@@ -527,7 +518,7 @@ void XRF::send_frame(uint8_t *ambe)
 		m_txstreamid = 0;
 		m_modeinfo.streamid = 0;
 		m_sendheader = 1;
-		m_txtimer->stop();
+		stop_timers();
 
 		if((m_ttsid == 0) && (m_modeinfo.stream_state == TRANSMITTING) ){
 			if (m_audio) m_audio->stop_capture();
@@ -537,9 +528,9 @@ void XRF::send_frame(uint8_t *ambe)
 		m_modeinfo.stream_state = STREAM_IDLE;
 	}
 
-	m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
-	if (m_audio) emit update_output_level(m_audio->level() * 2);
-	update(m_modeinfo);
+	m_udp->write((const uint8_t*)txdata.constData(), txdata.size());
+	if (m_audio) notify_output_level(m_audio->level() * 2);
+	notify_update(m_modeinfo);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -557,7 +548,7 @@ void XRF::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[9];
 
-	if(m_ambedev && m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->getAmbe(ambe)){
 		for(int i = 0; i < 9; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -567,6 +558,7 @@ void XRF::get_ambe()
 
 void XRF::process_rx_data()
 {
+    poll_network();
 	int16_t pcm[160];
 	uint8_t ambe[9];
 
@@ -575,7 +567,7 @@ void XRF::process_rx_data()
 		m_rxwatchdog = 0;
 		m_modeinfo.stream_state = STREAM_LOST;
 		m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 		m_modeinfo.streamid = 0;
 	}
 
@@ -600,9 +592,9 @@ void XRF::process_rx_data()
 #if !defined(Q_OS_IOS)
 			if (m_ambedev) m_ambedev->decode(ambe);
 
-			if(m_ambedev && m_ambedev->get_audio(pcm)){
+			if(m_ambedev && m_ambedev->getAudio(pcm)){
 				if (m_audio) m_audio->write(pcm, 160);
-				if (m_audio) emit update_output_level(m_audio->level());
+				if (m_audio) notify_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -614,11 +606,11 @@ void XRF::process_rx_data()
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
 			if (m_audio) m_audio->write(pcm, 160);
-			if (m_audio) emit update_output_level(m_audio->level());
+			if (m_audio) notify_output_level(m_audio->level());
 		}
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
-		m_rxtimer->stop();
+		stop_timers();
 		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;

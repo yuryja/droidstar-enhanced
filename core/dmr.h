@@ -24,21 +24,20 @@
 
 class DMR : public Mode
 {
-	Q_OBJECT
 public:
 	DMR();
 	~DMR();
 	void set_dmr_params(uint8_t essid, QString password, QString lat, QString lon, QString location, QString desc, QString freq, QString url, QString swid, QString pkid, QString options);
 	uint8_t * get_eot();
-private slots:
-	void process_udp();
+protected:
 	void process_rx_data();
 	void process_modem_data(QByteArray);
 	void get_ambe();
 	void send_ping();
 	void send_disconnect();
 	void transmit();
-	void hostname_lookup(QHostInfo i);
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
 	void dmr_tgid_changed(int id) { m_txdstid = id; }
     void dmrpc_state_changed(int p){m_flco = p ? FLCO_USER_USER : FLCO_GROUP; m_txflco = m_flco; }
     void cc_changed(int cc) {m_txcc = cc;}

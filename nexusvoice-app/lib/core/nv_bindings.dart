@@ -7,12 +7,14 @@ typedef StatusCbNative = Void Function(Int32 statusCode, Pointer<Utf8> msg, Poin
 typedef DataCbNative = Void Function(Pointer<Utf8> label, Pointer<Utf8> value, Pointer<Void> userdata);
 typedef LogCbNative = Void Function(Pointer<Utf8> line, Pointer<Void> userdata);
 typedef FileDownloadedCbNative = Void Function(Pointer<Utf8> filename, Pointer<Void> userdata);
+typedef DevicesChangedCbNative = Void Function(Pointer<Void> userdata);
 
 // Dart equivalents of callback signatures
 typedef StatusCbDart = void Function(int statusCode, Pointer<Utf8> msg, Pointer<Void> userdata);
 typedef DataCbDart = void Function(Pointer<Utf8> label, Pointer<Utf8> value, Pointer<Void> userdata);
 typedef LogCbDart = void Function(Pointer<Utf8> line, Pointer<Void> userdata);
 typedef FileDownloadedCbDart = void Function(Pointer<Utf8> filename, Pointer<Void> userdata);
+typedef DevicesChangedCbDart = void Function(Pointer<Void> userdata);
 
 class NexusVoiceBindings {
   late final DynamicLibrary _lib;
@@ -108,6 +110,7 @@ class NexusVoiceBindings {
   late final void Function(Pointer<Void>, Pointer<NativeFunction<DataCbNative>>, Pointer<Void>) nvSetDataCb;
   late final void Function(Pointer<Void>, Pointer<NativeFunction<LogCbNative>>, Pointer<Void>) nvSetLogCb;
   late final void Function(Pointer<Void>, Pointer<NativeFunction<FileDownloadedCbNative>>, Pointer<Void>) nvSetFileDownloadedCb;
+  late final void Function(Pointer<Void>, Pointer<NativeFunction<DevicesChangedCbNative>>, Pointer<Void>) nvSetDevicesCb;
 
   // Memory & Logs
   late final void Function(Pointer<Void>, int, Pointer<Utf8>, Pointer<Utf8>, int, int, Pointer<Utf8>) nvSaveMemory;
@@ -241,6 +244,11 @@ class NexusVoiceBindings {
         Void Function(Pointer<Void>, Pointer<NativeFunction<FileDownloadedCbNative>>, Pointer<Void>),
         void Function(Pointer<Void>, Pointer<NativeFunction<FileDownloadedCbNative>>, Pointer<Void>)
     >('nv_set_file_downloaded_cb');
+
+    nvSetDevicesCb = _lib.lookupFunction<
+        Void Function(Pointer<Void>, Pointer<NativeFunction<DevicesChangedCbNative>>, Pointer<Void>),
+        void Function(Pointer<Void>, Pointer<NativeFunction<DevicesChangedCbNative>>, Pointer<Void>)
+    >('nv_set_devices_cb');
 
     // Memory & Logs
     nvSaveMemory = _lib.lookupFunction<

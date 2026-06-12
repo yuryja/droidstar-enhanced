@@ -1,120 +1,104 @@
-/*
-	Copyright (C) 2019-2021 Doug McLain
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
 #ifndef SERIALMODEM_H
 #define SERIALMODEM_H
 
-#include <QObject>
-#include <QSerialPort>
-#include <QString>
+#include <string>
+#include <deque>
+#include <functional>
+#include <cstdint>
+#include <vector>
 #include <QByteArray>
-#include <QMap>
-#ifdef Q_OS_ANDROID
-#include "androidserialport.h"
-#endif
-#include <QQueue>
-#include <QTimer>
+#include "posix_serial.h"
 
-class SerialModem : public QObject
+class SerialModem
 {
-	Q_OBJECT
 public:
-	SerialModem(QString);
-	~SerialModem();
-	void set_mode(QString);
-	void set_modem_flags(bool, bool, bool, bool, bool);
-	void set_modem_params(uint32_t, uint32_t, uint32_t, uint32_t, float, float, uint32_t, float, float, float, float, float, float, float, float);
-	static QMap<QString, QString>  discover_devices();
-	void connect_to_serial(QString);
-	QString get_mmdvm_version() const { return m_version; }
-	void write(QByteArray);
-	void set_cc(uint32_t);
-public slots:
-	void set_mode(uint8_t);
-private slots:
-	void process_serial();
-	void receive_serial(QByteArray);
-    void config_modem();
-	void process_modem();
-	void get_status_modem();
-	void set_freq();
-	void set_config();
+    SerialModem(const std::string& mode);
+    ~SerialModem();
+
+    void setMode(const std::string& m);
+    void setModemFlags(bool rxInvert, bool txInvert, bool pttInvert, bool useCOSAsLockout, bool duplex);
+    void setModemParams(uint32_t baudrate, uint32_t rxfreq, uint32_t txfreq, uint32_t txDelay,
+                        float rxLevel, float rfLevel, uint32_t ysfTXHang,
+                        float cwIdTXLevel, float dstarTXLevel, float dmrTXLevel,
+                        float ysfTXLevel, float p25TXLevel, float nxdnTXLevel,
+                        float pocsagTXLevel, float m17TXLevel);
+    bool connectToSerial(const std::string& port);
+    void disconnect();
+    std::string getVersion() const { return m_version; }
+    void write(const std::vector<uint8_t>& data);
+    void write(const QByteArray& data);
+    void setCC(uint32_t cc) { m_dmrColorCode = cc; }
+    void setMode(uint8_t m);
+    bool isConnected() const { return m_serial && m_serial->isOpen(); }
+
+    // Poll for incoming serial data (call from run_loop)
+    void poll();
+
+    std::function<void()> on_data_ready;
+    std::function<void(std::vector<uint8_t>)> on_modem_data_ready;
+    std::function<void(bool)> on_connected;
+    std::function<void()> on_modem_ready;
+
+    static std::vector<std::pair<std::string, std::string>> discoverDevices();
+
 private:
-#ifndef Q_OS_ANDROID
-	QSerialPort *m_serial = nullptr;
-#else
-	AndroidSerialPort *m_serial = nullptr;
-#endif
-	QString m_version;
-	uint8_t m_protocol = 0;
-	uint8_t m_configured = 0;
-	uint32_t m_baudrate = 0;
-	QTimer *m_modemtimer = nullptr;
-	QTimer *m_statustimer = nullptr;
-	uint8_t packet_size = 0;
-	QQueue<char> m_serialdata;
-	uint32_t m_rxfreq;
-	uint32_t m_txfreq;
-	uint32_t m_dmrColorCode;
-	bool m_ysfLoDev;
-	uint32_t m_ysfTXHang;
-	uint32_t m_p25TXHang;
-	uint32_t m_nxdnTXHang;
-	uint32_t m_m17TXHang;
-	bool m_duplex;
-	bool m_rxInvert;
-	bool m_txInvert;
-	bool m_pttInvert;
-	uint32_t m_txDelay;
-	uint32_t m_dmrDelay;
-	float m_rxLevel;
-	float m_rfLevel;
-	float m_cwIdTXLevel;
-	float m_dstarTXLevel;
-	float m_dmrTXLevel;
-	float m_ysfTXLevel;
-	float m_p25TXLevel;
-	float m_nxdnTXLevel;
-	float m_pocsagTXLevel;
-	float m_m17TXLevel;
-	float m_fmTXLevel;
-	float m_ax25TXLevel;
-	int   m_ax25RXTwist;
-	uint32_t m_ax25TXDelay;
-	uint32_t m_ax25SlotTime;
-	uint32_t m_ax25PPersist;
-	bool m_debug;
-	bool m_useCOSAsLockout;
-	bool m_dstarEnabled;
-	bool m_dmrEnabled;
-	bool m_ysfEnabled;
-	bool m_p25Enabled;
-	bool m_nxdnEnabled;
-	bool m_pocsagEnabled;
-	bool m_ax25Enabled;
-	bool m_m17Enabled;
-	bool m_fmEnabled;
-	int m_rxDCOffset;
-	int m_txDCOffset;	
-signals:
-	void data_ready();
-	void modem_data_ready(QByteArray);
-	void connected(bool);
-    void modem_ready();
+    PosixSerial *m_serial = nullptr;
+    std::string m_version;
+    uint8_t m_protocol = 0;
+    uint8_t m_configured = 0;
+    uint32_t m_baudrate = 0;
+    uint8_t m_packet_size = 0;
+    std::deque<uint8_t> m_serialdata;
+    uint32_t m_rxfreq = 0;
+    uint32_t m_txfreq = 0;
+    uint32_t m_dmrColorCode = 1;
+    bool m_ysfLoDev = false;
+    uint32_t m_ysfTXHang = 0;
+    uint32_t m_p25TXHang = 0;
+    uint32_t m_nxdnTXHang = 0;
+    uint32_t m_m17TXHang = 5;
+    bool m_duplex = false;
+    bool m_rxInvert = false;
+    bool m_txInvert = false;
+    bool m_pttInvert = false;
+    uint32_t m_txDelay = 0;
+    uint32_t m_dmrDelay = 0;
+    float m_rxLevel = 0;
+    float m_rfLevel = 0;
+    float m_cwIdTXLevel = 0;
+    float m_dstarTXLevel = 0;
+    float m_dmrTXLevel = 0;
+    float m_ysfTXLevel = 0;
+    float m_p25TXLevel = 0;
+    float m_nxdnTXLevel = 0;
+    float m_pocsagTXLevel = 0;
+    float m_m17TXLevel = 0;
+    float m_fmTXLevel = 0;
+    float m_ax25TXLevel = 0;
+    int m_ax25RXTwist = 0;
+    uint32_t m_ax25TXDelay = 0;
+    uint32_t m_ax25SlotTime = 0;
+    uint32_t m_ax25PPersist = 0;
+    bool m_debug = false;
+    bool m_useCOSAsLockout = false;
+    bool m_dstarEnabled = false;
+    bool m_dmrEnabled = false;
+    bool m_ysfEnabled = false;
+    bool m_p25Enabled = false;
+    bool m_nxdnEnabled = false;
+    bool m_pocsagEnabled = false;
+    bool m_ax25Enabled = false;
+    bool m_m17Enabled = false;
+    bool m_fmEnabled = false;
+    int m_rxDCOffset = 0;
+    int m_txDCOffset = 0;
+
+    void processSerial();
+    void processModem();
+    void getStatusModem();
+    void setFreq();
+    void setConfig();
+    void configModem();
 };
 
 #endif // SERIALMODEM_H

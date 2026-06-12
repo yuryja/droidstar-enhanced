@@ -39,7 +39,7 @@ extern cst_voice * register_cmu_us_awb(const char *);
 }
 #endif
 
-Mode* Mode::create_mode(QString m)
+Mode* Mode::create_mode(const std::string& m)
 {
 	Mode *mode = nullptr;
 
@@ -79,24 +79,10 @@ Mode::Mode()
 
 Mode::~Mode()
 {
+    stop_timers();
     if (m_audio) {
         delete m_audio;
         m_audio = nullptr;
-    }
-    if (m_ping_timer) {
-        m_ping_timer->stop();
-        delete m_ping_timer;
-        m_ping_timer = nullptr;
-    }
-    if (m_txtimer) {
-        m_txtimer->stop();
-        delete m_txtimer;
-        m_txtimer = nullptr;
-    }
-    if (m_rxtimer) {
-        m_rxtimer->stop();
-        delete m_rxtimer;
-        m_rxtimer = nullptr;
     }
     if (m_mbevocoder) {
         delete m_mbevocoder;
@@ -114,7 +100,7 @@ Mode::~Mode()
 #endif
 }
 
-void Mode::init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, QString refname, QString host, int port, bool ipv6, QString vocoder, QString modem, QString audioin, QString audioout, bool mdirect)
+void Mode::init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, std::string refname, std::string host, int port, bool ipv6, std::string vocoder, std::string modem, std::string audioin, std::string audioout, bool mdirect)
 {
 	m_dmrid = dmrid;
 	m_nxdnid = nxdnid;
@@ -137,7 +123,7 @@ void Mode::init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, 
     m_watchdog = 0;
 	m_rxwatchdog = 0;
 
-	m_modeinfo.callsign = callsign;
+	m_modeinfo.callsign = callsign.toStdString();
 	m_modeinfo.gwid = 0;
 	m_modeinfo.srcid = dmrid;
 	m_modeinfo.dstid = 0;
@@ -150,12 +136,6 @@ void Mode::init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, 
 	m_modeinfo.stream_state = STREAM_IDLE;
 	m_modeinfo.sw_vocoder_loaded = false;
 	m_modeinfo.hw_vocoder_loaded = false;
-#ifdef Q_OS_WIN
-	m_rxtimerint = 19;
-#else
-	m_rxtimerint = 20;
-#endif
-	m_txtimerint = 19;
 #ifdef USE_FLITE
 	flite_init();
 	voice_slt = register_cmu_us_slt(nullptr);
@@ -170,9 +150,9 @@ void Mode::ambe_connect_status(bool s)
 	if(s){
 #if !defined(Q_OS_IOS)
 		if (m_ambedev) {
-			m_modeinfo.ambedesc = m_ambedev->get_ambe_description();
-			m_modeinfo.ambeprodid = m_ambedev->get_ambe_prodid();
-			m_modeinfo.ambeverstr = m_ambedev->get_ambe_verstring();
+			m_modeinfo.ambedesc = m_ambedev->getDescription();
+			m_modeinfo.ambeprodid = m_ambedev->getProdId();
+			m_modeinfo.ambeverstr = m_ambedev->getVerString();
 		}
 #endif
 	}
@@ -180,21 +160,20 @@ void Mode::ambe_connect_status(bool s)
 		m_modeinfo.ambeprodid = "Connect failed";
 		m_modeinfo.ambeverstr = "Connect failed";
 	}
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
 void Mode::mmdvm_connect_status(bool s)
 {
 	if(s){
-		//m_modeinfo.mmdvmdesc = m_modem->get_mmdvm_description();
 #if !defined(Q_OS_IOS)
-		if (m_modem) m_modeinfo.mmdvm = m_modem->get_mmdvm_version();
+		if (m_modem) m_modeinfo.mmdvm = m_modem->getVersion();
 #endif
 	}
 	else{
 		m_modeinfo.mmdvm = "Connect failed";
 	}
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
 void Mode::in_audio_vol_changed(qreal v)
@@ -224,51 +203,72 @@ void Mode::begin_connect()
         m_modeinfo.hw_vocoder_loaded = true;
 #if !defined(Q_OS_IOS)
         m_ambedev = new SerialAMBE(m_mode);
-        connect(m_ambedev, SIGNAL(connected(bool)), this, SLOT(ambe_connect_status(bool)));
-        connect(m_ambedev, SIGNAL(data_ready()), this, SLOT(get_ambe()));
-        connect(m_ambedev, SIGNAL(ambedev_ready()), this, SLOT(host_lookup()));
-        if (m_ambedev) m_ambedev->connect_to_serial(m_vocoder);
+        m_ambedev->on_connected = [this](bool s) { ambe_connect_status(s); };
+        m_ambedev->on_data_ready = [this]() { get_ambe(); };
+        m_ambedev->on_ambedev_ready = [this]() { host_lookup(); };
+        if (m_ambedev) m_ambedev->connectToSerial(m_vocoder);
 #endif
     }
     else{
         m_hwrx = false;
         m_hwtx = false;
-        if(m_modemport == ""){
+        if(m_modemport.empty()){
             host_lookup();
         }
     }
 
-    if(m_modemport != ""){
+    if(!m_modemport.empty()){
 #if !defined(Q_OS_IOS)
         m_modem = new SerialModem(m_mode);
-        m_modem->set_modem_flags(m_rxInvert, m_txInvert, m_pttInvert, m_useCOSAsLockout, m_duplex);
-        m_modem->set_modem_params(m_baud, m_rxfreq, m_txfreq, m_txDelay, m_rxLevel, m_rfLevel, m_ysfTXHang, m_cwIdTXLevel, m_dstarTXLevel, m_dmrTXLevel, m_ysfTXLevel, m_p25TXLevel, m_nxdnTXLevel, m_pocsagTXLevel, m_m17TXLevel);
-        m_modem->set_cc(m_dmrColorCode);
-        connect(m_modem, SIGNAL(connected(bool)), this, SLOT(mmdvm_connect_status(bool)));
-        connect(m_modem, SIGNAL(modem_data_ready(QByteArray)), this, SLOT(process_modem_data(QByteArray)));
-        connect(m_modem, SIGNAL(modem_ready()), this, SLOT(host_lookup()));
-        connect(this, SIGNAL(update_mode(uint8_t)), m_modem, SLOT(set_mode(uint8_t)));
-        m_modem->connect_to_serial(m_modemport);
+        m_modem->setModemFlags(m_rxInvert, m_txInvert, m_pttInvert, m_useCOSAsLockout, m_duplex);
+        m_modem->setModemParams(m_baud, m_rxfreq, m_txfreq, m_txDelay, m_rxLevel, m_rfLevel, m_ysfTXHang, m_cwIdTXLevel, m_dstarTXLevel, m_dmrTXLevel, m_ysfTXLevel, m_p25TXLevel, m_nxdnTXLevel, m_pocsagTXLevel, m_m17TXLevel);
+        m_modem->setCC(m_dmrColorCode);
+        m_modem->on_connected = [this](bool s) { mmdvm_connect_status(s); };
+        m_modem->on_modem_data_ready = [this](std::vector<uint8_t> d) {
+            QByteArray qba(reinterpret_cast<const char*>(d.data()), (int)d.size());
+            process_modem_data(qba);
+        };
+        m_modem->on_modem_ready = [this]() { host_lookup(); };
+        m_cb_update_mode = [this](uint8_t m) { if (m_modem) m_modem->setMode(m); };
+        m_modem->connectToSerial(m_modemport);
 #endif
     }
 }
 
 void Mode::host_lookup()
 {
-	qDebug() << "Mode::host_lookup() called for mode" << m_mode << "host=" << m_modeinfo.host << "mdirect=" << m_mdirect << "ipv6=" << m_ipv6;
-    if(m_mdirect && ((m_mode == "M17") || (m_mode == "DMR"))){ // MMDVM_DIRECT currently only supported by M17 and DMR
+	qDebug() << "Mode::host_lookup() called for mode" << m_mode.c_str() << "host=" << QString::fromStdString(m_modeinfo.host) << "mdirect=" << m_mdirect << "ipv6=" << m_ipv6;
+    if(m_mdirect && ((m_mode == "M17") || (m_mode == "DMR"))){
         mmdvm_direct_connect();
+        return;
     }
-    else if(m_ipv6 && (m_modeinfo.host != "none")){
-        qDebug() << "Host == " << m_modeinfo.host;
-        QList<QHostAddress> h;
-        QHostInfo i;
-        h.append(QHostAddress(m_modeinfo.host));
-        i.setAddresses(h);
-        hostname_lookup(i);
+    if (m_modeinfo.host == "none" || m_modeinfo.host.empty()) {
+        qDebug() << "No host to resolve";
+        return;
     }
-    else{
-        QHostInfo::lookupHost(m_modeinfo.host, this, SLOT(hostname_lookup(QHostInfo)));
+    if (m_udp) { delete m_udp; m_udp = nullptr; }
+    m_udp = new UdpSocket();
+    if (!m_udp->create(m_ipv6)) {
+        qDebug() << "Failed to create UDP socket:" << m_udp->lastError().c_str();
+        delete m_udp; m_udp = nullptr;
+        return;
+    }
+    m_udp->setNonBlocking(true);
+    if (!m_udp->connectTo(m_modeinfo.host, m_modeinfo.port)) {
+        qDebug() << "Failed to resolve/connect:" << m_udp->lastError().c_str();
+        delete m_udp; m_udp = nullptr;
+        return;
+    }
+    on_network_connected();
+}
+
+void Mode::poll_network()
+{
+    if (!m_udp || !m_udp->isValid()) return;
+    uint8_t buf[2048];
+    int n;
+    while ((n = m_udp->read(buf, sizeof(buf))) > 0) {
+        on_network_read(buf, n);
     }
 }
 
@@ -279,40 +279,35 @@ void Mode::toggle_tx(bool tx)
 
 void Mode::start_tx()
 {
-	if (!m_txtimer || !m_rxtimer) {
+	if (m_tx_interval_ms <= 0) {
 		return;
 	}
 #if !defined(Q_OS_IOS)
 	if(m_hwtx){
-		if (m_ambedev) m_ambedev->clear_queue();
+		if (m_ambedev) m_ambedev->clearQueue();
 	}
 #endif
 	m_txcodecq.clear();
 	m_tx = true;
 	m_txcnt = 0;
 	m_ttscnt = 0;
-	m_rxtimer->stop();
 	m_modeinfo.streamid = 0;
 	m_modeinfo.stream_state = TRANSMITTING;
 #ifdef USE_FLITE
 
 	if(m_ttsid == 1){
-		tts_audio = flite_text_to_wave(m_ttstext.toStdString().c_str(), voice_kal);
+		tts_audio = flite_text_to_wave(m_ttstext.c_str(), voice_kal);
 	}
 	else if(m_ttsid == 2){
-		tts_audio = flite_text_to_wave(m_ttstext.toStdString().c_str(), voice_awb);
+		tts_audio = flite_text_to_wave(m_ttstext.c_str(), voice_awb);
 	}
 	else if(m_ttsid == 3){
-		tts_audio = flite_text_to_wave(m_ttstext.toStdString().c_str(), voice_slt);
+		tts_audio = flite_text_to_wave(m_ttstext.c_str(), voice_slt);
 	}
 #endif
-	if(!m_txtimer->isActive()){
-		if(m_ttsid == 0 && m_audio){
-			m_audio->set_input_buffer_size(640);
-			m_audio->start_capture();
-			//audioin->start(&audio_buffer);
-		}
-		m_txtimer->start(m_txtimerint);
+	if(m_ttsid == 0 && m_audio){
+		m_audio->set_input_buffer_size(640);
+		m_audio->start_capture();
 	}
 }
 
@@ -351,5 +346,77 @@ void Mode::deleteLater()
 #endif
 	}
 	m_modeinfo.count = 0;
-	QObject::deleteLater();
+	delete this;
 }
+
+void Mode::disconnect_core()
+{
+	stop_timers();
+	m_loop_running = false;
+	if(m_modeinfo.status == CONNECTED_RW){
+		send_disconnect();
+		delete m_audio;  m_audio = nullptr;
+#if !defined(Q_OS_IOS)
+		delete m_ambedev; m_ambedev = nullptr;
+		delete m_modem;   m_modem = nullptr;
+#endif
+	}
+	m_modeinfo.count = 0;
+}
+
+void Mode::post_cmd(std::function<void()> cmd)
+{
+    std::lock_guard<std::mutex> lock(m_cmd_mutex);
+    m_cmd_queue.push(std::move(cmd));
+}
+
+void Mode::run_loop()
+{
+	m_loop_running = true;
+	begin_connect();
+	while (m_loop_running) {
+
+		// Drain command queue
+		{
+			std::lock_guard<std::mutex> lock(m_cmd_mutex);
+			while (!m_cmd_queue.empty()) {
+				auto cmd = std::move(m_cmd_queue.front());
+				m_cmd_queue.pop();
+				cmd();
+			}
+		}
+
+		// Poll serial devices (replaces QSerialPort readyRead signal)
+#if !defined(Q_OS_IOS)
+		if (m_ambedev) m_ambedev->poll();
+		if (m_modem) m_modem->poll();
+#endif
+		auto now = std::chrono::steady_clock::now();
+		poll_network();
+		if (m_rx_interval_ms > 0 &&
+			now - m_last_rx_time >= std::chrono::milliseconds(m_rx_interval_ms)) {
+			process_rx_data();
+			m_last_rx_time = now;
+		}
+		if (m_tx_interval_ms > 0 &&
+			now - m_last_tx_time >= std::chrono::milliseconds(m_tx_interval_ms)) {
+			transmit();
+			m_last_tx_time = now;
+		}
+		if (m_ping_interval_ms > 0 &&
+			now - m_last_ping_time >= std::chrono::milliseconds(m_ping_interval_ms)) {
+			send_ping();
+			m_last_ping_time = now;
+		}
+		if (m_loop_running)
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+}
+
+void Mode::stop_loop()   { m_loop_running = false; }
+void Mode::stop_timers() { m_tx_interval_ms = 0; m_rx_interval_ms = 0; m_ping_interval_ms = 0; }
+void Mode::start_tx_timer(int interval_ms)   { m_tx_interval_ms = interval_ms;   m_last_tx_time = std::chrono::steady_clock::now(); }
+void Mode::start_rx_timer(int interval_ms)   { m_rx_interval_ms = interval_ms;   m_last_rx_time = std::chrono::steady_clock::now(); }
+void Mode::start_ping_timer(int interval_ms) { m_ping_interval_ms = interval_ms; m_last_ping_time = std::chrono::steady_clock::now(); }
+
+

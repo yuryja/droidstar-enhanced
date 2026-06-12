@@ -29,7 +29,6 @@
 
 class M17 : public Mode
 {
-	Q_OBJECT
 public:
 	M17();
 	~M17();
@@ -44,8 +43,7 @@ public:
 #else
 	CCodec2 *m_c2;
 #endif
-private slots:
-	void process_udp();
+protected:
 	void process_modem_data(QByteArray);
 	void send_modem_data(QByteArray);
 	void send_ping();
@@ -53,8 +51,9 @@ private slots:
 	void toggle_tx(bool);
 	void start_tx();
 	void transmit();
-    void tx_packet(QString);
-    void hostname_lookup(QHostInfo);
+    void tx_packet(std::string);
+    void on_network_connected() override;
+    void on_network_read(const uint8_t* data, int len) override;
 	void mmdvm_direct_connect();
 	void rate_changed(int r) { m_txrate = r; }
 	void can_changed(int c) { m_txcan = c; qDebug() << "CAN == " << c; }

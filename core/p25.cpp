@@ -46,7 +46,6 @@ P25::P25()
 {
     m_mode = "P25";
 	m_p25cnt = 0;
-	m_txtimerint = 19;
 	m_attenuation = 2;
 }
 
@@ -54,14 +53,9 @@ P25::~P25()
 {
 }
 
-void P25::process_udp()
+void P25::on_network_read(const uint8_t* data, int len)
 {
-	QByteArray buf;
-	QHostAddress sender;
-	quint16 senderPort;
-
-	buf.resize(m_udp->pendingDatagramSize());
-	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
+	QByteArray buf(reinterpret_cast<const char*>(data), len);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -76,14 +70,10 @@ void P25::process_udp()
 		if(m_modeinfo.status == CONNECTING){
 			m_modeinfo.status = CONNECTED_RW;
 			m_modeinfo.status = CONNECTED_RW;
-			m_dstid = m_refname.toInt();
-			m_txtimer = new QTimer();
-			m_rxtimer = new QTimer();
-			connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
-			connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-			m_ping_timer = new QTimer();
-			connect(m_ping_timer, SIGNAL(timeout()), this, SLOT(send_ping()));
-			m_ping_timer->start(5000);
+			m_dstid = std::stoi(m_refname);
+			start_rx_timer(20);
+			start_tx_timer(20);
+			start_ping_timer(1000);
 			m_audio = new AudioEngine(m_audioin, m_audioout);
 			m_audio->init();
 			m_modeinfo.sw_vocoder_loaded = true;
@@ -92,7 +82,7 @@ void P25::process_udp()
 			m_modeinfo.stream_state = STREAM_IDLE;
 		}
 		m_modeinfo.count++;
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 	}
 	if(buf.size() > 11){
 		if( (m_modeinfo.stream_state == STREAM_END) ||
@@ -101,10 +91,9 @@ void P25::process_udp()
 		{
 			m_modeinfo.stream_state = STREAM_NEW;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-			if(!m_tx && !m_rxtimer->isActive() ){
+			if(!m_tx){
 				m_rxcodecq.clear();
 				if (m_audio) m_audio->start_playback();
-				m_rxtimer->start(m_rxtimerint);
 			}
 			qDebug() << "New P25 stream";
 		}
@@ -171,41 +160,36 @@ void P25::process_udp()
 		for (int i = 0; i < 11; ++i){
 			m_rxcodecq.append(buf.data()[offset+i]);
 		}
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 	}
 }
 
-void P25::hostname_lookup(QHostInfo i)
+void P25::on_network_connected()
 {
-	if (!i.addresses().isEmpty()) {
-		QByteArray out;
-		out.append(0xf0);
-		out.append(m_modeinfo.callsign.toUtf8());
-		out.append(10 - m_modeinfo.callsign.size(), ' ');
-		m_address = i.addresses().first();
-		m_udp = new QUdpSocket(this);
-		connect(m_udp, SIGNAL(readyRead()), this, SLOT(process_udp()));
-		m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+    QByteArray out;
+    out.append(0xf0);
+    out.append(QByteArray::fromStdString(m_modeinfo.callsign));
+    out.append(10 - m_modeinfo.callsign.size(), ' ');
+    m_udp->write((const uint8_t*)out.constData(), out.size());
 
-        if(m_debug){
-            QDebug debug = qDebug();
-            debug.noquote();
-            QString s = "CONN:";
-            for(int i = 0; i < out.size(); ++i){
-                s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
-            }
-            debug << s;
+    if(m_debug){
+        QDebug debug = qDebug();
+        debug.noquote();
+        QString s = "CONN:";
+        for(int i = 0; i < out.size(); ++i){
+            s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
         }
-	}
+        debug << s;
+    }
 }
 
 void P25::send_ping()
 {
 	QByteArray out;
 	out.append(0xf0);
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(10 - m_modeinfo.callsign.size(), ' ');
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -222,9 +206,9 @@ void P25::send_disconnect()
 {
 	QByteArray out;
 	out.append(0xf1);
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(10 - m_modeinfo.callsign.size(), ' ');
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -390,13 +374,12 @@ void P25::transmit()
 		m_modeinfo.srcid = m_dmrid;
 		m_modeinfo.dstid = m_dstid;
 		m_modeinfo.frame_number = m_p25step;
-		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+		m_udp->write((const uint8_t*)txdata.constData(), txdata.size());
 	}
 	else{
 		txdata.append((char *)REC80, 17U);
-		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+		m_udp->write((const uint8_t*)txdata.constData(), txdata.size());
 		fprintf(stderr, "P25 TX stopped\n");
-		m_txtimer->stop();
 		if(m_ttsid == 0){
 			if (m_audio) m_audio->stop_capture();
 		}
@@ -407,8 +390,8 @@ void P25::transmit()
 		m_modeinfo.frame_number = 0;
 		m_txcodecq.clear();
 	}
-	if (m_audio) emit update_output_level(m_audio->level() * 6);
-	emit update(m_modeinfo);
+	if (m_audio) notify_output_level(m_audio->level() * 6);
+	notify_update(m_modeinfo);
 
         if(m_debug){
             QDebug debug = qDebug();
@@ -423,12 +406,13 @@ void P25::transmit()
 
 void P25::process_rx_data()
 {
+	poll_network();
 	if(m_rxwatchdog++ > 50){
 		qDebug() << "P25 RX stream timeout ";
 		m_rxwatchdog = 0;
 		m_modeinfo.stream_state = STREAM_LOST;
 		m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 		m_modeinfo.streamid = 0;
 	}
 
@@ -442,10 +426,9 @@ void P25::process_rx_data()
 
         m_imbevocoder.decode_4400(pcm, imbe);
 		if (m_audio) m_audio->write(pcm, 160);
-		if (m_audio) emit update_output_level(m_audio->level());
+		if (m_audio) notify_output_level(m_audio->level());
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
-		m_rxtimer->stop();
 		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;

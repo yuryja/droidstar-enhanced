@@ -22,24 +22,22 @@
 
 class P25 : public Mode
 {
-	Q_OBJECT
 public:
 	P25();
 	~P25();
 	uint8_t * get_frame(uint8_t *ambe);
-private:
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
+protected:
 	int m_p25cnt;
 	uint8_t imbe[11U];
 	int m_dstid;
 	uint32_t m_txdstid;
 	uint8_t m_p25step = 0;
-private slots:
-	void process_udp();
 	void process_rx_data();
 	void send_ping();
 	void send_disconnect();
 	void transmit();
-	void hostname_lookup(QHostInfo i);
 	void dmr_tgid_changed(uint32_t id) { m_txdstid = id; }
 };
 

@@ -18,6 +18,7 @@ typedef void (*nv_status_cb)(int status_code, const char* msg, void* userdata);
 typedef void (*nv_data_cb)(const char* label, const char* value, void* userdata);
 typedef void (*nv_log_cb)(const char* line, void* userdata);
 typedef void (*nv_file_downloaded_cb)(const char* filename, void* userdata);
+typedef void (*nv_devices_changed_cb)(void* userdata);
 
 // Lifecycle
 NV_EXPORT nv_handle nv_create(void);
@@ -116,6 +117,7 @@ NV_EXPORT void nv_set_status_cb(nv_handle h, nv_status_cb cb, void* userdata);
 NV_EXPORT void nv_set_data_cb(nv_handle h, nv_data_cb cb, void* userdata);
 NV_EXPORT void nv_set_log_cb(nv_handle h, nv_log_cb cb, void* userdata);
 NV_EXPORT void nv_set_file_downloaded_cb(nv_handle h, nv_file_downloaded_cb cb, void* userdata);
+NV_EXPORT void nv_set_devices_cb(nv_handle h, nv_devices_changed_cb cb, void* userdata);
 
 // Memory / Station Log
 NV_EXPORT void nv_save_memory(nv_handle h, int index, const char* mode, const char* host, int slot, int cc, const char* tgid);

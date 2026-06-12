@@ -22,21 +22,17 @@
 
 class IAX : public Mode
 {
-	Q_OBJECT
 public:
-	IAX();//QString callsign, QString username, QString password, QString node, QString host, int port, QString audioin, QString audioout);
+	IAX();
 	~IAX();
 	void set_iax_params(QString username, QString password, QString callingname, QString node, QString host, int port);
-	//uint8_t get_status(){ return m_status; }
 	QString get_host() const { return m_host; }
 	int get_port() const { return m_port; }
 	int get_cnt() const { return m_cnt; }
-private slots:
+protected:
 	void deleteLater();
-	void process_udp();
 	void send_connect();
 	void send_disconnect();
-	void hostname_lookup(QHostInfo i);
 	void send_registration(uint16_t dcall = 0);
     void send_calltoken_request();
 	void send_call();
@@ -56,6 +52,8 @@ private slots:
 	void in_audio_vol_changed(qreal v){ m_audio->set_input_volume(v); }
 	void out_audio_vol_changed(qreal v){ m_audio->set_output_volume(v); }
 	void connected();
+	void on_network_connected() override;
+	void on_network_read(const uint8_t* data, int len) override;
 private:
 	QString m_username;
 	QString m_password;
@@ -73,7 +71,8 @@ private:
 	qint64 m_timestamp;
 	uint8_t m_regstat;
 	QByteArray m_md5seed;
-	QTimer *m_regtimer = nullptr;
+	std::chrono::steady_clock::time_point m_last_reg_time;
+	int m_reg_interval_ms = 60000;
 	uint8_t m_iseq;
 	uint8_t m_oseq;
 	QQueue<int16_t> m_audioq;
@@ -85,7 +84,7 @@ private:
 	uint32_t m_rxdropped;
 	uint32_t m_rxooo;
 	uint8_t m_ttsid;
-	QString m_ttstext;
+	std::string m_ttstext;
 	uint16_t m_ttscnt;
 	int m_cnt;
 	bool m_wt;

@@ -44,7 +44,6 @@ NXDN::NXDN()
 {
     m_mode = "NXDN";
 	m_txcnt = 0;
-	m_txtimerint = 19;
 	m_attenuation = 5;
 #ifdef USE_MD380_VOCODER
     md380_init();
@@ -55,15 +54,10 @@ NXDN::~NXDN()
 {
 }
 
-void NXDN::process_udp()
+void NXDN::on_network_read(const uint8_t* data, int len)
 {
-	QByteArray buf;
-	QHostAddress sender;
-	quint16 senderPort;
+	QByteArray buf(reinterpret_cast<const char*>(data), len);
 	uint8_t ambe[7];
-
-	buf.resize(m_udp->pendingDatagramSize());
-	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -77,17 +71,13 @@ void NXDN::process_udp()
 	if(buf.size() == 17){
 		if(m_modeinfo.status == CONNECTING){
 			m_modeinfo.status = CONNECTED_RW;
-			m_rxtimer = new QTimer();
-			connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
-			m_txtimer = new QTimer();
-			connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-			m_ping_timer = new QTimer();
-			connect(m_ping_timer, SIGNAL(timeout()), this, SLOT(send_ping()));
 			//m_mbeenc->set_gain_adjust(2.5);
 			m_modeinfo.sw_vocoder_loaded = load_vocoder_plugin();
 			m_audio = new AudioEngine(m_audioin, m_audioout);
 			m_audio->init();
-			m_ping_timer->start(1000);
+			start_rx_timer(20);
+			start_tx_timer(19);
+			start_ping_timer(1000);
 		}
 		if( (m_modeinfo.stream_state == STREAM_LOST) || (m_modeinfo.stream_state == STREAM_END) ){
 			m_modeinfo.stream_state = STREAM_IDLE;
@@ -106,20 +96,16 @@ void NXDN::process_udp()
 				m_modeinfo.streamid = 0;
 			}
 			else{
-				if(!m_rxtimer->isActive()){
-					if (m_audio) m_audio->start_playback();
-					m_rxtimer->start(m_rxtimerint);
-				}
+				if (m_audio) m_audio->start_playback();
+				start_rx_timer(20);
 				m_modeinfo.stream_state = STREAM_NEW;
 				m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 				qDebug() << "New NXDN stream from " << m_modeinfo.srcid << " to " << m_modeinfo.dstid;
 			}
 		}
 		else if(!m_tx && ( (m_modeinfo.stream_state == STREAM_LOST) || (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_IDLE) )){
-			if(!m_rxtimer->isActive()){
-				if (m_audio) m_audio->start_playback();
-				m_rxtimer->start(m_rxtimerint);
-			}
+			if (m_audio) m_audio->start_playback();
+			start_rx_timer(20);
 			m_modeinfo.stream_state = STREAM_NEW;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
 			qDebug() << "New NXDN stream in progress from " << m_modeinfo.srcid << " to " << m_modeinfo.dstid;
@@ -177,7 +163,7 @@ void NXDN::process_udp()
 			m_rxcodecq.append(ambe[i]);
 		}
 	}
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
 void NXDN::interleave(uint8_t *ambe)
@@ -199,15 +185,10 @@ void NXDN::interleave(uint8_t *ambe)
 	memcpy(ambe, dvsi_data, 7);
 }
 
-void NXDN::hostname_lookup(QHostInfo i)
+void NXDN::on_network_connected()
 {
-	if (!i.addresses().isEmpty()) {
-		m_address = i.addresses().first();
-		m_udp = new QUdpSocket(this);
-		connect(m_udp, SIGNAL(readyRead()), this, SLOT(process_udp()));
-		m_modeinfo.gwid = m_refname.toUInt();
-		send_ping();
-	}
+	m_modeinfo.gwid = std::stoul(m_refname);
+	send_ping();
 }
 
 void NXDN::send_ping(bool disconnect)
@@ -218,11 +199,11 @@ void NXDN::send_ping(bool disconnect)
 	out.append('D');
 	out.append('N');
 	disconnect ? out.append('U') : out.append('P');
-	out.append(m_modeinfo.callsign.toUtf8());
+	out.append(QByteArray::fromStdString(m_modeinfo.callsign));
 	out.append(10 - m_modeinfo.callsign.size(), ' ');
 	out.append((m_modeinfo.gwid >> 8) & 0xff);
 	out.append((m_modeinfo.gwid >> 0) & 0xff);
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -300,7 +281,7 @@ void NXDN::send_frame()
 		m_modeinfo.stream_state = TRANSMITTING;
 		temp_nxdn = get_frame();
 		txdata.append((char *)temp_nxdn, 43);
-		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+		m_udp->write((const uint8_t*)txdata.constData(), txdata.size());
 
         if(m_debug){
             QDebug debug = qDebug();
@@ -314,18 +295,17 @@ void NXDN::send_frame()
 	}
 	else{
 		fprintf(stderr, "NXDN TX stopped\n");
-		m_txtimer->stop();
 		temp_nxdn = get_eot();
 		m_ttscnt = 0;
 		txdata.append((char *)temp_nxdn, 43);
-		m_udp->writeDatagram(txdata, m_address, m_modeinfo.port);
+		m_udp->write((const uint8_t*)txdata.constData(), txdata.size());
 		m_modeinfo.stream_state = STREAM_IDLE;
 	}
 	m_modeinfo.srcid = m_nxdnid;
 	m_modeinfo.frame_number = m_txcnt;
 	m_modeinfo.dstid = m_modeinfo.gwid;
-	if (m_audio) emit update_output_level(m_audio->level() * 8);
-	emit update(m_modeinfo);
+	if (m_audio) notify_output_level(m_audio->level() * 8);
+	notify_update(m_modeinfo);
 }
 
 uint8_t * NXDN::get_frame()
@@ -619,7 +599,7 @@ void NXDN::get_ambe()
 #if !defined(Q_OS_IOS)
 	uint8_t ambe[7];
 
-	if(m_ambedev && m_ambedev->get_ambe(ambe)){
+	if(m_ambedev && m_ambedev->getAmbe(ambe)){
 		for(int i = 0; i < 7; ++i){
 			m_txcodecq.append(ambe[i]);
 		}
@@ -629,6 +609,8 @@ void NXDN::get_ambe()
 
 void NXDN::process_rx_data()
 {
+	poll_network();
+
 	int16_t pcm[160];
 	uint8_t ambe[7];
 
@@ -637,7 +619,7 @@ void NXDN::process_rx_data()
 		m_rxwatchdog = 0;
 		m_modeinfo.stream_state = STREAM_LOST;
 		m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 		m_rxcodecq.clear();
 	}
 
@@ -649,9 +631,9 @@ void NXDN::process_rx_data()
 #if !defined(Q_OS_IOS)
 			if (m_ambedev) m_ambedev->decode(ambe);
 
-			if(m_ambedev && m_ambedev->get_audio(pcm)){
+			if(m_ambedev && m_ambedev->getAudio(pcm)){
 				if (m_audio) m_audio->write(pcm, 160);
-				if (m_audio) emit update_output_level(m_audio->level());
+				if (m_audio) notify_output_level(m_audio->level());
 			}
 #endif
 		}
@@ -667,11 +649,10 @@ void NXDN::process_rx_data()
 				memset(pcm, 0, 160 * sizeof(int16_t));
 			}
 			if (m_audio) m_audio->write(pcm, 160);
-			if (m_audio) emit update_output_level(m_audio->level());
+			if (m_audio) notify_output_level(m_audio->level());
 		}
 	}
 	else if ( (m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST) ){
-		m_rxtimer->stop();
 		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;

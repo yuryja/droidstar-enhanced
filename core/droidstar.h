@@ -20,6 +20,10 @@
 
 #include <QObject>
 #include "mode.h"
+#include "json.hpp"
+#include <functional>
+#include <thread>
+#include <atomic>
 
 class DroidStar : public QObject
 {
@@ -120,7 +124,15 @@ public slots:
     void set_mmdvm_direct(bool mmdvm) { m_mdirect = mmdvm; process_mode_change(m_protocol); }
 	void set_iaxport(const QString &port){ m_iaxport = port.simplified().toUInt(); save_settings(); }
     void set_dst(QString dst){emit dst_changed(dst);}
-    void set_debug(bool debug){emit debug_changed(debug);}
+	void set_debug(bool debug){emit debug_changed(debug);}
+
+public:
+	// Callbacks for C API (replace Qt signals/slots)
+	std::function<void(const QString&)> on_log;
+	std::function<void()> on_data;
+	std::function<void()> on_devices_changed;
+	std::function<void(int)> on_status_changed;
+	void log_msg(const QString& s);
 
 	void set_modemRxFreq(QString m) { m_modemRxFreq = m; save_settings(); }
 	void set_modemTxFreq(QString m) { m_modemTxFreq = m; save_settings(); }
@@ -254,7 +266,7 @@ public slots:
 	QString get_build_abi() const { return QSysInfo::buildAbi(); }
     QString get_software_build() const { return VERSION_NUMBER; }
 
-	void download_file(QString, bool u = false);
+	void download_file(const QString& url, const QString& dest_name);
 	void file_downloaded(QString);
 	void url_downloaded(QString);
 	unsigned short get_output_level() const { return m_outlevel; }
@@ -275,8 +287,11 @@ public slots:
 private:
 	int connect_status;
 	bool m_update_host_files;
-	QSettings *m_settings;
+	nlohmann::json m_json_settings;
+	QString m_settings_path;
 	QString config_path;
+	void load_settings_file();
+	void save_settings_file();
 	QString hosts_filename;
 	QString m_callsign;
 	QString m_host;
@@ -338,7 +353,8 @@ private:
 	QStringList m_hostsmodel;
 	QMap<QString, QString> m_hostmap;
 	QStringList m_customhosts;
-	QThread *m_modethread;
+	std::thread *m_modethread = nullptr;
+	std::atomic<bool> m_threadRunning{false};
 	Mode *m_mode;
 	QByteArray user_data;
 	QString m_localhosts;

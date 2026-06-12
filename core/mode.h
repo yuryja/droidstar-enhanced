@@ -19,27 +19,31 @@
 #define MODE_H
 
 #include <string>
-#include <QObject>
-#include <QtNetwork>
+#include <functional>
+#include <atomic>
+#include <chrono>
+#include <mutex>
+#include <queue>
+#include <QtCore>
 #ifdef USE_FLITE
 #include <flite/flite.h>
 #endif
 #include "imbe_vocoder/imbe_vocoder_api.h"
 #include "mbe/mbevocoder_api.h"
 #include "audioengine.h"
+#include "udp_socket.h"
 #if !defined(Q_OS_IOS)
 #include "serialambe.h"
 #include "serialmodem.h"
 #endif
 
-class Mode : public QObject
+class Mode
 {
-	Q_OBJECT
 public:
 	Mode();
 	~Mode();
-	static Mode* create_mode(QString);
-    void init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, QString refname, QString host, int port, bool ipv6, QString vocoder, QString modem, QString audioin, QString audioout, bool mdirect);
+	static Mode* create_mode(const std::string& m);
+    void init(QString callsign, uint32_t dmrid, uint16_t nxdnid, char module, std::string refname, std::string host, int port, bool ipv6, std::string vocoder, std::string modem, std::string audioin, std::string audioout, bool mdirect);
 	void set_modem_flags(bool rxInvert, bool txInvert, bool pttInvert, bool useCOSAsLockout, bool duplex)
 	{
 		m_rxInvert = rxInvert;
@@ -77,26 +81,26 @@ public:
 		qint64 ts;
 		int status;
 		int stream_state;
-		QString callsign;
-		QString gw;
-		QString gw2;
-		QString src;
-		QString dst;
-		QString usertxt;
-		QString netmsg;
+		std::string callsign;
+		std::string gw;
+		std::string gw2;
+		std::string src;
+		std::string dst;
+		std::string usertxt;
+		std::string netmsg;
 		uint32_t gwid;
 		uint32_t srcid;
 		uint32_t dstid;
 		uint8_t slot;
 		uint8_t cc;
-		QString ambedesc;
-		QString ambeprodid;
-		QString ambeverstr;
-		QString mmdvmdesc;
-		QString mmdvm;
-		QString host;
-        QString module;
-        QString gps;
+		std::string ambedesc;
+		std::string ambeprodid;
+		std::string ambeverstr;
+		std::string mmdvmdesc;
+		std::string mmdvm;
+		std::string host;
+        std::string module;
+        std::string gps;
 		int port;
 		bool path;
 		char type;
@@ -131,86 +135,135 @@ public:
         PACKET_RECEIVED,
         PACKET_SENT
 	};
-signals:
-	void update(Mode::MODEINFO);
-    void update_log(QString);
-	void update_output_level(unsigned short);
-	void update_mode(uint8_t);
-    // Request that the application toggle the main connect button (same hook as UI)
-    void request_connect_toggle();
-	// Request the application schedule a reconnect after the given milliseconds
-	void request_reconnect(int ms);
-protected slots:
-	virtual void send_disconnect(){}
-	virtual void hostname_lookup(QHostInfo){}
-	virtual void mmdvm_direct_connect(){}
+    // Callbacks (replacing Qt signals for thread-safe dispatch)
+    using on_update_cb = std::function<void(MODEINFO)>;
+    using on_log_cb = std::function<void(std::string)>;
+    using on_output_level_cb = std::function<void(unsigned short)>;
+    using on_update_mode_cb = std::function<void(uint8_t)>;
+    using on_connect_toggle_cb = std::function<void()>;
+    using on_reconnect_cb = std::function<void(int)>;
 
-	void ambe_connect_status(bool);
-	void mmdvm_connect_status(bool);
+    on_update_cb m_cb_update;
+    on_log_cb m_cb_log;
+    on_output_level_cb m_cb_output_level;
+    on_update_mode_cb m_cb_update_mode;
+    on_connect_toggle_cb m_cb_connect_toggle;
+    on_reconnect_cb m_cb_reconnect;
+
+    void notify_update(MODEINFO info) { if(m_cb_update) m_cb_update(info); }
+    void notify_log(const std::string& msg) { if(m_cb_log) m_cb_log(msg); }
+    void notify_output_level(unsigned short lvl) { if(m_cb_output_level) m_cb_output_level(lvl); }
+    void notify_update_mode(uint8_t mode) { if(m_cb_update_mode) m_cb_update_mode(mode); }
+    void notify_connect_toggle() { if(m_cb_connect_toggle) m_cb_connect_toggle(); }
+    void notify_reconnect(int ms) { if(m_cb_reconnect) m_cb_reconnect(ms); }
+
+    void disconnect_core();
+
+    virtual void on_network_connected() {}
+    virtual void on_network_read(const uint8_t* data, int len) { (void)data; (void)len; }
+    void poll_network();
+
+    virtual void transmit() {}
+    virtual void process_rx_data() {}
+    virtual void send_ping() {}
+
+    void run_loop();
+    void stop_loop();
+    void start_tx_timer(int interval_ms);
+    void start_rx_timer(int interval_ms);
+    void start_ping_timer(int interval_ms);
+    void stop_timers();
+    std::atomic<bool> m_loop_running{false};
+
+    // Command queue for thread-safe dispatch from DroidStar (main thread)
+    void post_cmd(std::function<void()> cmd);
+
+    // Serial modem dispatch (called from run_loop)
+    void poll_modem();
+
+    // Public serial reads for protocol subclasses
+    virtual void get_ambe() {}
+    virtual void process_modem_data(QByteArray) {}
+    // Protocol-specific dispatch (called via command queue from DroidStar)
+    virtual void dmr_tgid_changed(int) {}
+    virtual void dmrpc_state_changed(int) {}
+    virtual void slot_changed(int) {}
+    virtual void cc_changed(int) {}
+    virtual void rate_changed(int) {}
+    virtual void can_changed(int) {}
+    virtual void tx_packet(std::string) {}
+    virtual void send_dtmf(QByteArray) {}
+
+    // Methods callable from DroidStar via command queue (were protected slots)
+    void deleteLater();
+    virtual void send_disconnect(){}
+    virtual void mmdvm_direct_connect(){}
+    void ambe_connect_status(bool);
+    void mmdvm_connect_status(bool);
     void begin_connect();
-	void input_src_changed(int id, QString t) { m_ttsid = id; m_ttstext = t; }
-	void start_tx();
-	void stop_tx();
-	void toggle_tx(bool);
-	void deleteLater();
-	void in_audio_vol_changed(qreal);
-	void out_audio_vol_changed(qreal);
-	bool load_vocoder_plugin();
-	void swrx_state_changed(int s) {m_hwrx = !s; }
-	void swtx_state_changed(int s) {m_hwtx = !s; }
-	void agc_state_changed(int s);
-	void mycall_changed(QString mc) { m_txmycall = mc; }
-	void urcall_changed(QString uc) { m_txurcall = uc; }
-	void rptr1_changed(QString r1) { m_txrptr1 = r1; }
-	void rptr2_changed(QString r2) { m_txrptr2 = r2; }
-	void usrtxt_changed(QString t) { m_txusrtxt = t; }
-	void module_changed(char m) { m_module = m; m_modeinfo.streamid = 0; }
-    void dst_changed(QString dst){ m_refname = dst; }
+    void input_src_changed(int id, std::string t) { m_ttsid = id; m_ttstext = t; }
+    void start_tx();
+    void stop_tx();
+    void toggle_tx(bool);
+    void in_audio_vol_changed(qreal);
+    void out_audio_vol_changed(qreal);
+    bool load_vocoder_plugin();
+    void swrx_state_changed(int s) {m_hwrx = !s; }
+    void swtx_state_changed(int s) {m_hwtx = !s; }
+    void agc_state_changed(int s);
+    void mycall_changed(std::string mc) { m_txmycall = mc; }
+    void urcall_changed(std::string uc) { m_txurcall = uc; }
+    void rptr1_changed(std::string r1) { m_txrptr1 = r1; }
+    void rptr2_changed(std::string r2) { m_txrptr2 = r2; }
+    void usrtxt_changed(std::string t) { m_txusrtxt = t; }
+    void module_changed(char m) { m_module = m; m_modeinfo.streamid = 0; }
+    void dst_changed(std::string dst){ m_refname = dst; }
     void host_lookup();
     void debug_changed(bool debug){ m_debug = debug; }
 protected:
-    QString m_mode;
-	QUdpSocket *m_udp = nullptr;
-	QHostAddress m_address;
+    std::string m_mode;
+	UdpSocket *m_udp = nullptr;
 	char m_module;
     uint8_t m_watchdog;
 	uint32_t m_dmrid;
 	uint16_t m_nxdnid;
-	QString m_refname;
+	std::string m_refname;
 	bool m_tx;
 	uint16_t m_txcnt = 0;
 	uint16_t m_ttscnt = 0;
 	uint8_t m_ttsid;
-	QString m_ttstext;
-	QString m_txmycall;
-	QString m_txurcall;
-	QString m_txrptr1;
-	QString m_txrptr2;
-	QString m_txusrtxt;
+	std::string m_ttstext;
+	std::string m_txmycall;
+	std::string m_txurcall;
+	std::string m_txrptr1;
+	std::string m_txrptr2;
+	std::string m_txusrtxt;
 #ifdef USE_FLITE
 	cst_voice *voice_slt;
 	cst_voice *voice_kal;
 	cst_voice *voice_awb;
 	cst_wave *tts_audio = nullptr;
 #endif
-	QTimer *m_ping_timer = nullptr;
-	QTimer *m_txtimer = nullptr;
-	QTimer *m_rxtimer = nullptr;
 	AudioEngine *m_audio = nullptr;
-	QString m_audioin;
-	QString m_audioout;
+	std::string m_audioin;
+	std::string m_audioout;
     bool m_mdirect;
 	uint32_t m_rxwatchdog;
 	uint8_t m_attenuation = 0;
-	uint8_t m_rxtimerint;
-	uint8_t m_txtimerint;
+
+	std::chrono::steady_clock::time_point m_last_tx_time;
+	std::chrono::steady_clock::time_point m_last_rx_time;
+	std::chrono::steady_clock::time_point m_last_ping_time;
+	int m_tx_interval_ms = 0;
+	int m_rx_interval_ms = 0;
+	int m_ping_interval_ms = 0;
 	QQueue<uint8_t> m_rxcodecq;
 	QQueue<uint8_t> m_txcodecq;
 	QQueue<uint8_t> m_rxmodemq;
     imbe_vocoder m_imbevocoder;
     MBEVocoder *m_mbevocoder;
-	QString m_vocoder;
-	QString m_modemport;
+	std::string m_vocoder;
+	std::string m_modemport;
 #if defined(Q_OS_IOS)
 	void *m_modem;
 	void *m_ambedev;
@@ -258,8 +311,10 @@ protected:
 	bool m_fmEnabled;
 	int m_rxDCOffset;
 	int m_txDCOffset;
-};
 
-Q_DECLARE_METATYPE(Mode::MODEINFO)
+    // Command queue
+    std::mutex m_cmd_mutex;
+    std::queue<std::function<void()>> m_cmd_queue;
+};
 
 #endif // MODE_H

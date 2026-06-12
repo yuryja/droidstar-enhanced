@@ -16,7 +16,8 @@
 */
 
 #include "droidstar.h"
-#include "httpmanager.h"
+#include "httplib.h"
+
 #ifdef Q_OS_ANDROID
 #include <QCoreApplication>
 #include <QJniObject>
@@ -24,15 +25,30 @@
 #endif
 #include <QStandardPaths>
 #include <QKeySequence>
-#include <QFile>
-#include <QTextStream>
-#include <QFileInfo>
-#include <QDir>
 #include <QFont>
 #include <QFontDatabase>
+#include <filesystem>
 #include <QSslSocket>
 #include <cstring>
 #include <fcntl.h>
+#include <fstream>
+namespace fs = std::filesystem;
+
+static QStringList read_lines(const QString& path) {
+    QStringList lines;
+    std::ifstream f(path.toStdString());
+    std::string line;
+    while (std::getline(f, line))
+        lines << QString::fromStdString(line);
+    return lines;
+}
+
+static QString jstr(const nlohmann::json& j, const char* key, const char* def = "") {
+    auto it = j.find(key);
+    if (it != j.end() && it->is_string())
+        return QString::fromStdString(*it);
+    return QString::fromStdString(def);
+}
 
 DroidStar::DroidStar(QObject *parent) :
 	QObject(parent),
@@ -48,18 +64,32 @@ DroidStar::DroidStar(QObject *parent) :
 	m_settings_processed = false;
 	m_modelchange = false;
 	connect_status = Mode::DISCONNECTED;
-	m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "yuryjajitzky", "nexusvoice", this);
 	config_path = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_WIN)
-	config_path += "/yuryjajitzky";
+	config_path += "/nexusvoice";
 #endif
+	m_settings_path = config_path + "/settings.json";
+	load_settings_file();
 #if defined(Q_OS_ANDROID)
 	keepScreenOn();
     m_USBmonitor = &AndroidSerialPort::GetInstance();
     connect(m_USBmonitor, SIGNAL(devices_changed()), this, SLOT(discover_devices()));
 #endif
 	check_host_files();
-	discover_devices();
+
+	qDebug() << "CPU arch: " << QSysInfo::currentCpuArchitecture();
+	qDebug() << "Build ABI: " << QSysInfo::buildAbi();
+	qDebug() << "boot ID: " << QSysInfo::bootUniqueId();
+	qDebug() << "Pretty name: " << QSysInfo::prettyProductName();
+	qDebug() << "Type: " << QSysInfo::productType();
+	qDebug() << "Version: " << QSysInfo::productVersion();
+	qDebug() << "Kernel type: " << QSysInfo::kernelType();
+	qDebug() << "Kernel version: " << QSysInfo::kernelVersion();
+    qDebug() << "Software version: " << VERSION_NUMBER;
+    qDebug() << "OpenSSL: " << QSslSocket::supportsSsl();
+
+	// discover_devices() is deferred — miniaudio enumeration can block 1-2s on macOS.
+	// process_settings() runs now since the Flutter UI reads settings immediately.
 	process_settings();
 
 	qDebug() << "CPU arch: " << QSysInfo::currentCpuArchitecture();
@@ -72,10 +102,43 @@ DroidStar::DroidStar(QObject *parent) :
 	qDebug() << "Kernel version: " << QSysInfo::kernelVersion();
     qDebug() << "Software version: " << VERSION_NUMBER;
     qDebug() << "OpenSSL: " << QSslSocket::supportsSsl();
+
+	// Discover audio devices in a background thread so nv_create() does not block
+	// the Flutter UI. ma_context_init() can block 1-2 seconds on macOS CoreAudio.
+	// Device list updates are dispatched to the Qt event loop thread.
+	std::thread([this]() {
+		auto playbacks = AudioEngine::discover_audio_devices(AUDIO_OUT);
+		auto captures  = AudioEngine::discover_audio_devices(AUDIO_IN);
+		if (auto* app = QCoreApplication::instance()) {
+			QMetaObject::invokeMethod(app, [this, pb = std::move(playbacks), cap = std::move(captures)]() {
+				m_playbacks.clear();
+				m_captures.clear();
+				m_vocoders.clear();
+				m_modems.clear();
+				m_playbacks.append("OS Default");
+				m_captures.append("OS Default");
+				m_vocoders.append("Software vocoder");
+				m_vocoders.append("None");
+				m_modems.append("None");
+				for (const auto& d : pb) m_playbacks.append(QString::fromStdString(d));
+				for (const auto& d : cap) m_captures.append(QString::fromStdString(d));
+#if !defined(Q_OS_IOS)
+				auto devs = SerialAMBE::discoverDevices();
+				for (const auto& d : devs) {
+					m_vocoders.append(QString::fromStdString(d.second));
+					m_modems.append(QString::fromStdString(d.second));
+				}
+#endif
+				emit update_devices();
+				if (on_devices_changed) on_devices_changed();
+			}, Qt::QueuedConnection);
+		}
+	}).detach();
 }
 
 DroidStar::~DroidStar()
 {
+	save_settings_file();
 }
 
 #include <QtQml>
@@ -132,45 +195,101 @@ void DroidStar::discover_devices()
 	m_vocoders.append("Software vocoder");
     m_vocoders.append("None");
 	m_modems.append("None");
-	m_playbacks.append(AudioEngine::discover_audio_devices(AUDIO_OUT));
-	m_captures.append(AudioEngine::discover_audio_devices(AUDIO_IN));
+	for (const auto& d : AudioEngine::discover_audio_devices(AUDIO_OUT)) {
+		m_playbacks.append(QString::fromStdString(d));
+	}
+	for (const auto& d : AudioEngine::discover_audio_devices(AUDIO_IN)) {
+		m_captures.append(QString::fromStdString(d));
+	}
 #if !defined(Q_OS_IOS)
-	QMap<QString, QString> l = SerialAMBE::discover_devices();
-	QMap<QString, QString>::const_iterator i = l.constBegin();
-
-	while (i != l.constEnd()) {
-		m_vocoders.append(i.value());
-		m_modems.append(i.value());
-		++i;
+	auto devs = SerialAMBE::discoverDevices();
+	for (const auto& d : devs) {
+		m_vocoders.append(QString::fromStdString(d.second));
+		m_modems.append(QString::fromStdString(d.second));
 	}
     emit update_devices();
 #endif
+    if (on_devices_changed) on_devices_changed();
 }
 
-void DroidStar::download_file(QString f, bool u)
+void DroidStar::log_msg(const QString& s)
 {
-	HttpManager *http = new HttpManager(f, u);
-	QThread *httpThread = new QThread;
-	http->moveToThread(httpThread);
-	connect(httpThread, SIGNAL(started()), http, SLOT(process()));
-	if(u){
-		connect(http, SIGNAL(file_downloaded(QString)), this, SLOT(url_downloaded(QString)));
-	}
-	else{
-		connect(http, SIGNAL(file_downloaded(QString)), this, SLOT(file_downloaded(QString)));
-	}
-	connect(httpThread, SIGNAL(finished()), http, SLOT(deleteLater()));
-	httpThread->start();
+	if (on_log) on_log(s);
+	log_msg(s);
+}
+
+void DroidStar::download_file(const QString& url, const QString& dest_name)
+{
+	std::thread t([this, url, dest_name]() {
+		try {
+			QString dest_file = config_path + "/" + dest_name;
+
+			// Strip scheme and split into host + path
+			bool use_ssl = url.startsWith("https://");
+			QString stripped = url;
+			if (stripped.startsWith("https://")) stripped = stripped.mid(8);
+			else if (stripped.startsWith("http://")) stripped = stripped.mid(7);
+
+			int slash_pos = stripped.indexOf('/');
+			QString host_part = (slash_pos >= 0) ? stripped.left(slash_pos) : stripped;
+			QString path_part = (slash_pos >= 0) ? stripped.mid(slash_pos) : "/";
+
+			std::string host = host_part.toStdString();
+			std::string path = path_part.toStdString();
+
+			std::string body;
+			int status = -1;
+
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+			if (use_ssl) {
+				httplib::SSLClient cli(host);
+				cli.set_follow_location(true);
+				cli.set_connection_timeout(15);
+				cli.set_read_timeout(60);
+				cli.enable_server_certificate_verification(false);
+				auto res = cli.Get(path);
+				if (res) { status = res->status; body = res->body; }
+			} else
+#endif
+			{
+				httplib::Client cli(host);
+				cli.set_follow_location(true);
+				cli.set_connection_timeout(15);
+				cli.set_read_timeout(60);
+				auto res = cli.Get(path);
+				if (res) { status = res->status; body = res->body; }
+			}
+
+			if (status == 200 && !body.empty()) {
+				std::ofstream out(dest_file.toStdString(), std::ios::binary);
+				if (out.is_open()) {
+					out.write(body.data(), (std::streamsize)body.size());
+					out.close();
+					qDebug() << "download_file: saved" << dest_file << "(" << body.size() << "bytes)";
+					QMetaObject::invokeMethod(this, [this, dest_name]() {
+						file_downloaded(dest_name);
+					});
+				}
+			} else {
+				qDebug() << "download_file: failed for" << url << "status:" << status;
+			}
+		} catch (const std::exception& e) {
+			qDebug() << "download_file exception:" << e.what();
+		} catch (...) {
+			qDebug() << "download_file: unknown exception, thread exiting safely";
+		}
+	});
+	t.detach();
 }
 
 void DroidStar::url_downloaded(QString url)
 {
-	emit update_log("Downloaded " + url);
+	log_msg("Downloaded " + url);
 }
 
 void DroidStar::file_downloaded(QString filename)
 {
-	emit update_log("Updated " + filename);
+	log_msg("Updated " + filename);
 	{
 		if(filename == "dplus.txt" && m_protocol == "REF"){
             process_dstar_hosts(m_protocol);
@@ -277,7 +396,7 @@ void DroidStar::obtain_asl_wt_creds()
 				} else {
                     qDebug() << "Error: " << reply->errorString();
                     m_errortxt = "ASL WT authentication failed";
-                    emit connect_status_changed(5);
+                    if (on_status_changed) on_status_changed(5); emit connect_status_changed(5);
 				}
 				reply->deleteLater();
 			});
@@ -286,7 +405,7 @@ void DroidStar::obtain_asl_wt_creds()
 		} else {
             qDebug() << "Error: " << reply->errorString();
             m_errortxt = "ASL WT login failed";
-            emit connect_status_changed(5);
+            if (on_status_changed) on_status_changed(5); emit connect_status_changed(5);
 		}
 		reply->deleteLater();
 	});
@@ -299,13 +418,19 @@ void DroidStar::process_connect()
 	if(connect_status != Mode::DISCONNECTED){
         if(connect_status == Mode::TIMEOUT){
             m_errortxt = "Connection timed out";
-            emit connect_status_changed(5);
+            if (on_status_changed) on_status_changed(5); emit connect_status_changed(5);
         }
 		connect_status = Mode::DISCONNECTED;
-		if (m_modethread) {
-			m_modethread->quit();
-			m_modethread->wait(3000);
+		if (m_threadRunning) {
+			m_threadRunning = false;
+			if (m_mode) m_mode->stop_loop();
+			if (m_modethread && m_modethread->joinable())
+				m_modethread->join();
+			delete m_modethread;
 			m_modethread = nullptr;
+			m_mode = nullptr;
+			if (on_status_changed) on_status_changed(0);
+			log_msg("Disconnected");
 		}
 		m_data1.clear();
 		m_data2.clear();
@@ -377,7 +502,7 @@ void DroidStar::process_connect()
         else{
             m_errortxt = "Invalid host selection";
             connect_status = Mode::DISCONNECTED;
-            emit connect_status_changed(5);
+            if (on_status_changed) on_status_changed(5); emit connect_status_changed(5);
             return;
         }
 
@@ -403,67 +528,96 @@ void DroidStar::process_connect()
 		const int rxfreq = m_modemRxFreq.toInt() + m_modemRxOffset.toInt();
 		const int txfreq = m_modemTxFreq.toInt() + m_modemTxOffset.toInt();
 
-		emit update_log("Connecting to " + m_host + ":" + QString::number(m_port) + "...");
+		log_msg("Connecting to " + m_host + ":" + QString::number(m_port) + "...");
 
 		uint16_t nxdnid = m_nxdnids.key(m_callsign);
 
-		m_mode = Mode::create_mode(m_protocol);
-		m_modethread = new QThread;
-		m_mode->moveToThread(m_modethread);
+		m_mode = Mode::create_mode(m_protocol.toStdString());
 
         if(m_protocol == "IAX"){
             QString iaxuser = sl.at(2).simplified();
             QString iaxpass = sl.at(3).simplified();
             m_mode->set_iax_params(iaxuser, iaxpass, m_wt_callingname, m_refname, m_host, m_port);
-            connect(this, SIGNAL(send_dtmf(QByteArray)), m_mode, SLOT(send_dtmf(QByteArray)));
+            connect(this, &DroidStar::send_dtmf, this, [this](QByteArray d) {
+                if (m_mode) m_mode->post_cmd([this, d]() { m_mode->send_dtmf(d); });
+            });
         }
 
-        m_mode->init(m_callsign, m_dmrid, nxdnid, m_module, m_refname, m_host, m_port, m_ipv6, vocoder, modem, m_capture, m_playback, m_mdirect);
+        m_mode->init(m_callsign, m_dmrid, nxdnid, m_module, m_refname.toStdString(), m_host.toStdString(), m_port, m_ipv6, vocoder.toStdString(), modem.toStdString(), m_capture.toStdString(), m_playback.toStdString(), m_mdirect);
 		m_mode->set_modem_flags(rxInvert, txInvert, pttInvert, useCOSAsLockout, duplex);
 		m_mode->set_modem_params(m_modemBaud.toUInt(), rxfreq, txfreq, m_modemTxDelay.toInt(), m_modemRxLevel.toFloat(), m_modemRFLevel.toFloat(), ysfTXHang, m_modemCWIdTxLevel.toFloat(), m_modemDstarTxLevel.toFloat(), m_modemDMRTxLevel.toFloat(), m_modemYSFTxLevel.toFloat(), m_modemP25TxLevel.toFloat(), m_modemNXDNTxLevel.toFloat(), pocsagTXLevel, m17TXLevel);
 
-		connect(this, SIGNAL(module_changed(char)), m_mode, SLOT(module_changed(char)));
-        connect(m_mode, SIGNAL(update(Mode::MODEINFO)), this, SLOT(update_data(Mode::MODEINFO)));
-        connect(m_mode, SIGNAL(update_log(QString)), this, SLOT(updatelog(QString)));
-		connect(m_mode, SIGNAL(update_output_level(unsigned short)), this, SLOT(update_output_level(unsigned short)));
-        connect(m_modethread, SIGNAL(started()), m_mode, SLOT(begin_connect()));
-		Mode* current_mode = m_mode;
-		connect(m_modethread, &QThread::finished, this, [this, current_mode]() {
-			if (current_mode) {
-				current_mode->QObject::deleteLater();
-			}
-			if (m_mode == current_mode) {
-				m_mode = nullptr;
-				emit connect_status_changed(0);
-				emit update_log("Disconnected");
-			}
-		});
-		connect(m_modethread, SIGNAL(finished()), m_modethread, SLOT(deleteLater()));
-		connect(this, SIGNAL(input_source_changed(int,QString)), m_mode, SLOT(input_src_changed(int,QString)));
-		connect(this, SIGNAL(swrx_state_changed(int)), m_mode, SLOT(swrx_state_changed(int)));
-		connect(this, SIGNAL(swtx_state_changed(int)), m_mode, SLOT(swtx_state_changed(int)));
-		connect(this, SIGNAL(agc_state_changed(int)), m_mode, SLOT(agc_state_changed(int)));
-		connect(this, SIGNAL(tx_clicked(bool)), m_mode, SLOT(toggle_tx(bool)));
-		connect(this, SIGNAL(tx_pressed()), m_mode, SLOT(start_tx()));
-		connect(this, SIGNAL(tx_released()), m_mode, SLOT(stop_tx()));
-		connect(this, SIGNAL(in_audio_vol_changed(qreal)), m_mode, SLOT(in_audio_vol_changed(qreal)));
-		connect(this, SIGNAL(out_audio_vol_changed(qreal)), m_mode, SLOT(out_audio_vol_changed(qreal)));
-		connect(this, SIGNAL(mycall_changed(QString)), m_mode, SLOT(mycall_changed(QString)));
-		connect(this, SIGNAL(urcall_changed(QString)), m_mode, SLOT(urcall_changed(QString)));
-		connect(this, SIGNAL(rptr1_changed(QString)), m_mode, SLOT(rptr1_changed(QString)));
-		connect(this, SIGNAL(rptr2_changed(QString)), m_mode, SLOT(rptr2_changed(QString)));
-		connect(this, SIGNAL(usrtxt_changed(QString)), m_mode, SLOT(usrtxt_changed(QString)));
-        connect(this, SIGNAL(debug_changed(bool)), m_mode, SLOT(debug_changed(bool)));
+        m_mode->m_cb_update = [this](Mode::MODEINFO info) {
+            QMetaObject::invokeMethod(this, [this, info]() { update_data(info); });
+        };
+        m_mode->m_cb_log = [this](const std::string& msg) {
+            QMetaObject::invokeMethod(this, [this, msg]() { updatelog(QString::fromStdString(msg)); });
+        };
+		m_mode->m_cb_output_level = [this](unsigned short lvl) {
+            QMetaObject::invokeMethod(this, [this, lvl]() { update_output_level(lvl); });
+        };
+        connect(this, &DroidStar::module_changed, this, [this](char m) {
+            if (m_mode) m_mode->post_cmd([this, m]() { m_mode->module_changed(m); });
+        });
+        connect(this, &DroidStar::input_source_changed, this, [this](int id, QString t) {
+            if (m_mode) m_mode->post_cmd([this, id, t]() { m_mode->input_src_changed(id, t.toStdString()); });
+        });
+        connect(this, &DroidStar::swrx_state_changed, this, [this](int s) {
+            if (m_mode) m_mode->post_cmd([this, s]() { m_mode->swrx_state_changed(s); });
+        });
+        connect(this, &DroidStar::swtx_state_changed, this, [this](int s) {
+            if (m_mode) m_mode->post_cmd([this, s]() { m_mode->swtx_state_changed(s); });
+        });
+        connect(this, &DroidStar::agc_state_changed, this, [this](int s) {
+            if (m_mode) m_mode->post_cmd([this, s]() { m_mode->agc_state_changed(s); });
+        });
+        connect(this, &DroidStar::tx_clicked, this, [this](bool x) {
+            if (m_mode) m_mode->post_cmd([this, x]() { m_mode->toggle_tx(x); });
+        });
+        connect(this, &DroidStar::tx_pressed, this, [this]() {
+            if (m_mode) m_mode->post_cmd([this]() { m_mode->start_tx(); });
+        });
+        connect(this, &DroidStar::tx_released, this, [this]() {
+            if (m_mode) m_mode->post_cmd([this]() { m_mode->stop_tx(); });
+        });
+        connect(this, &DroidStar::in_audio_vol_changed, this, [this](qreal v) {
+            if (m_mode) m_mode->post_cmd([this, v]() { m_mode->in_audio_vol_changed(v); });
+        });
+        connect(this, &DroidStar::out_audio_vol_changed, this, [this](qreal v) {
+            if (m_mode) m_mode->post_cmd([this, v]() { m_mode->out_audio_vol_changed(v); });
+        });
+        connect(this, &DroidStar::mycall_changed, this, [this](QString mc) {
+            if (m_mode) m_mode->post_cmd([this, mc]() { m_mode->mycall_changed(mc.toStdString()); });
+        });
+        connect(this, &DroidStar::urcall_changed, this, [this](QString uc) {
+            if (m_mode) m_mode->post_cmd([this, uc]() { m_mode->urcall_changed(uc.toStdString()); });
+        });
+        connect(this, &DroidStar::rptr1_changed, this, [this](QString r1) {
+            if (m_mode) m_mode->post_cmd([this, r1]() { m_mode->rptr1_changed(r1.toStdString()); });
+        });
+        connect(this, &DroidStar::rptr2_changed, this, [this](QString r2) {
+            if (m_mode) m_mode->post_cmd([this, r2]() { m_mode->rptr2_changed(r2.toStdString()); });
+        });
+        connect(this, &DroidStar::usrtxt_changed, this, [this](QString t) {
+            if (m_mode) m_mode->post_cmd([this, t]() { m_mode->usrtxt_changed(t.toStdString()); });
+        });
+        connect(this, &DroidStar::debug_changed, this, [this](bool debug) {
+            if (m_mode) m_mode->post_cmd([this, debug]() { m_mode->debug_changed(debug); });
+        });
 		// Allow modes to request the main app to toggle the connect button (simulate user)
-		connect(m_mode, SIGNAL(request_connect_toggle()), this, SLOT(process_connect()));
-		connect(m_mode, SIGNAL(request_reconnect(int)), this, SLOT(schedule_reconnect(int)));
-        emit connect_status_changed(1);
-		emit module_changed(m_module);
-		emit mycall_changed(m_mycall);
-		emit urcall_changed(m_urcall);
-		emit rptr1_changed(m_rptr1);
-		emit rptr2_changed(m_rptr2);
-		emit usrtxt_changed(m_dstarusertxt);
+		m_mode->m_cb_connect_toggle = [this]() {
+            QMetaObject::invokeMethod(this, [this]() { process_connect(); });
+        };
+		m_mode->m_cb_reconnect = [this](int ms) {
+            QMetaObject::invokeMethod(this, [this, ms]() { schedule_reconnect(ms); });
+        };
+        if (on_status_changed) on_status_changed(1); emit connect_status_changed(1);
+		m_mode->post_cmd([this]() { m_mode->module_changed(m_module); });
+        m_mode->post_cmd([this]() { m_mode->mycall_changed(m_mycall.toStdString()); });
+        m_mode->post_cmd([this]() { m_mode->urcall_changed(m_urcall.toStdString()); });
+        m_mode->post_cmd([this]() { m_mode->rptr1_changed(m_rptr1.toStdString()); });
+        m_mode->post_cmd([this]() { m_mode->rptr2_changed(m_rptr2.toStdString()); });
+        m_mode->post_cmd([this]() { m_mode->usrtxt_changed(m_dstarusertxt.toStdString()); });
 
 		if(m_protocol == "DMR"){
 			QString dmrpass = sl.at(2).simplified();
@@ -481,24 +635,46 @@ void DroidStar::process_connect()
 			}
 			m_mode->set_dmr_params(m_essid, dmrpass, m_latitude, m_longitude, m_location, m_description, m_freq, m_url, m_swid, m_pkgid, m_dmropts);
 			m_mode->set_dmr_cc(m_dmrColorCode);
-			connect(this, SIGNAL(dmr_tgid_changed(int)), m_mode, SLOT(dmr_tgid_changed(int)));
-			connect(this, SIGNAL(dmrpc_state_changed(int)), m_mode, SLOT(dmrpc_state_changed(int)));
-			connect(this, SIGNAL(slot_changed(int)), m_mode, SLOT(slot_changed(int)));
-			connect(this, SIGNAL(cc_changed(int)), m_mode, SLOT(cc_changed(int)));
-			emit dmr_tgid_changed(m_dmr_destid);
-            emit dmrpc_state_changed(m_pc);
+            connect(this, &DroidStar::dmr_tgid_changed, this, [this](int id) {
+                if (m_mode) m_mode->post_cmd([this, id]() { m_mode->dmr_tgid_changed(id); });
+            });
+            connect(this, &DroidStar::dmrpc_state_changed, this, [this](int p) {
+                if (m_mode) m_mode->post_cmd([this, p]() { m_mode->dmrpc_state_changed(p); });
+            });
+            connect(this, &DroidStar::slot_changed, this, [this](int s) {
+                if (m_mode) m_mode->post_cmd([this, s]() { m_mode->slot_changed(s); });
+            });
+            connect(this, &DroidStar::cc_changed, this, [this](int cc) {
+                if (m_mode) m_mode->post_cmd([this, cc]() { m_mode->cc_changed(cc); });
+            });
+			m_mode->post_cmd([this]() { m_mode->dmr_tgid_changed((int)m_dmr_destid); });
+            m_mode->post_cmd([this]() { m_mode->dmrpc_state_changed(m_pc); });
 		}
 
 		if(m_protocol == "M17"){
-			connect(this, SIGNAL(m17_rate_changed(int)), m_mode, SLOT(rate_changed(int)));
-			connect(this, SIGNAL(m17_can_changed(int)), m_mode, SLOT(can_changed(int)));
-            connect(this, SIGNAL(m17_send_sms(QString)), m_mode, SLOT(tx_packet(QString)));
+            connect(this, QOverload<int>::of(&DroidStar::m17_rate_changed), this, [this](int r) {
+                if (m_mode) m_mode->post_cmd([this, r]() { m_mode->rate_changed(r); });
+            });
+            connect(this, &DroidStar::m17_can_changed, this, [this](int c) {
+                if (m_mode) m_mode->post_cmd([this, c]() { m_mode->can_changed(c); });
+            });
+            connect(this, &DroidStar::m17_send_sms, this, [this](QString s) {
+                if (m_mode) m_mode->post_cmd([this, s]() { m_mode->tx_packet(s.toStdString()); });
+            });
             if(m_mdirect){
-                connect(this, SIGNAL(dst_changed(QString)), m_mode, SLOT(dst_changed(QString)));
+                connect(this, &DroidStar::dst_changed, this, [this](QString dst) {
+                    if (m_mode) m_mode->post_cmd([this, dst]() { m_mode->dst_changed(dst.toStdString()); });
+                });
             }
 		}
 
-		m_modethread->start();
+		m_threadRunning = true;
+		Mode* captured_mode = m_mode;
+		m_modethread = new std::thread([captured_mode]() {
+			captured_mode->run_loop();
+			captured_mode->disconnect_core();
+			delete captured_mode;
+		});
 
 	}
 /*
@@ -635,147 +811,178 @@ void DroidStar::process_mode_change(const QString &m)
 	emit mode_changed();
 }
 
+void DroidStar::load_settings_file()
+{
+	std::ifstream f(m_settings_path.toStdString());
+	if (f.is_open()) {
+		try {
+			f >> m_json_settings;
+		} catch (...) {
+			m_json_settings = nlohmann::json::object();
+		}
+	} else {
+		m_json_settings = nlohmann::json::object();
+	}
+}
+
+void DroidStar::save_settings_file()
+{
+	// Ensure directory exists
+	fs::create_directories(config_path.toStdString());
+	std::ofstream f(m_settings_path.toStdString());
+	if (f.is_open()) {
+		f << m_json_settings.dump(4) << std::endl;
+	}
+}
+
 void DroidStar::save_settings()
 {
-	m_settings->setValue("PLAYBACK", m_playback);
-	m_settings->setValue("CAPTURE", m_capture);
-	m_settings->setValue("VOCODER", m_vocoder);
-	m_settings->setValue("IPV6", m_ipv6 ? "true" : "false");
-	m_settings->setValue("MODE", m_protocol);
-	m_settings->setValue("REFHOST", m_saved_refhost);
-	m_settings->setValue("DCSHOST", m_saved_dcshost);
-	m_settings->setValue("XRFHOST", m_saved_xrfhost);
-	m_settings->setValue("YSFHOST", m_saved_ysfhost);
-	m_settings->setValue("FCSHOST", m_saved_fcshost);
-	m_settings->setValue("DMRHOST", m_saved_dmrhost);
-	m_settings->setValue("P25HOST", m_saved_p25host);
-	m_settings->setValue("NXDNHOST", m_saved_nxdnhost);
-	m_settings->setValue("M17HOST", m_saved_m17host);
-    m_settings->setValue("IAXHOST", m_saved_iaxhost);
-	m_settings->setValue("MODULE", QString(m_module));
-	m_settings->setValue("CALLSIGN", m_callsign);
-	m_settings->setValue("DMRID", m_dmrid);
-	m_settings->setValue("ESSID", m_essid);
-	m_settings->setValue("BMPASSWORD", m_bm_password);
-	m_settings->setValue("TGIFPASSWORD", m_tgif_password);
-	m_settings->setValue("ASLPASSWORD", m_asl_password);
-	m_settings->setValue("DMRTGID", m_dmr_destid);
-	m_settings->setValue("DMRLAT", m_latitude);
-	m_settings->setValue("DMRLONG", m_longitude);
-	m_settings->setValue("DMRLOC", m_location);
-	m_settings->setValue("DMRDESC", m_description);
-	m_settings->setValue("DMRFREQ", m_freq);
-	m_settings->setValue("DMRURL", m_url);
-	m_settings->setValue("DMRSWID", m_swid);
-	m_settings->setValue("DMRPKGID", m_pkgid);
-	m_settings->setValue("DMROPTS", m_dmropts);
-	m_settings->setValue("MYCALL", m_mycall);
-	m_settings->setValue("URCALL", m_urcall);
-	m_settings->setValue("RPTR1", m_rptr1);
-	m_settings->setValue("RPTR2", m_rptr2);
-	m_settings->setValue("TXTIMEOUT", m_txtimeout);
-	m_settings->setValue("TXTOGGLE", m_toggletx ? "true" : "false");
-	m_settings->setValue("XRF2REF", m_xrf2ref ? "true" : "false");
-	m_settings->setValue("USRTXT", m_dstarusertxt);
+	m_json_settings["PLAYBACK"] = m_playback.toStdString();
+	m_json_settings["CAPTURE"] = m_capture.toStdString();
+	m_json_settings["VOCODER"] = m_vocoder.toStdString();
+	m_json_settings["IPV6"] = m_ipv6 ? "true" : "false";
+	m_json_settings["MODE"] = m_protocol.toStdString();
+	m_json_settings["REFHOST"] = m_saved_refhost.toStdString();
+	m_json_settings["DCSHOST"] = m_saved_dcshost.toStdString();
+	m_json_settings["XRFHOST"] = m_saved_xrfhost.toStdString();
+	m_json_settings["YSFHOST"] = m_saved_ysfhost.toStdString();
+	m_json_settings["FCSHOST"] = m_saved_fcshost.toStdString();
+	m_json_settings["DMRHOST"] = m_saved_dmrhost.toStdString();
+	m_json_settings["P25HOST"] = m_saved_p25host.toStdString();
+	m_json_settings["NXDNHOST"] = m_saved_nxdnhost.toStdString();
+	m_json_settings["M17HOST"] = m_saved_m17host.toStdString();
+	m_json_settings["IAXHOST"] = m_saved_iaxhost.toStdString();
+	m_json_settings["MODULE"] = std::string(1, m_module);
+	m_json_settings["CALLSIGN"] = m_callsign.toStdString();
+	m_json_settings["DMRID"] = QString::number(m_dmrid).toStdString();
+	m_json_settings["ESSID"] = QString::number(m_essid).toStdString();
+	m_json_settings["BMPASSWORD"] = m_bm_password.toStdString();
+	m_json_settings["TGIFPASSWORD"] = m_tgif_password.toStdString();
+	m_json_settings["ASLPASSWORD"] = m_asl_password.toStdString();
+	m_json_settings["DMRTGID"] = QString::number(m_dmr_destid).toStdString();
+	m_json_settings["DMRLAT"] = m_latitude.toStdString();
+	m_json_settings["DMRLONG"] = m_longitude.toStdString();
+	m_json_settings["DMRLOC"] = m_location.toStdString();
+	m_json_settings["DMRDESC"] = m_description.toStdString();
+	m_json_settings["DMRFREQ"] = m_freq.toStdString();
+	m_json_settings["DMRURL"] = m_url.toStdString();
+	m_json_settings["DMRSWID"] = m_swid.toStdString();
+	m_json_settings["DMRPKGID"] = m_pkgid.toStdString();
+	m_json_settings["DMROPTS"] = m_dmropts.toStdString();
+	m_json_settings["MYCALL"] = m_mycall.toStdString();
+	m_json_settings["URCALL"] = m_urcall.toStdString();
+	m_json_settings["RPTR1"] = m_rptr1.toStdString();
+	m_json_settings["RPTR2"] = m_rptr2.toStdString();
+	m_json_settings["TXTIMEOUT"] = QString::number(m_txtimeout).toStdString();
+	m_json_settings["TXTOGGLE"] = m_toggletx ? "true" : "false";
+	m_json_settings["XRF2REF"] = m_xrf2ref ? "true" : "false";
+	m_json_settings["USRTXT"] = m_dstarusertxt.toStdString();
 
-	m_settings->setValue("ModemRxFreq", m_modemRxFreq);
-	m_settings->setValue("ModemTxFreq", m_modemTxFreq);
-	m_settings->setValue("ModemRxOffset", m_modemRxOffset);
-	m_settings->setValue("ModemTxOffset", m_modemTxOffset);
-	m_settings->setValue("ModemRxDCOffset", m_modemRxDCOffset);
-	m_settings->setValue("ModemTxDCOffset", m_modemTxDCOffset);
-	m_settings->setValue("ModemRxLevel", m_modemRxLevel);
-	m_settings->setValue("ModemTxLevel", m_modemTxLevel);
-	m_settings->setValue("ModemRFLevel", m_modemRFLevel);
-	m_settings->setValue("ModemTxDelay", m_modemTxDelay);
-	m_settings->setValue("ModemCWIdTxLevel", m_modemCWIdTxLevel);
-	m_settings->setValue("ModemDstarTxLevel", m_modemDstarTxLevel);
-	m_settings->setValue("ModemDMRTxLevel", m_modemDMRTxLevel);
-	m_settings->setValue("ModemYSFTxLevel", m_modemYSFTxLevel);
-	m_settings->setValue("ModemP25TxLevel", m_modemP25TxLevel);
-	m_settings->setValue("ModemNXDNTxLevel", m_modemNXDNTxLevel);
-	m_settings->setValue("ModemBaud", m_modemBaud);
-	m_settings->setValue("ModemM17CAN", m_modemM17CAN);
-	m_settings->setValue("ModemTxInvert", m_modemTxInvert ? "true" : "false");
-	m_settings->setValue("ModemRxInvert", m_modemRxInvert ? "true" : "false");
-	m_settings->setValue("ModemPTTInvert", m_modemPTTInvert ? "true" : "false");
-	m_settings->setValue("PTT_KEY", m_pttKey);
-	m_settings->sync();
+	m_json_settings["ModemRxFreq"] = m_modemRxFreq.toStdString();
+	m_json_settings["ModemTxFreq"] = m_modemTxFreq.toStdString();
+	m_json_settings["ModemRxOffset"] = m_modemRxOffset.toStdString();
+	m_json_settings["ModemTxOffset"] = m_modemTxOffset.toStdString();
+	m_json_settings["ModemRxDCOffset"] = m_modemRxDCOffset.toStdString();
+	m_json_settings["ModemTxDCOffset"] = m_modemTxDCOffset.toStdString();
+	m_json_settings["ModemRxLevel"] = m_modemRxLevel.toStdString();
+	m_json_settings["ModemTxLevel"] = m_modemTxLevel.toStdString();
+	m_json_settings["ModemRFLevel"] = m_modemRFLevel.toStdString();
+	m_json_settings["ModemTxDelay"] = m_modemTxDelay.toStdString();
+	m_json_settings["ModemCWIdTxLevel"] = m_modemCWIdTxLevel.toStdString();
+	m_json_settings["ModemDstarTxLevel"] = m_modemDstarTxLevel.toStdString();
+	m_json_settings["ModemDMRTxLevel"] = m_modemDMRTxLevel.toStdString();
+	m_json_settings["ModemYSFTxLevel"] = m_modemYSFTxLevel.toStdString();
+	m_json_settings["ModemP25TxLevel"] = m_modemP25TxLevel.toStdString();
+	m_json_settings["ModemNXDNTxLevel"] = m_modemNXDNTxLevel.toStdString();
+	m_json_settings["ModemBaud"] = m_modemBaud.toStdString();
+	m_json_settings["ModemM17CAN"] = m_modemM17CAN.toStdString();
+	m_json_settings["ModemTxInvert"] = m_modemTxInvert ? "true" : "false";
+	m_json_settings["ModemRxInvert"] = m_modemRxInvert ? "true" : "false";
+	m_json_settings["ModemPTTInvert"] = m_modemPTTInvert ? "true" : "false";
+	m_json_settings["PTT_KEY"] = m_pttKey;
+	save_settings_file();
 }
 
 void DroidStar::process_settings()
 {
-	m_playback = m_settings->value("PLAYBACK").toString().simplified();
-	m_capture = m_settings->value("CAPTURE").toString().simplified();
-	m_vocoder = m_settings->value("VOCODER", "Software vocoder").toString().simplified();
-	m_ipv6 = (m_settings->value("IPV6").toString().simplified() == "true") ? true : false;
-	process_mode_change(m_settings->value("MODE").toString().simplified());
-	m_saved_refhost = m_settings->value("REFHOST").toString().simplified();
-	m_saved_dcshost =m_settings->value("DCSHOST").toString().simplified();
-	m_saved_xrfhost = m_settings->value("XRFHOST").toString().simplified();
-	m_saved_ysfhost = m_settings->value("YSFHOST").toString().simplified();
-	m_saved_fcshost = m_settings->value("FCSHOST").toString().simplified();
-	m_saved_dmrhost = m_settings->value("DMRHOST").toString().simplified();
-	m_saved_p25host = m_settings->value("P25HOST").toString().simplified();
-	m_saved_nxdnhost = m_settings->value("NXDNHOST").toString().simplified();
-	m_saved_m17host = m_settings->value("M17HOST").toString().simplified();
-    m_saved_iaxhost = m_settings->value("IAXHOST").toString().simplified();
-	m_module = m_settings->value("MODULE").toString().toStdString()[0];
-	m_callsign = m_settings->value("CALLSIGN").toString().simplified();
-	m_dmrid = m_settings->value("DMRID").toString().simplified().toUInt();
-	m_essid = m_settings->value("ESSID").toString().simplified().toUInt();
-	m_bm_password = m_settings->value("BMPASSWORD").toString().simplified();
-	m_tgif_password = m_settings->value("TGIFPASSWORD").toString().simplified();
-	m_asl_password = m_settings->value("ASLPASSWORD").toString().simplified();
-	m_latitude = m_settings->value("DMRLAT", "0").toString().simplified();
-	m_longitude = m_settings->value("DMRLONG", "0").toString().simplified();
-	m_location = m_settings->value("DMRLOC").toString().simplified();
-	m_description = m_settings->value("DMRDESC", "").toString().simplified();
-	m_freq = m_settings->value("DMRFREQ", "438800000").toString().simplified();
-	m_url = m_settings->value("DMRURL", "www.qrz.com").toString().simplified();
-	m_swid = m_settings->value("DMRSWID", "20200922").toString().simplified();
-	m_pkgid = m_settings->value("DMRPKGID", "MMDVM_MMDVM_HS_Hat").toString().simplified();
-	m_dmropts = m_settings->value("DMROPTS").toString().simplified();
-	m_dmr_destid = m_settings->value("DMRTGID", "4000").toString().simplified().toUInt();
-	m_mycall = m_settings->value("MYCALL").toString().simplified();
-	m_urcall = m_settings->value("URCALL", "CQCQCQ").toString().simplified();
-	m_rptr1 = m_settings->value("RPTR1").toString().simplified();
-	m_rptr2 = m_settings->value("RPTR2").toString().simplified();
-	m_txtimeout = m_settings->value("TXTIMEOUT", "300").toString().simplified().toUInt();
-	m_toggletx = (m_settings->value("TXTOGGLE", "true").toString().simplified() == "true") ? true : false;
-	m_dstarusertxt = m_settings->value("USRTXT").toString().simplified();
-	m_xrf2ref = (m_settings->value("XRF2REF").toString().simplified() == "true") ? true : false;
-	m_localhosts = m_settings->value("LOCALHOSTS").toString();
-	m_pttKey = m_settings->value("PTT_KEY", 0).toInt();
+	m_playback = jstr(m_json_settings, "PLAYBACK");
+	m_capture = jstr(m_json_settings, "CAPTURE");
+	m_vocoder = jstr(m_json_settings, "VOCODER", "Software vocoder");
+	m_ipv6 = jstr(m_json_settings, "IPV6") == "true";
+	process_mode_change(jstr(m_json_settings, "MODE"));
+	m_saved_refhost = jstr(m_json_settings, "REFHOST");
+	m_saved_dcshost = jstr(m_json_settings, "DCSHOST");
+	m_saved_xrfhost = jstr(m_json_settings, "XRFHOST");
+	m_saved_ysfhost = jstr(m_json_settings, "YSFHOST");
+	m_saved_fcshost = jstr(m_json_settings, "FCSHOST");
+	m_saved_dmrhost = jstr(m_json_settings, "DMRHOST");
+	m_saved_p25host = jstr(m_json_settings, "P25HOST");
+	m_saved_nxdnhost = jstr(m_json_settings, "NXDNHOST");
+	m_saved_m17host = jstr(m_json_settings, "M17HOST");
+	m_saved_iaxhost = jstr(m_json_settings, "IAXHOST");
+	{
+		QString mod = jstr(m_json_settings, "MODULE");
+		if (!mod.isEmpty()) m_module = mod.toStdString()[0];
+	}
+	m_callsign = jstr(m_json_settings, "CALLSIGN");
+	m_dmrid = jstr(m_json_settings, "DMRID").toUInt();
+	m_essid = jstr(m_json_settings, "ESSID").toUInt();
+	m_bm_password = jstr(m_json_settings, "BMPASSWORD");
+	m_tgif_password = jstr(m_json_settings, "TGIFPASSWORD");
+	m_asl_password = jstr(m_json_settings, "ASLPASSWORD");
+	m_latitude = jstr(m_json_settings, "DMRLAT", "0");
+	m_longitude = jstr(m_json_settings, "DMRLONG", "0");
+	m_location = jstr(m_json_settings, "DMRLOC");
+	m_description = jstr(m_json_settings, "DMRDESC", "");
+	m_freq = jstr(m_json_settings, "DMRFREQ", "438800000");
+	m_url = jstr(m_json_settings, "DMRURL", "www.qrz.com");
+	m_swid = jstr(m_json_settings, "DMRSWID", "20200922");
+	m_pkgid = jstr(m_json_settings, "DMRPKGID", "MMDVM_MMDVM_HS_Hat");
+	m_dmropts = jstr(m_json_settings, "DMROPTS");
+	m_dmr_destid = jstr(m_json_settings, "DMRTGID", "4000").toUInt();
+	m_mycall = jstr(m_json_settings, "MYCALL");
+	m_urcall = jstr(m_json_settings, "URCALL", "CQCQCQ");
+	m_rptr1 = jstr(m_json_settings, "RPTR1");
+	m_rptr2 = jstr(m_json_settings, "RPTR2");
+	m_txtimeout = jstr(m_json_settings, "TXTIMEOUT", "300").toUInt();
+	m_toggletx = jstr(m_json_settings, "TXTOGGLE", "true") == "true";
+	m_dstarusertxt = jstr(m_json_settings, "USRTXT");
+	m_xrf2ref = jstr(m_json_settings, "XRF2REF") == "true";
+	m_localhosts = jstr(m_json_settings, "LOCALHOSTS");
+	{
+		auto it = m_json_settings.find("PTT_KEY");
+		m_pttKey = (it != m_json_settings.end() && it->is_number()) ? it->get<int>() : 0;
+	}
 
-	m_modemRxFreq = m_settings->value("ModemRxFreq", "438800000").toString().simplified();
-	m_modemTxFreq = m_settings->value("ModemTxFreq", "438800000").toString().simplified();
-	m_modemRxOffset = m_settings->value("ModemRxOffset", "0").toString().simplified();
-	m_modemTxOffset = m_settings->value("ModemTxOffset", "0").toString().simplified();
-	m_modemRxDCOffset = m_settings->value("ModemRxDCOffset", "0").toString().simplified();
-	m_modemTxDCOffset = m_settings->value("ModemTxDCOffset", "0").toString().simplified();
-	m_modemRxLevel = m_settings->value("ModemRxLevel", "50").toString().simplified();
-	m_modemTxLevel = m_settings->value("ModemTxLevel", "50").toString().simplified();
-	m_modemRFLevel = m_settings->value("ModemRFLevel", "100").toString().simplified();
-	m_modemTxDelay = m_settings->value("ModemTxDelay", "100").toString().simplified();
-	m_modemCWIdTxLevel = m_settings->value("ModemCWIdTxLevel", "50").toString().simplified();
-	m_modemDstarTxLevel = m_settings->value("ModemDstarTxLevel", "50").toString().simplified();
-	m_modemDMRTxLevel = m_settings->value("ModemDMRTxLevel", "50").toString().simplified();
-	m_modemYSFTxLevel = m_settings->value("ModemYSFTxLevel", "50").toString().simplified();
-	m_modemP25TxLevel = m_settings->value("ModemP25TxLevel", "50").toString().simplified();
-	m_modemNXDNTxLevel = m_settings->value("ModemNXDNTxLevel", "50").toString().simplified();
-	m_modemBaud = m_settings->value("ModemBaud", "115200").toString().simplified();
-	m_modemM17CAN = m_settings->value("ModemM17CAN", "0").toString().simplified();
-	m_modemTxInvert = (m_settings->value("ModemTxInvert", "true").toString().simplified() == "true") ? true : false;
-	m_modemRxInvert = (m_settings->value("ModemRxInvert", "false").toString().simplified() == "true") ? true : false;
-	m_modemPTTInvert = (m_settings->value("ModemPTTInvert", "false").toString().simplified() == "true") ? true : false;
+	m_modemRxFreq = jstr(m_json_settings, "ModemRxFreq", "438800000");
+	m_modemTxFreq = jstr(m_json_settings, "ModemTxFreq", "438800000");
+	m_modemRxOffset = jstr(m_json_settings, "ModemRxOffset", "0");
+	m_modemTxOffset = jstr(m_json_settings, "ModemTxOffset", "0");
+	m_modemRxDCOffset = jstr(m_json_settings, "ModemRxDCOffset", "0");
+	m_modemTxDCOffset = jstr(m_json_settings, "ModemTxDCOffset", "0");
+	m_modemRxLevel = jstr(m_json_settings, "ModemRxLevel", "50");
+	m_modemTxLevel = jstr(m_json_settings, "ModemTxLevel", "50");
+	m_modemRFLevel = jstr(m_json_settings, "ModemRFLevel", "100");
+	m_modemTxDelay = jstr(m_json_settings, "ModemTxDelay", "100");
+	m_modemCWIdTxLevel = jstr(m_json_settings, "ModemCWIdTxLevel", "50");
+	m_modemDstarTxLevel = jstr(m_json_settings, "ModemDstarTxLevel", "50");
+	m_modemDMRTxLevel = jstr(m_json_settings, "ModemDMRTxLevel", "50");
+	m_modemYSFTxLevel = jstr(m_json_settings, "ModemYSFTxLevel", "50");
+	m_modemP25TxLevel = jstr(m_json_settings, "ModemP25TxLevel", "50");
+	m_modemNXDNTxLevel = jstr(m_json_settings, "ModemNXDNTxLevel", "50");
+	m_modemBaud = jstr(m_json_settings, "ModemBaud", "115200");
+	m_modemM17CAN = jstr(m_json_settings, "ModemM17CAN", "0");
+	m_modemTxInvert = jstr(m_json_settings, "ModemTxInvert", "true") == "true";
+	m_modemRxInvert = jstr(m_json_settings, "ModemRxInvert", "false") == "true";
+	m_modemPTTInvert = jstr(m_json_settings, "ModemPTTInvert", "false") == "true";
 	emit update_settings();
 }
 
 void DroidStar::update_custom_hosts(QString h)
 {
-	m_settings->setValue("LOCALHOSTS", h);
-	m_localhosts = m_settings->value("LOCALHOSTS").toString();
+	m_json_settings["LOCALHOSTS"] = h.toStdString();
+	m_localhosts = h;
+	save_settings_file();
 }
 
 void DroidStar::process_dstar_hosts(QString m)
@@ -796,41 +1003,41 @@ void DroidStar::process_dstar_hosts(QString m)
         port = "30001";
     }
 
-    QFileInfo check_file(config_path + "/" + filename);
-
-    if(check_file.exists() && check_file.isFile()){
-        QFile f(config_path + "/" + filename);
-        if(f.open(QIODevice::ReadOnly)){
-            while(!f.atEnd()){
-                QString l = f.readLine();
-                if(l.at(0) == '#'){
-                    continue;
-                }
-                QStringList ll = l.split('\t');
-                if(ll.size() > 1){
-                    m_hostmap[ll.at(0).simplified()] = ll.at(1).simplified() + "," + port;
-                }
+    QString fpath = config_path + "/" + filename;
+    if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+        for(QString l : read_lines(fpath)){
+            if(l.at(0) == '#'){
+                continue;
             }
-
-            m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-                QStringList line = i.simplified().split(' ');
-
-                if(line.at(0) == m){
-                    m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
-                }
-            }
-
-            QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-            while (i != m_hostmap.constEnd()) {
-                m_hostsmodel.append(i.key());
-                ++i;
+            QStringList ll = l.split('\t');
+            if(ll.size() > 1){
+                m_hostmap[ll.at(0).simplified()] = ll.at(1).simplified() + "," + port;
             }
         }
-        f.close();
+
+        m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+            QStringList line = i.simplified().split(' ');
+
+            if(line.at(0) == m){
+                m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+            }
+        }
+
+        QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+        while (i != m_hostmap.constEnd()) {
+            m_hostsmodel.append(i.key());
+            ++i;
+        }
     }
     else{
-        download_file("/" + filename);
+        // D-STAR host files from dstarinfo.com
+        if (filename == "dplus.txt")
+            download_file("https://www.dstarinfo.com/downloads/dplus.txt", "dplus.txt");
+        else if (filename == "dcs.txt")
+            download_file("https://www.dstarinfo.com/downloads/dcs.txt", "dcs.txt");
+        else if (filename == "dextra.txt")
+            download_file("https://www.dstarinfo.com/downloads/dextra.txt", "dextra.txt");
     }
 }
 
@@ -838,40 +1045,35 @@ void DroidStar::process_ysf_hosts()
 {
 	m_hostmap.clear();
 	m_hostsmodel.clear();
-	QFileInfo check_file(config_path + "/YSFHosts.txt");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/YSFHosts.txt");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString l = f.readLine();
-				if(l.at(0) == '#'){
-					continue;
-				}
-				QStringList ll = l.split(';');
-				if(ll.size() > 4){
-					m_hostmap[ll.at(1).simplified()] = ll.at(3) + "," + ll.at(4);
-				}
+	QString fpath = config_path + "/YSFHosts.txt";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString l : read_lines(fpath)){
+			if(l.at(0) == '#'){
+				continue;
 			}
-
-			m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-				QStringList line = i.simplified().split(' ');
-
-				if(line.at(0) == "YSF"){
-					m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
-				}
-			}
-
-			QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-			while (i != m_hostmap.constEnd()) {
-				m_hostsmodel.append(i.key());
-				++i;
+			QStringList ll = l.split(';');
+			if(ll.size() > 4){
+				m_hostmap[ll.at(1).simplified()] = ll.at(3) + "," + ll.at(4);
 			}
 		}
-		f.close();
+
+		m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+			QStringList line = i.simplified().split(' ');
+
+			if(line.at(0) == "YSF"){
+				m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+			}
+		}
+
+		QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+		while (i != m_hostmap.constEnd()) {
+			m_hostsmodel.append(i.key());
+			++i;
+		}
 	}
 	else{
-		download_file("/YSFHosts.txt");
+		download_file("https://www.ysfreflector.de/hostsfiles/YSFHosts.txt", "YSFHosts.txt");
 	}
 }
 
@@ -879,42 +1081,37 @@ void DroidStar::process_fcs_rooms()
 {
 	m_hostmap.clear();
 	m_hostsmodel.clear();
-	QFileInfo check_file(config_path + "/FCSHosts.txt");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/FCSHosts.txt");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString l = f.readLine();
-				if(l.at(0) == '#'){
-					continue;
-				}
-				QStringList ll = l.split(';');
-				if(ll.size() > 4){
-					if(ll.at(1).simplified() != "nn"){
-						m_hostmap[ll.at(0).simplified() + " - " + ll.at(1).simplified()] = ll.at(2).left(6).toLower() + ".xreflector.net,62500";
-					}
-				}
+	QString fpath = config_path + "/FCSHosts.txt";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString l : read_lines(fpath)){
+			if(l.at(0) == '#'){
+				continue;
 			}
-
-			m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-				QStringList line = i.simplified().split(' ');
-
-				if(line.at(0) == "FCS"){
-					m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+			QStringList ll = l.split(';');
+			if(ll.size() > 4){
+				if(ll.at(1).simplified() != "nn"){
+					m_hostmap[ll.at(0).simplified() + " - " + ll.at(1).simplified()] = ll.at(2).left(6).toLower() + ".xreflector.net,62500";
 				}
-			}
-
-			QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-			while (i != m_hostmap.constEnd()) {
-				m_hostsmodel.append(i.key());
-				++i;
 			}
 		}
-		f.close();
+
+		m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+			QStringList line = i.simplified().split(' ');
+
+			if(line.at(0) == "FCS"){
+				m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+			}
+		}
+
+		QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+		while (i != m_hostmap.constEnd()) {
+			m_hostsmodel.append(i.key());
+			++i;
+		}
 	}
 	else{
-		download_file("/FCSHosts.txt");
+		download_file("https://www.ysfreflector.de/hostsfiles/FCSHosts.txt", "FCSHosts.txt");
 	}
 }
 
@@ -922,45 +1119,40 @@ void DroidStar::process_dmr_hosts()
 {
 	m_hostmap.clear();
 	m_hostsmodel.clear();
-	QFileInfo check_file(config_path + "/DMRHosts.txt");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/DMRHosts.txt");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString l = f.readLine();
-				if(l.at(0) == '#'){
-					continue;
-				}
-				QStringList ll = l.simplified().split(' ');
-				if(ll.size() > 4){
-					if( (ll.at(0).simplified() != "DMRGateway")
-					 && (ll.at(0).simplified() != "DMR2YSF")
-					 && (ll.at(0).simplified() != "DMR2NXDN"))
-					{
-						m_hostmap[ll.at(0).simplified()] = ll.at(2) + "," + ll.at(4) + "," + ll.at(3);
-					}
-				}
+	QString fpath = config_path + "/DMRHosts.txt";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString l : read_lines(fpath)){
+			if(l.at(0) == '#'){
+				continue;
 			}
-
-			m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-				QStringList line = i.simplified().split(' ');
-
-				if(line.at(0) == "DMR"){
-					m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified() + "," + line.at(4).simplified();
+			QStringList ll = l.simplified().split(' ');
+			if(ll.size() > 4){
+				if( (ll.at(0).simplified() != "DMRGateway")
+				 && (ll.at(0).simplified() != "DMR2YSF")
+				 && (ll.at(0).simplified() != "DMR2NXDN"))
+				{
+					m_hostmap[ll.at(0).simplified()] = ll.at(2) + "," + ll.at(4) + "," + ll.at(3);
 				}
-			}
-
-			QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-			while (i != m_hostmap.constEnd()) {
-				m_hostsmodel.append(i.key());
-				++i;
 			}
 		}
-		f.close();
+
+		m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+			QStringList line = i.simplified().split(' ');
+
+			if(line.at(0) == "DMR"){
+				m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified() + "," + line.at(4).simplified();
+			}
+		}
+
+		QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+		while (i != m_hostmap.constEnd()) {
+			m_hostsmodel.append(i.key());
+			++i;
+		}
 	}
 	else{
-		download_file("/DMRHosts.txt");
+		download_file("https://www.pistar.uk/downloads/DMR_Hosts.txt", "DMRHosts.txt");
 	}
 }
 
@@ -968,43 +1160,38 @@ void DroidStar::process_p25_hosts()
 {
 	m_hostmap.clear();
 	m_hostsmodel.clear();
-	QFileInfo check_file(config_path + "/P25Hosts.txt");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/P25Hosts.txt");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString l = f.readLine();
-				if(l.at(0) == '#'){
-					continue;
-				}
-				QStringList ll = l.simplified().split(' ');
-				if(ll.size() > 2){
-					m_hostmap[ll.at(0).simplified()] = ll.at(1) + "," + ll.at(2);
-				}
+	QString fpath = config_path + "/P25Hosts.txt";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString l : read_lines(fpath)){
+			if(l.at(0) == '#'){
+				continue;
 			}
-
-			m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-				QStringList line = i.simplified().split(' ');
-
-				if(line.at(0) == "P25"){
-					m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
-				}
+			QStringList ll = l.simplified().split(' ');
+			if(ll.size() > 2){
+				m_hostmap[ll.at(0).simplified()] = ll.at(1) + "," + ll.at(2);
 			}
-
-			QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-			while (i != m_hostmap.constEnd()) {
-				m_hostsmodel.append(i.key());
-				++i;
-            }
-            QMap<int, QString> m;
-            for (auto s : m_hostsmodel) m[s.toInt()] = s;
-            m_hostsmodel = QStringList(m.values());
 		}
-		f.close();
+
+		m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+			QStringList line = i.simplified().split(' ');
+
+			if(line.at(0) == "P25"){
+				m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+			}
+		}
+
+		QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+		while (i != m_hostmap.constEnd()) {
+			m_hostsmodel.append(i.key());
+			++i;
+        }
+        QMap<int, QString> m;
+        for (auto s : m_hostsmodel) m[s.toInt()] = s;
+        m_hostsmodel = QStringList(m.values());
 	}
 	else{
-		download_file("/P25Hosts.txt");
+		download_file("https://www.pistar.uk/downloads/P25_Hosts.txt", "P25Hosts.txt");
 	}
 }
 
@@ -1012,43 +1199,38 @@ void DroidStar::process_nxdn_hosts()
 {
 	m_hostmap.clear();
 	m_hostsmodel.clear();
-	QFileInfo check_file(config_path + "/NXDNHosts.txt");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/NXDNHosts.txt");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString l = f.readLine();
-				if(l.at(0) == '#'){
-					continue;
-				}
-				QStringList ll = l.simplified().split(' ');
-				if(ll.size() > 2){
-					m_hostmap[ll.at(0).simplified()] = ll.at(1) + "," + ll.at(2);
-				}
+	QString fpath = config_path + "/NXDNHosts.txt";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString l : read_lines(fpath)){
+			if(l.at(0) == '#'){
+				continue;
 			}
-
-			m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-				QStringList line = i.simplified().split(' ');
-
-				if(line.at(0) == "NXDN"){
-					m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
-				}
+			QStringList ll = l.simplified().split(' ');
+			if(ll.size() > 2){
+				m_hostmap[ll.at(0).simplified()] = ll.at(1) + "," + ll.at(2);
 			}
-
-			QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-			while (i != m_hostmap.constEnd()) {
-				m_hostsmodel.append(i.key());
-				++i;
-            }
-            QMap<int, QString> m;
-            for (auto s : m_hostsmodel) m[s.toInt()] = s;
-            m_hostsmodel = QStringList(m.values());
 		}
-		f.close();
+
+		m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+			QStringList line = i.simplified().split(' ');
+
+			if(line.at(0) == "NXDN"){
+				m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+			}
+		}
+
+		QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+		while (i != m_hostmap.constEnd()) {
+			m_hostsmodel.append(i.key());
+			++i;
+        }
+        QMap<int, QString> m;
+        for (auto s : m_hostsmodel) m[s.toInt()] = s;
+        m_hostsmodel = QStringList(m.values());
 	}
 	else{
-		download_file("/NXDNHosts.txt");
+		download_file("https://www.pistar.uk/downloads/NXDN_Hosts.txt", "NXDNHosts.txt");
 	}
 }
 
@@ -1057,45 +1239,40 @@ void DroidStar::process_m17_hosts()
 	m_hostmap.clear();
 	m_hostsmodel.clear();
 
-	QFileInfo check_file(config_path + "/M17Hosts-full.csv");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/M17Hosts-full.csv");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString l = f.readLine();
-				if(l.at(0) == '#'){
-					continue;
-				}
-				QStringList ll = l.simplified().split(',');
-				if(ll.size() > 3){
-					m_hostmap[ll.at(0).simplified()] = ll.at(2) + "," + ll.at(4) + "," + ll.at(3);
-				}
+	QString fpath = config_path + "/M17Hosts-full.csv";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString l : read_lines(fpath)){
+			if(l.at(0) == '#'){
+				continue;
 			}
-
-			m_customhosts = m_localhosts.split('\n');
-            for (const auto& i : std::as_const(m_customhosts)){
-				QStringList line = i.simplified().split(' ');
-
-				if(line.at(0) == "M17"){
-					m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
-				}
-			}
-            if(m_mdirect){
-                m_hostmap["ALL"] = "ALL";
-                m_hostmap["UNLINK"] = "UNLINK";
-                m_hostmap["ECHO"] = "ECHO";
-                m_hostmap["INFO"] = "INFO";
-            }
-			QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
-			while (i != m_hostmap.constEnd()) {
-				m_hostsmodel.append(i.key());
-				++i;
+			QStringList ll = l.simplified().split(',');
+			if(ll.size() > 3){
+				m_hostmap[ll.at(0).simplified()] = ll.at(2) + "," + ll.at(4) + "," + ll.at(3);
 			}
 		}
-		f.close();
+
+		m_customhosts = m_localhosts.split('\n');
+        for (const auto& i : std::as_const(m_customhosts)){
+			QStringList line = i.simplified().split(' ');
+
+			if(line.at(0) == "M17"){
+				m_hostmap[line.at(1).simplified()] = line.at(2).simplified() + "," + line.at(3).simplified();
+			}
+		}
+        if(m_mdirect){
+            m_hostmap["ALL"] = "ALL";
+            m_hostmap["UNLINK"] = "UNLINK";
+            m_hostmap["ECHO"] = "ECHO";
+            m_hostmap["INFO"] = "INFO";
+        }
+		QMap<QString, QString>::const_iterator i = m_hostmap.constBegin();
+		while (i != m_hostmap.constEnd()) {
+			m_hostsmodel.append(i.key());
+			++i;
+		}
 	}
 	else{
-		download_file("/M17Hosts-full.csv");
+		download_file("https://www.m17project.org/reflectors/M17Hosts-full.csv", "M17Hosts-full.csv");
 	}
 }
 
@@ -1129,40 +1306,34 @@ void DroidStar::process_asl_hosts() {
 
 void DroidStar::process_dmr_ids()
 {
-	QFileInfo check_file(config_path + "/DMRIDs.dat");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/DMRIDs.dat");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString lids = f.readLine();
-				if(lids.at(0) == '#'){
-					continue;
-				}
-				QStringList llids = lids.simplified().split(' ');
+	QString fpath = config_path + "/DMRIDs.dat";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString lids : read_lines(fpath)){
+			if(lids.at(0) == '#'){
+				continue;
+			}
+			QStringList llids = lids.simplified().split(' ');
 
-				if(llids.size() >= 2){
-                    if(llids.size() == 3){
-                         m_dmrids[llids.at(0).toUInt()] = llids.at(1) + " " + llids.at(2);
-                    }
-                    else{
-                        m_dmrids[llids.at(0).toUInt()] = llids.at(1);
-                    }
-				}
+			if(llids.size() >= 2){
+                if(llids.size() == 3){
+                     m_dmrids[llids.at(0).toUInt()] = llids.at(1) + " " + llids.at(2);
+                }
+                else{
+                    m_dmrids[llids.at(0).toUInt()] = llids.at(1);
+                }
 			}
 		}
-		f.close();
 	}
 	else{
-		download_file("/DMRIDs.dat");
+		download_file("https://database.radioid.net/static/users.dat", "DMRIDs.dat");
 	}
 }
 
 void DroidStar::update_dmr_ids()
 {
-	QFileInfo check_file(config_path + "/DMRIDs.dat");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/DMRIDs.dat");
-		f.remove();
+	QString fpath = config_path + "/DMRIDs.dat";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		fs::remove(fpath.toStdString());
 	}
 	process_dmr_ids();
 	update_nxdn_ids();
@@ -1170,35 +1341,29 @@ void DroidStar::update_dmr_ids()
 
 void DroidStar::process_nxdn_ids()
 {
-	QFileInfo check_file(config_path + "/NXDN.csv");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/NXDN.csv");
-		if(f.open(QIODevice::ReadOnly)){
-			while(!f.atEnd()){
-				QString lids = f.readLine();
-				if(lids.at(0) == '#'){
-					continue;
-				}
-				QStringList llids = lids.simplified().split(',');
+	QString fpath = config_path + "/NXDN.csv";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		for(QString lids : read_lines(fpath)){
+			if(lids.at(0) == '#'){
+				continue;
+			}
+			QStringList llids = lids.simplified().split(',');
 
-				if(llids.size() > 1){
-					m_nxdnids[llids.at(0).toUInt()] = llids.at(1);
-				}
+			if(llids.size() > 1){
+				m_nxdnids[llids.at(0).toUInt()] = llids.at(1);
 			}
 		}
-		f.close();
 	}
 	else{
-		download_file("/NXDN.csv");
+		download_file("https://www.pistar.uk/downloads/NXDN.csv", "NXDN.csv");
 	}
 }
 
 void DroidStar::update_nxdn_ids()
 {
-	QFileInfo check_file(config_path + "/NXDN.csv");
-	if(check_file.exists() && check_file.isFile()){
-		QFile f(config_path + "/NXDN.csv");
-		f.remove();
+	QString fpath = config_path + "/NXDN.csv";
+	if(fs::exists(fpath.toStdString()) && fs::is_regular_file(fpath.toStdString())){
+		fs::remove(fpath.toStdString());
 	}
 	process_nxdn_ids();
 }
@@ -1211,74 +1376,46 @@ void DroidStar::update_host_files()
 
 void DroidStar::check_host_files()
 {
-	if(!QDir(config_path).exists()){
-		QDir().mkdir(config_path);
+	if(!fs::exists(config_path.toStdString())){
+		fs::create_directories(config_path.toStdString());
 	}
 
-	QFileInfo check_file(config_path + "/dplus.txt");
-	if( (!check_file.exists() && !(check_file.isFile())) || m_update_host_files ){
-		download_file("/dplus.txt");
+	auto host_needed = [&](const char* name) {
+		QString fpath = config_path + "/" + name;
+		return (!fs::exists(fpath.toStdString()) || !fs::is_regular_file(fpath.toStdString())) || m_update_host_files;
+	};
+
+	if(host_needed("dplus.txt"))         download_file("https://www.dstarinfo.com/downloads/dplus.txt",                    "dplus.txt");
+	if(host_needed("dextra.txt"))        download_file("https://www.dstarinfo.com/downloads/dextra.txt",                   "dextra.txt");
+	if(host_needed("dcs.txt"))           download_file("https://www.dstarinfo.com/downloads/dcs.txt",                      "dcs.txt");
+	if(host_needed("YSFHosts.txt"))      download_file("https://www.ysfreflector.de/hostsfiles/YSFHosts.txt",              "YSFHosts.txt");
+	if(host_needed("FCSHosts.txt"))      download_file("https://www.ysfreflector.de/hostsfiles/FCSHosts.txt",              "FCSHosts.txt");
+	if(host_needed("DMRHosts.txt"))      download_file("https://www.pistar.uk/downloads/DMR_Hosts.txt",                    "DMRHosts.txt");
+	if(host_needed("P25Hosts.txt"))      download_file("https://www.pistar.uk/downloads/P25_Hosts.txt",                    "P25Hosts.txt");
+	if(host_needed("NXDNHosts.txt"))     download_file("https://www.pistar.uk/downloads/NXDN_Hosts.txt",                   "NXDNHosts.txt");
+	if(host_needed("M17Hosts-full.csv")) download_file("https://www.m17project.org/reflectors/M17Hosts-full.csv",          "M17Hosts-full.csv");
+	if(host_needed("ASLHosts.txt"))      {} // AllStar: no public host list available
+
+	{
+		QString fpath = config_path + "/DMRIDs.dat";
+		if(!fs::exists(fpath.toStdString()) || !fs::is_regular_file(fpath.toStdString())){
+			// DMR user database from RadioID.net
+			download_file("https://database.radioid.net/static/users.dat", "DMRIDs.dat");
+		}
+		else {
+			QMetaObject::invokeMethod(this, [this]() { process_dmr_ids(); }, Qt::QueuedConnection);
+		}
 	}
 
-	check_file.setFile(config_path + "/dextra.txt");
-	if( (!check_file.exists() && !check_file.isFile() ) || m_update_host_files  ){
-		download_file("/dextra.txt");
-	}
-
-	check_file.setFile(config_path + "/dcs.txt");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file( "/dcs.txt");
-	}
-
-	check_file.setFile(config_path + "/YSFHosts.txt");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file("/YSFHosts.txt");
-	}
-
-	check_file.setFile(config_path + "/FCSHosts.txt");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file("/FCSHosts.txt");
-	}
-
-	check_file.setFile(config_path + "/DMRHosts.txt");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file("/DMRHosts.txt");
-	}
-
-	check_file.setFile(config_path + "/P25Hosts.txt");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file("/P25Hosts.txt");
-	}
-
-	check_file.setFile(config_path + "/NXDNHosts.txt");
-	if((!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file("/NXDNHosts.txt");
-	}
-
-	check_file.setFile(config_path + "/M17Hosts-full.csv");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-		download_file("/M17Hosts-full.csv");
-	}
-
-	check_file.setFile(config_path + "/ASLHosts.txt");
-	if( (!check_file.exists() && !check_file.isFile()) || m_update_host_files ){
-        //download_file("/ASLHosts.txt");
-	}
-
-	check_file.setFile(config_path + "/DMRIDs.dat");
-	if(!check_file.exists() && !check_file.isFile()){
-		download_file("/DMRIDs.dat");
-	}
-	else {
-		process_dmr_ids();
-	}
-
-	check_file.setFile(config_path + "/NXDN.csv");
-	if(!check_file.exists() && !check_file.isFile()){
-		download_file("/NXDN.csv");
-	}
-	else{
-		process_nxdn_ids();
+	{
+		QString fpath = config_path + "/NXDN.csv";
+		if(!fs::exists(fpath.toStdString()) || !fs::is_regular_file(fpath.toStdString())){
+			// NXDN ID database from PiStar.uk
+			download_file("https://www.pistar.uk/downloads/NXDN.csv", "NXDN.csv");
+		}
+		else{
+			QMetaObject::invokeMethod(this, [this]() { process_nxdn_ids(); }, Qt::QueuedConnection);
+		}
 	}
 	m_update_host_files = false;
 
@@ -1291,26 +1428,21 @@ void DroidStar::check_host_files()
 #endif
 	QString newvoc = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation) + vocname;
 	QString voc = config_path + vocname;
-	check_file.setFile(newvoc);
 	qDebug() << "newvoc == " << newvoc;
 	qDebug() << "voc == " << voc;
-	if(check_file.exists() && check_file.isFile()){
+	if(fs::exists(newvoc.toStdString()) && fs::is_regular_file(newvoc.toStdString())){
 		qDebug() << newvoc << " found";
-		if(QFile::exists(voc)){
+		if(fs::exists(voc.toStdString())){
 			qDebug() << voc << " found";
-			if(QFile::remove(voc)){
+			if(fs::remove(voc.toStdString())){
 				qDebug() << voc << " deleted";
 			}
 			else{
 				qDebug() << voc << " not deleted";
 			}
 		}
-		if(QFile::copy(newvoc, voc)){
-			qDebug() << newvoc << " copied";
-		}
-		else{
-			qDebug() << "Could not copy " << newvoc;
-		}
+		fs::copy_file(newvoc.toStdString(), voc.toStdString(), fs::copy_options::overwrite_existing);
+		qDebug() << newvoc << " copied";
 	}
 	else{
 		qDebug() << newvoc << " not found";
@@ -1333,7 +1465,7 @@ void DroidStar::update_data(Mode::MODEINFO info)
 
 	if( (connect_status == Mode::CONNECTING) && ( info.status == Mode::CONNECTED_RW)){
 		connect_status = Mode::CONNECTED_RW;
-		emit connect_status_changed(2);
+		if (on_status_changed) on_status_changed(2); emit connect_status_changed(2);
 		emit in_audio_vol_changed(0.5);
 		emit swtx_state(!m_mode->get_hwtx());
 		emit swrx_state(!m_mode->get_hwrx());
@@ -1342,13 +1474,13 @@ void DroidStar::update_data(Mode::MODEINFO info)
 		if(m_urcall.isEmpty()) set_urcall("CQCQCQ");
 		if(m_rptr1.isEmpty()) set_rptr1(m_callsign + " " + m_module);
         QString s = "Connected to " + m_protocol + " " + m_refname + " " + m_host + ":" + QString::number(m_port);
-        emit update_log(s);
+        log_msg(s);
 
 		if(info.sw_vocoder_loaded){
-			emit update_log("Vocoder plugin loaded");
+			log_msg("Vocoder plugin loaded");
 		}
 		else{
-			emit update_log("Vocoder plugin not loaded");
+			log_msg("Vocoder plugin not loaded");
 			emit open_vocoder_dialog();
 		}
 #ifdef Q_OS_ANDROID
@@ -1363,21 +1495,45 @@ void DroidStar::update_data(Mode::MODEINFO info)
 	}
 
 	m_netstatustxt = "Connected ping cnt: " + QString::number(info.count);
-	m_ambestatustxt = "AMBE: " + (info.ambeprodid.isEmpty() ? "No device" : info.ambeprodid);
+	m_ambestatustxt = "AMBE: " + (info.ambeprodid.empty() ? "No device" : QString::fromStdString(info.ambeprodid));
 	m_mmdvmstatustxt = "MMDVM: ";
 
-	if(info.mmdvm.isEmpty()){
+	if(info.mmdvm.empty()){
 		m_mmdvmstatustxt += "No device";
 	}
 
-	QStringList verlist = info.ambeverstr.split('.');
-	if(verlist.size() > 7){
-		m_ambestatustxt += " " + verlist.at(0) + " " + verlist.at(5) + " " + verlist.at(6);
+	std::vector<std::string> verparts;
+	{
+		size_t pos = 0;
+		while(pos < info.ambeverstr.size()){
+			size_t dot = info.ambeverstr.find('.', pos);
+			if(dot == std::string::npos){
+				verparts.push_back(info.ambeverstr.substr(pos));
+				break;
+			}
+			verparts.push_back(info.ambeverstr.substr(pos, dot - pos));
+			pos = dot + 1;
+		}
+	}
+	if(verparts.size() > 7){
+		m_ambestatustxt += " " + QString::fromStdString(verparts[0]) + " " + QString::fromStdString(verparts[5]) + " " + QString::fromStdString(verparts[6]);
 	}
 
-	verlist = info.mmdvm.split(' ');
-	if(verlist.size() > 3){
-		m_mmdvmstatustxt += verlist.at(0) + " " + verlist.at(1);
+	std::vector<std::string> mmdvmparts;
+	{
+		size_t pos = 0;
+		while(pos < info.mmdvm.size()){
+			size_t sp = info.mmdvm.find(' ', pos);
+			if(sp == std::string::npos){
+				mmdvmparts.push_back(info.mmdvm.substr(pos));
+				break;
+			}
+			mmdvmparts.push_back(info.mmdvm.substr(pos, sp - pos));
+			pos = sp + 1;
+		}
+	}
+	if(mmdvmparts.size() > 3){
+		m_mmdvmstatustxt += QString::fromStdString(mmdvmparts[0]) + " " + QString::fromStdString(mmdvmparts[1]);
 	}
 
 	if(info.stream_state == Mode::STREAM_IDLE){
@@ -1389,17 +1545,17 @@ void DroidStar::update_data(Mode::MODEINFO info)
 		m_data6.clear();
 	}
 	else if (m_protocol == "REF" || m_protocol == "XRF" || m_protocol == "DCS"){
-		m_data1 = info.src;
-		m_data2 = info.dst;
-		m_data3 = info.gw;
-		m_data4 = info.gw2;
+		m_data1 = QString::fromStdString(info.src);
+		m_data2 = QString::fromStdString(info.dst);
+		m_data3 = QString::fromStdString(info.gw);
+		m_data4 = QString::fromStdString(info.gw2);
 		m_data5 = QString::number(info.streamid, 16) + " " + QString("%1").arg(info.frame_number, 2, 16, QChar('0'));
-		m_data6 = info.usertxt;
+		m_data6 = QString::fromStdString(info.usertxt);
 	}
 	else if (m_protocol == "YSF" || m_protocol == "FCS"){
-		m_data1 = info.gw;
-		m_data2 = info.src;
-		m_data3 = info.dst;
+		m_data1 = QString::fromStdString(info.gw);
+		m_data2 = QString::fromStdString(info.src);
+		m_data3 = QString::fromStdString(info.dst);
 
 		if(info.type == 0){
 			m_data4 = "V/D mode 1";
@@ -1475,8 +1631,8 @@ void DroidStar::update_data(Mode::MODEINFO info)
 		}
 	}
 	else if(m_protocol == "M17"){
-		m_data1 = info.src;
-        m_data2 = info.dst + " " + info.module;
+		m_data1 = QString::fromStdString(info.src);
+        m_data2 = QString::fromStdString(info.dst) + " " + QString::fromStdString(info.module);
 
         switch(info.type){
         case 0:
@@ -1489,8 +1645,8 @@ void DroidStar::update_data(Mode::MODEINFO info)
             break;
         case 2:
             m_data3 = "Packet";
-            m_data5 = info.usertxt.left(20);
-            update_log(info.src.section(" ", 0, 0) + ": " + info.usertxt);
+            m_data5 = QString::fromStdString(info.usertxt.substr(0, 20));
+            update_log(QString::fromStdString(info.src.substr(0, info.src.find(' '))) + ": " + QString::fromStdString(info.usertxt));
             break;
         }
 
@@ -1522,31 +1678,33 @@ void DroidStar::update_data(Mode::MODEINFO info)
 		}
 
 		if(info.stream_state == Mode::STREAM_NEW){
-			emit update_log(t + " " + m_protocol + " RX started from: " + logDetails + " to: " + QString::number(info.dstid));
+			log_msg(t + " " + m_protocol + " RX started from: " + logDetails + " to: " + QString::number(info.dstid));
 		}
 		if(info.stream_state == Mode::STREAM_END){
-			emit update_log(t + " " + m_protocol + " RX ended from: " + logDetails + " to: " + QString::number(info.dstid));
+			log_msg(t + " " + m_protocol + " RX ended from: " + logDetails + " to: " + QString::number(info.dstid));
 		}
 		if(info.stream_state == Mode::STREAM_LOST){
-			emit update_log(t + " " + m_protocol + " RX lost from: " + logDetails + " to: " + QString::number(info.dstid));
+			log_msg(t + " " + m_protocol + " RX lost from: " + logDetails + " to: " + QString::number(info.dstid));
 		}
 	}
 	else{
 		if(info.stream_state == Mode::STREAM_NEW){
-			emit update_log(t + " " + m_protocol + " RX started id: " + QString::number(info.streamid, 16) + " src: " + info.src + " dst: " + info.gw2);
+			log_msg(t + " " + m_protocol + " RX started id: " + QString::number(info.streamid, 16) + " src: " + QString::fromStdString(info.src) + " dst: " + QString::fromStdString(info.gw2));
 		}
 		if(info.stream_state == Mode::STREAM_END){
-			emit update_log(t + " " + m_protocol + " RX ended id: " + QString::number(info.streamid, 16) + " src: " + info.src + " dst: " + info.gw2);
+			log_msg(t + " " + m_protocol + " RX ended id: " + QString::number(info.streamid, 16) + " src: " + QString::fromStdString(info.src) + " dst: " + QString::fromStdString(info.gw2));
 		}
 		if(info.stream_state == Mode::STREAM_LOST){
-			emit update_log(t + " " + m_protocol + " RX lost id: " + QString::number(info.streamid, 16) + " src: " + info.src + " dst: " + info.gw2);
+			log_msg(t + " " + m_protocol + " RX lost id: " + QString::number(info.streamid, 16) + " src: " + QString::fromStdString(info.src) + " dst: " + QString::fromStdString(info.gw2));
 		}
 	}
+    if (on_data) on_data();
     emit update_data();
 }
 
 void DroidStar::updatelog(QString s)
 {
+    if (on_log) on_log(s);
     emit update_log(s);
 }
 
@@ -1584,10 +1742,9 @@ void DroidStar::appendToStationLog(const QString &tgStr, const QString &dateStr,
     m_lastLogName = name;
     m_lastLogCountry = country;
 
-    QFile f(config_path + "/station_log.csv");
-    if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        QTextStream out(&f);
-        
+    QString fpath = config_path + "/station_log.csv";
+    std::ofstream f(fpath.toStdString(), std::ios::app);
+    if (f.is_open()) {
         // Escape commas and quotes for CSV compliance
         QString escTg = tgStr;
         escTg.replace("\"", "\"\"");
@@ -1602,8 +1759,7 @@ void DroidStar::appendToStationLog(const QString &tgStr, const QString &dateStr,
         escCountry.replace("\"", "\"\"");
         if (escCountry.contains(",")) escCountry = "\"" + escCountry + "\"";
 
-        out << escTg << "," << dateStr << "," << timeStr << "," << callsign << "," << escName << "," << escCountry << "\n";
-        f.close();
+        f << escTg.toStdString() << "," << dateStr.toStdString() << "," << timeStr.toStdString() << "," << callsign.toStdString() << "," << escName.toStdString() << "," << escCountry.toStdString() << std::endl;
     }
 }
 
@@ -1611,20 +1767,10 @@ void DroidStar::updateLastStationLogTG(const QString &tgStr)
 {
     if (m_lastLogCallsign.isEmpty()) return;
     
-    QFile f(config_path + "/station_log.csv");
-    if (!f.exists()) return;
+    QString fpath = config_path + "/station_log.csv";
+    if (!fs::exists(fpath.toStdString())) return;
     
-    QStringList lines;
-    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&f);
-        while (!in.atEnd()) {
-            QString line = in.readLine();
-            if (!line.trimmed().isEmpty()) {
-                lines.append(line);
-            }
-        }
-        f.close();
-    }
+    QStringList lines = read_lines(fpath);
     
     if (!lines.isEmpty()) {
         // Rewrite the last line with the new tgStr
@@ -1643,24 +1789,24 @@ void DroidStar::updateLastStationLogTG(const QString &tgStr)
         QString newLastLine = escTg + "," + m_lastLogDate + "," + m_lastLogTime + "," + m_lastLogCallsign + "," + escName + "," + escCountry;
         lines.last() = newLastLine;
         
-        if (f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-            QTextStream out(&f);
+        std::ofstream f(fpath.toStdString(), std::ios::trunc);
+        if (f.is_open()) {
             for (const QString &line : lines) {
-                out << line << "\n";
+                f << line.toStdString() << "\n";
             }
-            f.close();
         }
     }
 }
 
 QString DroidStar::readStationLog()
 {
-    QFile f(config_path + "/station_log.csv");
-    if (f.exists() && f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&f);
-        QString content = in.readAll();
-        f.close();
-        return content;
+    QString fpath = config_path + "/station_log.csv";
+    if (fs::exists(fpath.toStdString())) {
+        std::ifstream f(fpath.toStdString());
+        if (f.is_open()) {
+            std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+            return QString::fromStdString(content);
+        }
     }
     return "";
 }
@@ -1668,20 +1814,19 @@ QString DroidStar::readStationLog()
 QString DroidStar::exportStationLog()
 {
     QString srcPath = config_path + "/station_log.csv";
-    QFile srcFile(srcPath);
-    if (!srcFile.exists()) {
+    if (!fs::exists(srcPath.toStdString())) {
         return "EMPTY";
     }
 
     QString destDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QDir().mkpath(destDir);
+    fs::create_directories(destDir.toStdString());
     QString destPath = destDir + "/station_log.csv";
 
-    if (QFile::exists(destPath)) {
-        QFile::remove(destPath);
+    if (fs::exists(destPath.toStdString())) {
+        fs::remove(destPath.toStdString());
     }
 
-    if (QFile::copy(srcPath, destPath)) {
+    if (fs::copy_file(srcPath.toStdString(), destPath.toStdString(), fs::copy_options::overwrite_existing)) {
         return destPath;
     }
     return "ERROR";
@@ -1689,31 +1834,42 @@ QString DroidStar::exportStationLog()
 
 void DroidStar::clearStationLog()
 {
-    QFile::remove(config_path + "/station_log.csv");
+    fs::remove((config_path + "/station_log.csv").toStdString());
 }
 
 void DroidStar::save_memory(int index, const QString &mode, const QString &host, int slot, int cc, const QString &tgid)
 {
-	m_settings->beginGroup("Memory_" + QString::number(index));
-	m_settings->setValue("Mode", mode);
-	m_settings->setValue("Host", host);
-	m_settings->setValue("Slot", slot);
-	m_settings->setValue("CC", cc);
-	m_settings->setValue("TGID", tgid);
-	m_settings->endGroup();
-	m_settings->sync();
+	nlohmann::json mem;
+	mem["Mode"] = mode.toStdString();
+	mem["Host"] = host.toStdString();
+	mem["Slot"] = slot;
+	mem["CC"] = cc;
+	mem["TGID"] = tgid.toStdString();
+	if (!m_json_settings.contains("Memory") || !m_json_settings["Memory"].is_array()) {
+		m_json_settings["Memory"] = nlohmann::json::array();
+	}
+	auto& arr = m_json_settings["Memory"];
+	while (index >= (int)arr.size()) {
+		arr.push_back(nullptr);
+	}
+	arr[index] = mem;
+	save_settings_file();
 }
 
 QVariantMap DroidStar::get_memory(int index)
 {
 	QVariantMap map;
-	m_settings->beginGroup("Memory_" + QString::number(index));
-	map["Mode"] = m_settings->value("Mode", "");
-	map["Host"] = m_settings->value("Host", "");
-	map["Slot"] = m_settings->value("Slot", 0);
-	map["CC"] = m_settings->value("CC", 0);
-	map["TGID"] = m_settings->value("TGID", "");
-	m_settings->endGroup();
+	if (m_json_settings.contains("Memory") && m_json_settings["Memory"].is_array()) {
+		auto& arr = m_json_settings["Memory"];
+		if (index < (int)arr.size() && !arr[index].is_null()) {
+			auto& mem = arr[index];
+			map["Mode"] = QString::fromStdString(mem.value("Mode", ""));
+			map["Host"] = QString::fromStdString(mem.value("Host", ""));
+			map["Slot"] = mem.value("Slot", 0);
+			map["CC"] = mem.value("CC", 0);
+			map["TGID"] = QString::fromStdString(mem.value("TGID", ""));
+		}
+	}
 	return map;
 }
 

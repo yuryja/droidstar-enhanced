@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
@@ -27,6 +26,10 @@ void _onFileDownloaded(Pointer<Utf8> filenamePtr, Pointer<Void> userdata) {
   NvController.instance._handleFileDownloaded(filename);
 }
 
+void _onDevicesChanged(Pointer<Void> userdata) {
+  NvController.instance._handleDevicesChanged();
+}
+
 class NvController extends ChangeNotifier {
   static final NvController instance = NvController._internal();
 
@@ -50,14 +53,9 @@ class NvController extends ChangeNotifier {
   NvController._internal() {
     _bindings = NexusVoiceBindings();
     _handle = _bindings.nvCreate();
+    // The Qt event loop is pumped by a native C++ background thread
+    // inside nv_context — no Dart timer needed.
     _setupCallbacks();
-    
-    // Continuously pump the Qt event loop in the C++ library
-    Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (_handle != null) {
-        _bindings.nvPumpEvents(_handle!);
-      }
-    });
   }
 
   void _setupCallbacks() {
@@ -78,6 +76,10 @@ class NvController extends ChangeNotifier {
     // Register file downloaded callback
     final fileDownloadedCbPtr = Pointer.fromFunction<FileDownloadedCbNative>(_onFileDownloaded);
     _bindings.nvSetFileDownloadedCb(_handle!, fileDownloadedCbPtr, nullptr);
+
+    // Register devices changed callback
+    final devicesCbPtr = Pointer.fromFunction<DevicesChangedCbNative>(_onDevicesChanged);
+    _bindings.nvSetDevicesCb(_handle!, devicesCbPtr, nullptr);
   }
 
   // Handle incoming status callbacks
@@ -109,6 +111,11 @@ class NvController extends ChangeNotifier {
   // Handle file download notification
   void _handleFileDownloaded(String filename) {
     _handleLogReceived('System downloaded file: $filename');
+  }
+
+  // Handle devices changed notification (deferred init complete)
+  void _handleDevicesChanged() {
+    notifyListeners();
   }
 
   // Dispose and cleanup

@@ -9,6 +9,9 @@
 #include <QCoreApplication>
 #include <QThread>
 #include <functional>
+#include <thread>
+#include <chrono>
+#include <atomic>
 
 static QCoreApplication* qt_app = nullptr;
 
@@ -24,21 +27,47 @@ struct nv_context {
     void* log_cb_userdata = nullptr;
     nv_file_downloaded_cb file_downloaded_cb = nullptr;
     void* file_downloaded_cb_userdata = nullptr;
+    nv_devices_changed_cb devices_cb = nullptr;
+    void* devices_cb_userdata = nullptr;
+
+    std::atomic<bool> _running{false};
+    std::thread _event_thread;
 
     nv_context()
         : instance(new DroidStar())
         , creator_thread(QThread::currentThread())
     {
         setup_connections();
+        _start_event_loop();
     }
 
     ~nv_context() {
+        _stop_event_loop();
         if (QThread::currentThread() != creator_thread) {
             QMetaObject::invokeMethod(QCoreApplication::instance(), [this]() {
                 delete instance;
             }, Qt::BlockingQueuedConnection);
         } else {
             delete instance;
+        }
+    }
+
+    void _start_event_loop() {
+        _running = true;
+        _event_thread = std::thread([this]() {
+            while (_running) {
+                if (QCoreApplication::instance()) {
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 15);
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+        });
+    }
+
+    void _stop_event_loop() {
+        _running = false;
+        if (_event_thread.joinable()) {
+            _event_thread.join();
         }
     }
 
@@ -65,7 +94,7 @@ struct nv_context {
     }
 
     void setup_connections() {
-        QObject::connect(instance, &DroidStar::connect_status_changed, [this](int c) {
+        instance->on_status_changed = [this](int c) {
             if (status_cb) {
                 const char* msg = "";
                 if (c == 0) msg = "Disconnected";
@@ -75,16 +104,16 @@ struct nv_context {
                 else if (c == 5) msg = "Connection Error";
                 status_cb(c, msg, status_cb_userdata);
             }
-        });
+        };
 
-        QObject::connect(instance, &DroidStar::update_log, [this](const QString& s) {
+        instance->on_log = [this](const QString& s) {
             if (log_cb) {
                 QByteArray utf8 = s.toUtf8();
                 log_cb(utf8.constData(), log_cb_userdata);
             }
-        });
+        };
 
-        QObject::connect(instance, static_cast<void (DroidStar::*)()>(&DroidStar::update_data), [this]() {
+        instance->on_data = [this]() {
             if (data_cb) {
                 auto send = [this](const char* label, const QString& val) {
                     QByteArray utf8 = val.toUtf8();
@@ -106,7 +135,13 @@ struct nv_context {
                 send("mmdvmstatustxt", instance->get_mmdvmstatustxt());
                 send("netstatustxt", instance->get_netstatustxt());
             }
-        });
+        };
+
+        instance->on_devices_changed = [this]() {
+            if (devices_cb) {
+                devices_cb(devices_cb_userdata);
+            }
+        };
     }
 };
 
@@ -454,6 +489,14 @@ NV_EXPORT void nv_set_file_downloaded_cb(nv_handle h, nv_file_downloaded_cb cb, 
         nv_context* ctx = static_cast<nv_context*>(h);
         ctx->file_downloaded_cb = cb;
         ctx->file_downloaded_cb_userdata = userdata;
+    }
+}
+
+NV_EXPORT void nv_set_devices_cb(nv_handle h, nv_devices_changed_cb cb, void* userdata) {
+    if (h) {
+        nv_context* ctx = static_cast<nv_context*>(h);
+        ctx->devices_cb = cb;
+        ctx->devices_cb_userdata = userdata;
     }
 }
 

@@ -22,32 +22,28 @@
 
 class DCS : public Mode
 {
-	Q_OBJECT
 public:
 	DCS();
 	~DCS();
 	uint8_t * get_frame(uint8_t *ambe);
-private:
-	QString m_txusrtxt;
+protected:
 	uint8_t packet_size;
 	bool m_sd_sync = false;
 	int m_sd_seq = 0;
 	char m_user_data[21]{};
-	uint16_t m_txstreamid = 0;
-private slots:
+    uint16_t m_txstreamid = 0;
+    void on_network_connected() override;
+    void on_network_read(const uint8_t* data, int len) override;
 	void toggle_tx(bool);
 	void start_tx();
-	void process_udp();
-	void process_modem_data(QByteArray);
-	void process_rx_data();
-	void get_ambe();
-	void send_ping();
-	void send_disconnect();
-	void transmit();
-	void format_callsign(QString &s);
-	void hostname_lookup(QHostInfo i);
-	void module_changed(int m) { m_module = 0x41 + m; m_modeinfo.streamid = 0; }
-	void usrtxt_changed(QString t) { m_txusrtxt = t; }
+    void process_modem_data(QByteArray);
+    void process_rx_data();
+    void get_ambe();
+    void send_ping();
+    void send_disconnect();
+    void transmit();
+    void format_callsign(std::string &s);
+	void module_changed(char m) { m_module = m; m_modeinfo.streamid = 0; }
 	void send_frame(uint8_t *);
 };
 

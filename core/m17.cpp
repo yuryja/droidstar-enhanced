@@ -85,12 +85,7 @@ M17::M17() :
 	m_c2(NULL),
 	m_txrate(1)
 {
-#ifdef Q_OS_WIN
-	m_txtimerint = 30; // Qt timers on windows seem to be slower than desired value
-
-#else
 	m_txcan = 0;
-#endif
     m_mode = "M17";
 	m_attenuation = 1;
 }
@@ -199,14 +194,9 @@ void M17::encode_c2(int16_t *audio, uint8_t *c)
 #endif
 }
 
-void M17::process_udp()
+void M17::on_network_read(const uint8_t* data, int len)
 {
-	QByteArray buf;
-	QHostAddress sender;
-	quint16 senderPort;
-
-	buf.resize(m_udp->pendingDatagramSize());
-	m_udp->readDatagram(buf.data(), buf.size(), &sender, &senderPort);
+	QByteArray buf(reinterpret_cast<const char*>(data), len);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -226,38 +216,34 @@ void M17::process_udp()
 #ifndef USE_EXTERNAL_CODEC2
 			m_c2 = new CCodec2(true);
 #endif
-			m_txtimer = new QTimer();
-			connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-			m_rxtimer = new QTimer();
-			connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
-			m_ping_timer = new QTimer();
-			connect(m_ping_timer, SIGNAL(timeout()), this, SLOT(send_ping()));
-			m_ping_timer->start(8000);
+			start_tx_timer(19);
+			start_rx_timer(20);
+			start_ping_timer(1000);
 			m_audio = new AudioEngine(m_audioin, m_audioout);
 			m_audio->init();
 			m_modeinfo.sw_vocoder_loaded = true;
 		}
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 	}
 	if((buf.size() == 10) && (::memcmp(buf.data(), "PING", 4U) == 0)){
 		if(m_modeinfo.streamid == 0){
 			m_modeinfo.stream_state = STREAM_IDLE;
 		}
 		m_modeinfo.count++;
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 	}
     if((buf.size() > 33) && (::memcmp(buf.data(), "M17P", 4U) == 0)){
         uint8_t cs[10];
         ::memcpy(cs, &(buf.data()[10]), 6);
         decode_callsign(cs);
-        m_modeinfo.src = QString((char *)cs);
+        m_modeinfo.src = (char *)cs;
         ::memcpy(cs, &(buf.data()[4]), 6);
         decode_callsign(cs);
-        m_modeinfo.dst = QString((char *)cs);
+        m_modeinfo.dst = (char *)cs;
         m_modeinfo.type = 2;
         m_modeinfo.usertxt = &(buf.data()[35]);
         m_modeinfo.stream_state = PACKET_RECEIVED;
-        emit update(m_modeinfo);
+        notify_update(m_modeinfo);
     }
     if((buf.size() == 54) && (::memcmp(buf.data(), "M17 ", 4U) == 0)){
 		uint16_t streamid = (buf.data()[4] << 8) | (buf.data()[5] & 0xff);
@@ -270,10 +256,10 @@ void M17::process_udp()
 			uint8_t cs[10];
 			::memcpy(cs, &(buf.data()[12]), 6);
 			decode_callsign(cs);
-			m_modeinfo.src = QString((char *)cs);
+			m_modeinfo.src = (char *)cs;
 			::memcpy(cs, &(buf.data()[6]), 6);
 			decode_callsign(cs);
-			m_modeinfo.dst = QString((char *)cs);
+			m_modeinfo.dst = (char *)cs;
 			m_modeinfo.streamid = streamid;
 			if (m_audio) m_audio->start_playback();
 
@@ -286,17 +272,11 @@ void M17::process_udp()
 				set_mode(false);
 			}
 
-			if(!m_rxtimer->isActive()){
-#ifdef Q_OS_WIN
-				m_rxtimer->start(m_modeinfo.type ? m_rxtimerint : 32);
-#else
-				m_rxtimer->start(m_modeinfo.type ? m_rxtimerint : m_rxtimerint*2);
-#endif
-			}
+			start_rx_timer(20);
 
 			m_modeinfo.stream_state = STREAM_NEW;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-			qDebug() << "New stream from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16);
+			qDebug() << "New stream from " << QString::fromStdString(m_modeinfo.src) << " to " << QString::fromStdString(m_modeinfo.dst) << " id == " << QString::number(m_modeinfo.streamid, 16);
 		}
 		else{
 			m_modeinfo.stream_state = STREAMING;
@@ -318,50 +298,45 @@ void M17::process_udp()
 			m_rxwatchdog = 0;
 			m_modeinfo.stream_state = STREAM_END;
 			m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-            emit update(m_modeinfo);
+            notify_update(m_modeinfo);
 			m_modeinfo.streamid = 0;
 		}
 		else{
-			emit update(m_modeinfo);
+			notify_update(m_modeinfo);
 		}
 		if(m_modem){
 			send_modem_data(buf);
 		}
 	}
-	//emit update(m_modeinfo);
+	//notify_update(m_modeinfo);
 }
 
-void M17::hostname_lookup(QHostInfo i)
+void M17::on_network_connected()
 {
-	if (!i.addresses().isEmpty()) {
-		QByteArray out;
-		uint8_t cs[10];
-		memset(cs, ' ', 9);
-		memcpy(cs, m_modeinfo.callsign.toLocal8Bit(), m_modeinfo.callsign.size());
-		cs[8] = 'D';
-		cs[9] = 0x00;
-		M17::encode_callsign(cs);
-		out.append('C');
-		out.append('O');
-		out.append('N');
-		out.append('N');
-		out.append((char *)cs, 6);
-		out.append(m_module);
-		m_address = i.addresses().first();
-		m_udp = new QUdpSocket(this);
-		connect(m_udp, SIGNAL(readyRead()), this, SLOT(process_udp()));
-		m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+    QByteArray out;
+    uint8_t cs[10];
+    memset(cs, ' ', 9);
+    memcpy(cs, m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
+    cs[8] = 'D';
+    cs[9] = 0x00;
+    M17::encode_callsign(cs);
+    out.append('C');
+    out.append('O');
+    out.append('N');
+    out.append('N');
+    out.append((char *)cs, 6);
+    out.append(m_module);
+    m_udp->write((const uint8_t*)out.constData(), out.size());
 
-        if(m_debug){
-            QDebug debug = qDebug();
-            debug.noquote();
-            QString s = "CONN:";
-            for(int i = 0; i < out.size(); ++i){
-                s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
-            }
-            debug << s;
+    if(m_debug){
+        QDebug debug = qDebug();
+        debug.noquote();
+        QString s = "CONN:";
+        for(int i = 0; i < out.size(); ++i){
+            s += " " + QString("%1").arg((uint8_t)out.data()[i], 2, 16, QChar('0'));
         }
-	}
+        debug << s;
+    }
 }
 
 void M17::mmdvm_direct_connect()
@@ -379,13 +354,9 @@ void M17::mmdvm_direct_connect()
 #ifndef USE_EXTERNAL_CODEC2
 	m_c2 = new CCodec2(true);
 #endif
-	m_txtimer = new QTimer();
-	connect(m_txtimer, SIGNAL(timeout()), this, SLOT(transmit()));
-	m_rxtimer = new QTimer();
-	connect(m_rxtimer, SIGNAL(timeout()), this, SLOT(process_rx_data()));
 	m_audio = new AudioEngine(m_audioin, m_audioout);
 	m_audio->init();
-	emit update(m_modeinfo);
+	notify_update(m_modeinfo);
 }
 
 void M17::send_ping()
@@ -393,7 +364,7 @@ void M17::send_ping()
 	QByteArray out;
 	uint8_t cs[10];
 	memset(cs, ' ', 9);
-	memcpy(cs, m_modeinfo.callsign.toLocal8Bit(), m_modeinfo.callsign.size());
+	memcpy(cs, m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
 	cs[8] = 'D';
 	cs[9] = 0x00;
 	encode_callsign(cs);
@@ -402,7 +373,7 @@ void M17::send_ping()
 	out.append('N');
 	out.append('G');
 	out.append((char *)cs, 6);
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -435,7 +406,7 @@ void M17::send_disconnect()
 	QByteArray out;
 	uint8_t cs[10];
 	memset(cs, ' ', 9);
-	memcpy(cs, m_modeinfo.callsign.toLocal8Bit(), m_modeinfo.callsign.size());
+	memcpy(cs, m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
 	cs[8] = 'D';
 	cs[9] = 0x00;
 	encode_callsign(cs);
@@ -444,7 +415,7 @@ void M17::send_disconnect()
 	out.append('S');
 	out.append('C');
 	out.append((char *)cs, 6);
-	m_udp->writeDatagram(out, m_address, m_modeinfo.port);
+	m_udp->write((const uint8_t*)out.constData(), out.size());
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -571,10 +542,10 @@ void M17::process_modem_data(QByteArray d)
 			uint8_t cs[10];
 			::memcpy(cs, m_lsf, 6);
 			decode_callsign(cs);
-			m_modeinfo.dst = QString((char *)cs);
+			m_modeinfo.dst = (char *)cs;
 			::memcpy(cs, m_lsf+6, 6);
 			decode_callsign(cs);
-			m_modeinfo.src = QString((char *)cs);
+			m_modeinfo.src = (char *)cs;
 		}
 	}
 	else if(d.data()[2] == MMDVM_M17_STREAM){
@@ -621,27 +592,21 @@ void M17::process_modem_data(QByteArray d)
 					uint8_t cs[10];
 					::memcpy(cs, m_lsf, 6);
 					decode_callsign(cs);
-					m_modeinfo.dst = QString((char *)cs);
+					m_modeinfo.dst = (char *)cs;
 					::memcpy(cs, m_lsf+6, 6);
 					decode_callsign(cs);
-					m_modeinfo.src = QString((char *)cs);
+					m_modeinfo.src = (char *)cs;
 					m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
 				}
 
 				m_modeinfo.stream_state = STREAM_NEW;
 				m_modeinfo.streamid = m_txstreamid;
 				m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-				qDebug() << "New RF stream from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16) << "FN == " << fn << " ber == " << ber;
+qDebug() << "New RF stream from " << QString::fromStdString(m_modeinfo.src) << " to " << QString::fromStdString(m_modeinfo.dst) << " id == " << QString::number(m_modeinfo.streamid, 16) << "FN == " << fn << " ber == " << ber;
 
-				if (m_audio) m_audio->start_playback();
+			if (m_audio) m_audio->start_playback();
 
-				if(!m_rxtimer->isActive()){
-	#ifdef Q_OS_WIN
-					m_rxtimer->start(m_rxtimerint);
-	#else
-					m_rxtimer->start(m_rxtimerint);
-	#endif
-				}
+				start_rx_timer(20);
 
 
 			}
@@ -649,7 +614,7 @@ void M17::process_modem_data(QByteArray d)
 				m_modeinfo.stream_state = STREAMING;
 			}
 
-			qDebug() << "RF streaming from " << m_modeinfo.src << " to " << m_modeinfo.dst << " id == " << QString::number(m_modeinfo.streamid, 16) << "FN == " << fn << " ber == " << ber << " type == " << netframe[13];
+			qDebug() << "RF streaming from " << QString::fromStdString(m_modeinfo.src) << " to " << QString::fromStdString(m_modeinfo.dst) << " id == " << QString::number(m_modeinfo.streamid, 16) << "FN == " << fn << " ber == " << ber << " type == " << netframe[13];
 
 			if((netframe[13] & 0x06U) == 0x04U){
 				m_modeinfo.type = 1;//"3200 Voice";
@@ -672,7 +637,7 @@ void M17::process_modem_data(QByteArray d)
 				m_rxcodecq.append(netframe[30+i]);
 			}
 
-			emit update(m_modeinfo);
+			notify_update(m_modeinfo);
 		}
 		else{
 			if(m_txstreamid == 0){
@@ -682,7 +647,7 @@ void M17::process_modem_data(QByteArray d)
 
 			uint8_t dst[10];
 			memset(dst, ' ', 9);
-			memcpy(dst, m_refname.toLocal8Bit(), m_refname.size());
+			memcpy(dst, m_refname.c_str(), m_refname.size());
 			dst[8] =  m_module;
 			dst[9] = 0x00;
 			encode_callsign(dst);
@@ -703,7 +668,7 @@ void M17::process_modem_data(QByteArray d)
 			txframe.append((char)netframe[29] & 0xff);
 			txframe.append((char *)&netframe[30], 16);
 			txframe.append(2, 0x00);
-			m_udp->writeDatagram(txframe, m_address, m_modeinfo.port);
+			m_udp->write((const uint8_t*)txframe.constData(), txframe.size());
 
             if(m_debug){
                 QDebug debug = qDebug();
@@ -726,7 +691,6 @@ void M17::toggle_tx(bool tx)
 
 void M17::start_tx()
 {
-	m_txtimerint = 38;
 	set_mode(m_txrate);
 	Mode::start_tx();
 }
@@ -769,20 +733,16 @@ void M17::transmit()
 	}
 
 	txframe.clear();
-	if (m_audio) emit update_output_level(m_audio->level() * 2);
+	if (m_audio) notify_output_level(m_audio->level() * 2);
 	int r = get_mode() ? 0x05 : 0x07;
 
 	if(m_tx){
 		if(m_txstreamid == 0){
 		   m_txstreamid = static_cast<uint16_t>((::rand() & 0xFFFF));
-           if(!m_rxtimer->isActive() && m_mdirect){
+           if(m_mdirect){
 			   m_rxmodemq.clear();
 			   m_modeinfo.stream_state = STREAM_NEW;
-#ifdef Q_OS_WIN
-			   m_rxtimer->start(m_modeinfo.type ? m_rxtimerint : 32);
-#else
-			   m_rxtimer->start(19);
-#endif
+			   start_rx_timer(19);
 		   }
 
 		}
@@ -796,13 +756,13 @@ void M17::transmit()
 		uint8_t dst[10];
 		uint8_t lsf[30];
 		memset(dst, ' ', 9);
-		memcpy(dst, m_refname.toLocal8Bit(), m_refname.size());
+		memcpy(dst, m_refname.c_str(), m_refname.size());
 
 		dst[8] =  m_module;
 		dst[9] = 0x00;
 		encode_callsign(dst);
 		memset(src, ' ', 9);
-		memcpy(src, m_modeinfo.callsign.toLocal8Bit(), m_modeinfo.callsign.size());
+		memcpy(src, m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
 		src[8] = 'D';
 		src[9] = 0x00;
 		encode_callsign(src);
@@ -835,17 +795,17 @@ void M17::transmit()
 			m_rxwatchdog = 0;
 		}
 		else{
-			m_udp->writeDatagram(txframe, m_address, m_modeinfo.port);
+			m_udp->write((const uint8_t*)txframe.constData(), txframe.size());
 		}
 
 		++m_tx_cnt;
 		m_modeinfo.src = m_modeinfo.callsign;
 		m_modeinfo.dst = m_refname;
-        m_modeinfo.module = m_module;
+        m_modeinfo.module = std::string(1, m_module);
 		m_modeinfo.type = get_mode();
 		m_modeinfo.frame_number = m_tx_cnt;
 		m_modeinfo.streamid = m_txstreamid;
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 
         if(m_debug){
             QDebug debug = qDebug();
@@ -864,12 +824,12 @@ void M17::transmit()
 		uint8_t src[10];
 		uint8_t dst[10];
 		memset(dst, ' ', 9);
-		memcpy(dst, m_refname.toLocal8Bit(), m_refname.size());
+		memcpy(dst, m_refname.c_str(), m_refname.size());
 		dst[8] =  m_module;
 		dst[9] = 0x00;
 		encode_callsign(dst);
 		memset(src, ' ', 9);
-		memcpy(src, m_modeinfo.callsign.toLocal8Bit(), m_modeinfo.callsign.size());
+		memcpy(src, m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
 		src[8] = 'D';
 		src[9] = 0x00;
 		M17::encode_callsign(src);
@@ -897,14 +857,14 @@ void M17::transmit()
 			m_modeinfo.stream_state = STREAM_END;
 		}
 		else{
-			m_udp->writeDatagram(txframe, m_address, m_modeinfo.port);
+			m_udp->write((const uint8_t*)txframe.constData(), txframe.size());
 		}
 		m_txstreamid = 0;
 		m_tx_cnt = 0;
 #ifdef USE_FLITE
 		m_ttscnt = 0;
 #endif
-		m_txtimer->stop();
+		stop_timers();
 		if(m_ttsid == 0){
 			if (m_audio) m_audio->stop_capture();
 		}
@@ -913,7 +873,7 @@ void M17::transmit()
 		m_modeinfo.type = get_mode();
 		m_modeinfo.frame_number = m_tx_cnt;
 		m_modeinfo.streamid = m_txstreamid;
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 
         if(m_debug){
             QDebug debug = qDebug();
@@ -927,20 +887,20 @@ void M17::transmit()
 	}
 }
 
-void M17::tx_packet(QString sms)
+void M17::tx_packet(std::string sms)
 {
     QByteArray txframe;
     uint8_t src[10];
     uint8_t dst[10];
     uint8_t lsf[30];
     memset(dst, ' ', 9);
-    memcpy(dst, m_refname.toLocal8Bit(), m_refname.size());
+    memcpy(dst, m_refname.c_str(), m_refname.size());
 
     dst[8] =  m_module;
     dst[9] = 0x00;
     encode_callsign(dst);
     memset(src, 0x00, 9);
-    memcpy(src, m_modeinfo.callsign.toLocal8Bit(), m_modeinfo.callsign.size());
+    memcpy(src, m_modeinfo.callsign.c_str(), m_modeinfo.callsign.size());
     encode_callsign(src);
 
     txframe.append('M');
@@ -959,11 +919,11 @@ void M17::tx_packet(QString sms)
 
     encodeCRC16(lsf, M17_LSF_LENGTH_BYTES);
     txframe.append(0x05); // SMS packet type
-    txframe.append(sms.toUtf8());
+    txframe.append(QByteArray(sms.c_str(), sms.size()));
     txframe.append(1, 0x00);
     txframe.append(lsf[28]);
     txframe.append(lsf[29]);
-    m_udp->writeDatagram(txframe, m_address, m_modeinfo.port);
+    m_udp->write((const uint8_t*)txframe.constData(), txframe.size());
 
     m_modeinfo.stream_state = PACKET_SENT;
     m_modeinfo.src = m_modeinfo.callsign;
@@ -971,7 +931,7 @@ void M17::tx_packet(QString sms)
     m_modeinfo.type = 2;
     m_modeinfo.frame_number = 0;
     m_modeinfo.usertxt = sms;
-    emit update(m_modeinfo);
+    notify_update(m_modeinfo);
 
     if(m_debug){
         QDebug debug = qDebug();
@@ -986,6 +946,7 @@ void M17::tx_packet(QString sms)
 
 void M17::process_rx_data()
 {
+    poll_network();
 	int16_t pcm[320];
 	uint8_t codec2[8];
 
@@ -994,7 +955,7 @@ void M17::process_rx_data()
 		m_rxwatchdog = 0;
 		m_modeinfo.stream_state = STREAM_LOST;
 		m_modeinfo.ts = QDateTime::currentMSecsSinceEpoch();
-		emit update(m_modeinfo);
+		notify_update(m_modeinfo);
 		m_modeinfo.streamid = 0;
 	}
 
@@ -1019,10 +980,10 @@ void M17::process_rx_data()
 		decode_c2(pcm, codec2);
 		int s = get_mode() ? 160 : 320;
 		if (m_audio) m_audio->write(pcm, s);
-		if (m_audio) emit update_output_level(m_audio->level());
+		if (m_audio) notify_output_level(m_audio->level());
 	}
 	else if ( ((m_modeinfo.stream_state == STREAM_END) || (m_modeinfo.stream_state == STREAM_LOST)) && (m_rxmodemq.size() < 50) ){
-		m_rxtimer->stop();
+		stop_timers();
 		if (m_audio) m_audio->stop_playback();
 		m_rxwatchdog = 0;
 		m_modeinfo.streamid = 0;
